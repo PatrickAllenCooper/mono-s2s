@@ -75,6 +75,9 @@ pip install datasets
 pip install transformers  # Often useful with datasets
 pip install accelerate    # For optimized training
 
+# Experiment tracking and logging
+pip install wandb         # Weights & Biases for experiment tracking
+
 # Additional utilities
 pip install tqdm          # Progress bars
 pip install scikit-learn  # For additional ML utilities
@@ -144,6 +147,7 @@ jupyterlab>=4.0.0
 datasets>=2.14.0
 transformers>=4.30.0
 accelerate>=0.20.0
+wandb>=0.15.0
 tqdm>=4.65.0
 scikit-learn>=1.3.0
 ipywidgets>=8.0.0

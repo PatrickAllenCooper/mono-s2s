@@ -60,6 +60,7 @@ call pip install --upgrade pip
 call pip install datasets
 call pip install transformers
 call pip install accelerate
+call pip install wandb
 call pip install tqdm
 call pip install scikit-learn
 call pip install ipywidgets
@@ -128,6 +129,7 @@ echo jupyterlab^>=4.0.0
 echo datasets^>=2.14.0
 echo transformers^>=4.30.0
 echo accelerate^>=0.20.0
+echo wandb^>=0.15.0
 echo tqdm^>=4.65.0
 echo scikit-learn^>=1.3.0
 echo ipywidgets^>=8.0.0
