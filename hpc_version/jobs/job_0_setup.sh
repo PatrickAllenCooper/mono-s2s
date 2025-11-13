@@ -20,17 +20,15 @@ echo "Node: $SLURM_NODELIST"
 echo "Started: $(date)"
 echo "=========================================="
 
-# Load modules (customize for your HPC)
-module purge
-module load anaconda  # Use anaconda on Alpine
-# OR use: module load python (and check available versions with: module spider python)
-module load cuda      # Load CUDA for GPU support
+# Load modules (Alpine compute nodes may have additional modules)
+# Note: Login nodes may not show all modules - they become available on compute nodes
+module purge 2>/dev/null || true
 
-# Activate conda environment (if you created one)
-conda activate mono_s2s 2>/dev/null || true  # Ignore error if not using conda
+# Try to load CUDA if available (ignore errors)
+module load cuda 2>/dev/null || true
 
-# OR activate virtual environment (if using venv instead)
-# source /path/to/venv/bin/activate
+# Use system Python3 (always available on Alpine)
+# Packages installed with: python3 -m pip install --user <package>
 
 # Set environment variables for determinism (BEFORE running Python)
 export PYTHONHASHSEED=42

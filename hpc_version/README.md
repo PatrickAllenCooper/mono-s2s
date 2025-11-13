@@ -42,16 +42,12 @@ The full encoder/decoder remains non-monotonic due to LayerNorm, residual connec
 # SSH to Alpine
 ssh your_username@login.rc.colorado.edu
 
-# Find available Python modules
-module spider python
+# Check system Python (Alpine has python3 by default)
+which python3
+python3 --version  # Should show Python 3.x
 
-# Load required modules (Alpine-specific names)
-module load anaconda
-# OR
-module load python  # Use whatever version is available
-
-# Load CUDA for GPU support
-module load cuda
+# No modules needed - Alpine uses system Python
+# CUDA drivers are available on compute nodes automatically
 ```
 
 ### 1. Setup (5 minutes)
@@ -62,16 +58,14 @@ cd $HOME
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# Option A: Use Anaconda (recommended for Alpine)
-module load anaconda
-conda create -n mono_s2s python=3.10 -y
-conda activate mono_s2s
-conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
-pip install transformers datasets rouge-score scipy pandas tqdm
+# Install PyTorch with CUDA support (to your home directory)
+python3 -m pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Option B: Use system Python + pip
-module load python
-pip install --user torch transformers datasets rouge-score scipy pandas tqdm
+# Install other required packages
+python3 -m pip install --user transformers datasets rouge-score scipy pandas tqdm
+
+# Verify PyTorch and CUDA
+python3 -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 
 # Validate setup
 ./validate_setup.sh

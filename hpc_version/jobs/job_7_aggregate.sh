@@ -20,12 +20,10 @@ echo "Node: $SLURM_NODELIST"
 echo "Started: $(date)"
 echo "=========================================="
 
-# Load modules
-module purge
-module load anaconda  # Use anaconda on Alpine
+# Load modules (no GPU needed for aggregation)
+module purge 2>/dev/null || true
 
-# Activate conda environment
-conda activate mono_s2s 2>/dev/null || true
+# Use system Python3
 
 # Set environment variables
 export PYTHONHASHSEED=42
