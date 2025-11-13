@@ -53,19 +53,23 @@ python3 --version  # Should show Python 3.x
 ### 1. Setup (5 minutes)
 
 ```bash
-# Clone/transfer repository
-cd $HOME
+# Clone/transfer repository to /projects (larger disk space)
+cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# Install PyTorch with CUDA support (to your home directory)
+# Install PyTorch with CUDA support (installs to ~/.local)
 python3 -m pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 # Install other required packages
 python3 -m pip install --user transformers datasets rouge-score scipy pandas tqdm
 
-# Verify PyTorch and CUDA
-python3 -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+# Verify PyTorch installation
+python3 -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+# Note: CUDA will show False on login nodes, True on GPU compute nodes
+
+# Make scripts executable
+chmod +x run_all.sh jobs/*.sh scripts/*.py
 
 # Validate setup
 ./validate_setup.sh
@@ -76,25 +80,27 @@ python3 -c "import torch; print(f'PyTorch {torch.__version__}'); print(f'CUDA av
 Edit `configs/experiment_config.py`:
 
 ```python
-# Lines 23-24: Paths (auto-configured on Alpine)
-SCRATCH_DIR = os.environ.get("SCRATCH", "/scratch/alpine/your_username")
-PROJECT_DIR = os.environ.get("PROJECT", "/pl/active/your_project")
+# Lines 23-24: Verify paths (environment variables auto-populate on Alpine)
+# SCRATCH_DIR = os.environ.get("SCRATCH", "/scratch/alpine/your_username")
+# PROJECT_DIR = os.environ.get("PROJECT", "/pl/active/your_project")
+# These should work automatically - $SCRATCH and $PROJECT are set by SLURM
 
-# Lines 147-148: Alpine A100 partition
-SLURM_PARTITION = "aa100"  # A100 GPU partition on Alpine
-SLURM_QOS = "normal"
+# Line 147: Verify GPU partition
+SLURM_PARTITION = "aa100"  # A100 GPUs on Alpine
 ```
+
+**Storage Layout:**
+- **Code:** `/projects/$USER/mono-s2s/` (where you cloned - persistent, backed up)
+- **Scratch:** `$SCRATCH/mono_s2s_work/` (temporary files, fast I/O, auto-cleaned after 90 days)
+- **Results:** `$PROJECT/mono_s2s_final_results/` (final results, persistent, backed up)
 
 ### 3. Deploy (1 command)
 
 ```bash
-# Make executable
-chmod +x run_all.sh jobs/*.sh scripts/*.py
-
 # Submit full pipeline
 ./run_all.sh
 
-# OR specify custom seed
+# OR specify a custom seed
 ./run_all.sh 42
 ```
 

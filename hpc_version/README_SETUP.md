@@ -47,7 +47,12 @@ All 7 stages are now fully implemented:
 ### Step 1: Validate Your Setup
 
 ```bash
-cd hpc_version
+# Clone to /projects for larger disk space
+cd /projects/$USER
+git clone https://github.com/PatrickAllenCooper/mono-s2s.git
+cd mono-s2s/hpc_version
+
+# Validate environment
 ./validate_setup.sh
 ```
 
@@ -139,34 +144,39 @@ All use **identical**:
 
 ### Required Python Packages
 
-```bash
-# Option A: Using pip
-pip install --user torch transformers datasets rouge-score scipy pandas tqdm matplotlib
+**For CURC Alpine (uses system Python3):**
 
-# Option B: Using conda (recommended)
+```bash
+# Install PyTorch with CUDA support
+python3 -m pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Install other packages
+python3 -m pip install --user transformers datasets rouge-score scipy pandas tqdm matplotlib
+
+# Verify installation
+python3 -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+```
+
+**Note:** Alpine login nodes don't expose Python modules. Use system `python3` which is always available. CUDA will be available on GPU compute nodes automatically.
+
+### Alternative: Other HPC Systems
+
+If your cluster has module system with Python/Conda:
+
+```bash
+# Find available modules
+module spider python
+module avail
+
+# Load required modules
+module load anaconda  # or python
+module load cuda
+
+# Create conda environment
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
-pip install transformers datasets rouge-score scipy pandas tqdm matplotlib
-```
-
-### CURC Module Setup
-
-```bash
-# Find available modules on Alpine
-module spider python
-module spider cuda
-
-# Load required modules (Alpine-specific)
-module load anaconda  # Recommended
-module load cuda
-
-# Create conda environment (first time only)
-conda create -n mono_s2s python=3.10 -y
-conda activate mono_s2s
-
-# OR use system Python
-module load python  # Check version with: module spider python
+pip install transformers datasets rouge-score scipy pandas tqdm
 ```
 
 ---
@@ -218,9 +228,33 @@ ls -la $SCRATCH/mono_s2s_work/*.flag
 
 ---
 
+## 📂 Storage Best Practices
+
+**Always clone to `/projects/$USER/` not `$HOME`:**
+- `/projects/` has much larger quota (typically TBs vs GBs)
+- Persistent and backed up
+- Good for code, environments, and permanent files
+
+**Use `$SCRATCH` for temporary work:**
+- Fast I/O, not backed up
+- Auto-cleaned after 90 days of inactivity
+- Perfect for checkpoints, data cache, intermediate results
+
+**Copy final results to `$PROJECT`:**
+- Long-term persistent storage
+- Backed up regularly
+- The pipeline automatically copies results here
+
 ## 📂 Output Structure
 
-### Working Directory (Scratch)
+### Code Location (persistent, backed up)
+
+```
+/projects/$USER/mono-s2s/hpc_version/
+└── (Your code and scripts - cloned here)
+```
+
+### Working Directory (Scratch - temporary, auto-cleaned after 90 days)
 
 ```
 $SCRATCH/mono_s2s_work/
@@ -251,12 +285,14 @@ $SCRATCH/mono_s2s_results/
 └── experiment_summary.txt         ★ HUMAN-READABLE
 ```
 
-### Permanent Storage (Project)
+### Permanent Storage (Project - persistent, backed up)
 
 ```
 $PROJECT/mono_s2s_final_results/
-└── (Copy of all results from scratch)
+└── (Copy of all results from scratch - kept permanently)
 ```
+
+**Important:** Always work from `/projects/$USER/` for code to ensure you have enough disk space.
 
 ---
 
