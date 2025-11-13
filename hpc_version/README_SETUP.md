@@ -47,11 +47,11 @@ All 7 stages are now fully implemented:
 ### Step 1: Validate Your Setup
 
 ```bash
-# Install Miniconda (if not already installed)
-cd ~
+# Install Miniconda to /projects (NOT $HOME - home directory is too small!)
+cd /projects/$USER
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
-$HOME/miniconda3/bin/conda init bash
+bash Miniconda3-latest-Linux-x86_64.sh -b -p /projects/$USER/miniconda3
+/projects/$USER/miniconda3/bin/conda init bash
 source ~/.bashrc
 
 # Create conda environment
@@ -162,11 +162,11 @@ All use **identical**:
 **For CURC Alpine (Python 3.6.8 is too old - use Miniconda):**
 
 ```bash
-# 1. Install Miniconda (one-time setup)
-cd ~
+# 1. Install Miniconda to /projects (NOT $HOME - home dir is too small!)
+cd /projects/$USER
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
-$HOME/miniconda3/bin/conda init bash
+bash Miniconda3-latest-Linux-x86_64.sh -b -p /projects/$USER/miniconda3
+/projects/$USER/miniconda3/bin/conda init bash
 source ~/.bashrc
 
 # 2. Create conda environment with Python 3.10

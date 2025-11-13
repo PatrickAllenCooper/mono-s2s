@@ -24,9 +24,9 @@ echo "=========================================="
 module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
-# Activate conda environment
-source $HOME/miniconda3/etc/profile.d/conda.sh 2>/dev/null || true
-conda activate mono_s2s 2>/dev/null || true
+# Activate conda environment (installed to /projects)
+CONDA_BASE="/projects/$USER/miniconda3"
+source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s2s
 
 # Set environment variables
 export PYTHONHASHSEED=42
