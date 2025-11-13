@@ -22,14 +22,15 @@ echo "=========================================="
 
 # Load modules (customize for your HPC)
 module purge
-module load python/3.10.0  # Adjust version as needed
-module load cuda/11.8      # Adjust version as needed
+module load anaconda  # Use anaconda on Alpine
+# OR use: module load python (and check available versions with: module spider python)
+module load cuda      # Load CUDA for GPU support
 
-# Activate virtual environment (if using)
+# Activate conda environment (if you created one)
+conda activate mono_s2s 2>/dev/null || true  # Ignore error if not using conda
+
+# OR activate virtual environment (if using venv instead)
 # source /path/to/venv/bin/activate
-
-# Or load conda environment
-# conda activate mono_s2s
 
 # Set environment variables for determinism (BEFORE running Python)
 export PYTHONHASHSEED=42

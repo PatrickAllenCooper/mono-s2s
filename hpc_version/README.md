@@ -42,9 +42,16 @@ The full encoder/decoder remains non-monotonic due to LayerNorm, residual connec
 # SSH to Alpine
 ssh your_username@login.rc.colorado.edu
 
-# Load required modules
-module load python/3.10.0
-module load cuda/11.8
+# Find available Python modules
+module spider python
+
+# Load required modules (Alpine-specific names)
+module load anaconda
+# OR
+module load python  # Use whatever version is available
+
+# Load CUDA for GPU support
+module load cuda
 ```
 
 ### 1. Setup (5 minutes)
@@ -52,10 +59,18 @@ module load cuda/11.8
 ```bash
 # Clone/transfer repository
 cd $HOME
-git clone <your-repo-url> mono-s2s
+git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# Install dependencies (one-time)
+# Option A: Use Anaconda (recommended for Alpine)
+module load anaconda
+conda create -n mono_s2s python=3.10 -y
+conda activate mono_s2s
+conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+pip install transformers datasets rouge-score scipy pandas tqdm
+
+# Option B: Use system Python + pip
+module load python
 pip install --user torch transformers datasets rouge-score scipy pandas tqdm
 
 # Validate setup

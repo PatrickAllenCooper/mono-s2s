@@ -22,8 +22,11 @@ echo "=========================================="
 
 # Load modules
 module purge
-module load python/3.10.0
-module load cuda/11.8
+module load anaconda  # Use anaconda on Alpine
+module load cuda
+
+# Activate conda environment
+conda activate mono_s2s 2>/dev/null || true
 
 # Set environment variables
 export PYTHONHASHSEED=42

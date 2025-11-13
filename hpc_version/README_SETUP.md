@@ -153,13 +153,20 @@ pip install transformers datasets rouge-score scipy pandas tqdm matplotlib
 ### CURC Module Setup
 
 ```bash
-# Load required modules (add to your job scripts)
-module load python/3.10.0
-module load cuda/11.8
+# Find available modules on Alpine
+module spider python
+module spider cuda
 
-# Or use Anaconda
-module load anaconda
+# Load required modules (Alpine-specific)
+module load anaconda  # Recommended
+module load cuda
+
+# Create conda environment (first time only)
+conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
+
+# OR use system Python
+module load python  # Check version with: module spider python
 ```
 
 ---
