@@ -1,5 +1,0 @@
-We need to implement a CURC-compatible version of our code here in a sub directory for exeucution as a series of jobs on 
-these HPC resources. Let us do so here. Consider how to break down the code into a series of slurm scripts
-each of which can be run and interogated for errors before proceeding.
-
-Do so here.
