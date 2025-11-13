@@ -23,7 +23,9 @@ echo "=========================================="
 # Load modules (no GPU needed for aggregation)
 module purge 2>/dev/null || true
 
-# Use system Python3
+# Activate conda environment
+source $HOME/miniconda3/etc/profile.d/conda.sh 2>/dev/null || true
+conda activate mono_s2s 2>/dev/null || true
 
 # Set environment variables
 export PYTHONHASHSEED=42

@@ -47,10 +47,25 @@ All 7 stages are now fully implemented:
 ### Step 1: Validate Your Setup
 
 ```bash
+# Install Miniconda (if not already installed)
+cd ~
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
+$HOME/miniconda3/bin/conda init bash
+source ~/.bashrc
+
+# Create conda environment
+conda create -n mono_s2s python=3.10 -y
+conda activate mono_s2s
+
 # Clone to /projects for larger disk space
 cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
+
+# Install dependencies
+conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+pip install transformers datasets rouge-score scipy pandas tqdm
 
 # Validate environment
 ./validate_setup.sh
@@ -144,20 +159,31 @@ All use **identical**:
 
 ### Required Python Packages
 
-**For CURC Alpine (uses system Python3):**
+**For CURC Alpine (Python 3.6.8 is too old - use Miniconda):**
 
 ```bash
-# Install PyTorch with CUDA support
-python3 -m pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# 1. Install Miniconda (one-time setup)
+cd ~
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
+$HOME/miniconda3/bin/conda init bash
+source ~/.bashrc
 
-# Install other packages
-python3 -m pip install --user transformers datasets rouge-score scipy pandas tqdm matplotlib
+# 2. Create conda environment with Python 3.10
+conda create -n mono_s2s python=3.10 -y
+conda activate mono_s2s
 
-# Verify installation
-python3 -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+# 3. Install PyTorch with CUDA support
+conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+
+# 4. Install other packages
+pip install transformers datasets rouge-score scipy pandas tqdm matplotlib
+
+# 5. Verify installation
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 ```
 
-**Note:** Alpine login nodes don't expose Python modules. Use system `python3` which is always available. CUDA will be available on GPU compute nodes automatically.
+**Note:** Alpine's system Python 3.6.8 is too old for modern PyTorch. Miniconda provides a local Python 3.10 installation. CUDA will be available on GPU compute nodes automatically.
 
 ### Alternative: Other HPC Systems
 

@@ -27,8 +27,10 @@ module purge 2>/dev/null || true
 # Try to load CUDA if available (ignore errors)
 module load cuda 2>/dev/null || true
 
-# Use system Python3 (always available on Alpine)
-# Packages installed with: python3 -m pip install --user <package>
+# Activate conda environment (installed via Miniconda)
+# This gives us Python 3.10+ (system Python 3.6.8 is too old)
+source $HOME/miniconda3/etc/profile.d/conda.sh 2>/dev/null || true
+conda activate mono_s2s 2>/dev/null || true
 
 # Set environment variables for determinism (BEFORE running Python)
 export PYTHONHASHSEED=42

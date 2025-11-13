@@ -42,30 +42,37 @@ The full encoder/decoder remains non-monotonic due to LayerNorm, residual connec
 # SSH to Alpine
 ssh your_username@login.rc.colorado.edu
 
-# Check system Python (Alpine has python3 by default)
-which python3
-python3 --version  # Should show Python 3.x
+# Check system Python version
+python3 --version  # Alpine has Python 3.6.8 (too old for PyTorch)
 
-# No modules needed - Alpine uses system Python
-# CUDA drivers are available on compute nodes automatically
+# Install Miniconda for newer Python (one-time setup)
+cd ~
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda3
+$HOME/miniconda3/bin/conda init bash
+source ~/.bashrc  # Reload shell configuration
 ```
 
 ### 1. Setup (5 minutes)
 
 ```bash
-# Clone/transfer repository to /projects (larger disk space)
+# Create conda environment with Python 3.10
+conda create -n mono_s2s python=3.10 -y
+conda activate mono_s2s
+
+# Clone repository to /projects (larger disk space)
 cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# Install PyTorch with CUDA support (installs to ~/.local)
-python3 -m pip install --user torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# Install PyTorch with CUDA support
+conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
 # Install other required packages
-python3 -m pip install --user transformers datasets rouge-score scipy pandas tqdm
+pip install transformers datasets rouge-score scipy pandas tqdm
 
-# Verify PyTorch installation
-python3 -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+# Verify installation
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 # Note: CUDA will show False on login nodes, True on GPU compute nodes
 
 # Make scripts executable
@@ -97,6 +104,9 @@ SLURM_PARTITION = "aa100"  # A100 GPUs on Alpine
 ### 3. Deploy (1 command)
 
 ```bash
+# Ensure conda environment is activated
+conda activate mono_s2s
+
 # Submit full pipeline
 ./run_all.sh
 
