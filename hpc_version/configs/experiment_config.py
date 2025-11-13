@@ -18,8 +18,15 @@ class ExperimentConfig:
     # ======================================================================
     
     # HPC paths - EDIT THESE FOR YOUR CLUSTER
-    SCRATCH_DIR = os.environ.get("SCRATCH", "/scratch/your_username")
+    # Default to environment variables, fall back to placeholders
+    # On CURC clusters, $SCRATCH and $PROJECT are automatically set
+    SCRATCH_DIR = os.environ.get("SCRATCH", "/scratch/summit/your_username")
     PROJECT_DIR = os.environ.get("PROJECT", "/projects/your_project")
+    
+    # CURC Cluster-Specific Examples:
+    # Summit:  SCRATCH=/scratch/summit/$USER, PROJECT=/projects/$USER
+    # Alpine:  SCRATCH=/scratch/alpine/$USER, PROJECT=/pl/active/$USER
+    # Blanca:  SCRATCH=/rc_scratch/$USER, PROJECT=/projects/your_group
     
     # Experiment directories (created automatically)
     WORK_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_work")
@@ -134,8 +141,11 @@ class ExperimentConfig:
     # ======================================================================
     
     # SLURM partition (edit for your cluster)
-    SLURM_PARTITION = "gpu"  # or "blanca-ics", "aa100", etc.
-    SLURM_QOS = "normal"
+    # Summit: "shas" (Haswell GPU nodes) or "sgpu" (general GPU)
+    # Alpine: "aa100" (A100 GPUs) or "ami100" (MI100 GPUs)
+    # Blanca: "blanca-ics" or your specific condo partition
+    SLURM_PARTITION = "shas"  # Change this for your cluster
+    SLURM_QOS = "normal"  # Or "blanca-ics" for Blanca
     
     # Resource requests
     SLURM_NODES = 1
