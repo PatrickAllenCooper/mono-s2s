@@ -45,7 +45,7 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 echo ""
 
 # Navigate and run
-cd $(dirname $0)/../scripts
+cd $SLURM_SUBMIT_DIR/scripts
 
 echo "Evaluating ALL THREE models on all test datasets..."
 echo "Models: Standard T5, Baseline T5, Monotonic T5"

@@ -45,7 +45,7 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 echo ""
 
 # Navigate and run
-cd $(dirname $0)/../scripts
+cd $SLURM_SUBMIT_DIR/scripts
 
 echo "Running UAT (Universal Adversarial Trigger) attacks..."
 echo "Learning model-specific triggers with multiple restarts"

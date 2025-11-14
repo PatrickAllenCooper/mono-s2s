@@ -34,7 +34,7 @@ export SCRATCH=${SCRATCH:-/scratch/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
 # Navigate and run
-cd $(dirname $0)/../scripts
+cd $SLURM_SUBMIT_DIR/scripts
 
 echo "Aggregating all results..."
 echo "Creating comparison tables"

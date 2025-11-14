@@ -59,8 +59,8 @@ echo "  Seed: $EXPERIMENT_SEED"
 echo "  Scratch: $SCRATCH"
 echo ""
 
-# Navigate to script directory
-cd $(dirname $0)/../scripts
+# Navigate to script directory using SLURM_SUBMIT_DIR
+cd $SLURM_SUBMIT_DIR/scripts
 
 # Run setup stage
 echo "Running stage 0: setup..."

@@ -45,7 +45,7 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
 echo ""
 
 # Navigate and run
-cd $(dirname $0)/../scripts
+cd $SLURM_SUBMIT_DIR/scripts
 
 echo "Training MONOTONIC model (W≥0 FFN constraints)..."
 echo "Using softplus reparametrization: W = softplus(V)"
