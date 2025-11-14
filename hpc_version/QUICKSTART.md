@@ -51,14 +51,14 @@ SLURM_PARTITION = "shas"  # Options: shas, aa100, blanca-ics, etc.
 # Option A: Using modules (quick)
 module load python/3.10.0
 module load cuda/11.8
-pip install --user transformers datasets torch rouge-score pandas scipy matplotlib tqdm
+pip install --user transformers datasets torch rouge-score pandas scipy tqdm sentencepiece protobuf
 
 # Option B: Using conda (recommended for reproducibility)
 module load anaconda
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
-pip install transformers datasets rouge-score pandas scipy matplotlib tqdm
+pip install transformers datasets rouge-score pandas scipy tqdm sentencepiece protobuf
 ```
 
 ---

@@ -75,7 +75,7 @@ cd mono-s2s/hpc_version
 
 # Install dependencies
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
-pip install transformers datasets rouge-score scipy pandas tqdm
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
 
 # Validate environment
 ./validate_setup.sh
@@ -232,7 +232,7 @@ conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
 # OR if conda fails:
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-pip install transformers datasets rouge-score scipy pandas tqdm
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
 ```
 
 **Note:** If you encounter `iJIT_NotifyEvent` or other library errors, always use pip wheels for PyTorch instead of conda.
