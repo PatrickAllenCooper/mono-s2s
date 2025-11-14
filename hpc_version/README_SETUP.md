@@ -192,17 +192,20 @@ which conda  # Must show: /projects/$USER/miniconda3/bin/conda
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
 
-# 5. Install PyTorch with CUDA support (~3GB download)
-conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+# 5. Verify environment location
+conda info --envs  # mono_s2s should be in /projects/$USER/miniconda3/envs/
 
-# 6. Install other packages
-pip install transformers datasets rouge-score scipy pandas tqdm matplotlib
+# 6. Install PyTorch via pip wheels (conda has MKL library conflicts on Alpine)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# 7. Verify installation
+# 7. Install other packages
+pip install transformers datasets rouge-score scipy pandas tqdm
+
+# 8. Verify PyTorch installation
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
 
-# 8. Verify conda environment location
-conda info --envs  # mono_s2s should be in /projects/$USER/miniconda3/envs/
+# 9. Verify all imports work
+python -c "import torch; import transformers; import datasets; from rouge_score import rouge_scorer; print('✓ All packages work!')"
 ```
 
 **Note:** Alpine's system Python 3.6.8 is too old for modern PyTorch. Miniconda provides a local Python 3.10 installation. CUDA will be available on GPU compute nodes automatically.
@@ -223,9 +226,16 @@ module load cuda
 # Create conda environment
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
+
+# Try conda first, if library errors occur, use pip wheels
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+# OR if conda fails:
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
 pip install transformers datasets rouge-score scipy pandas tqdm
 ```
+
+**Note:** If you encounter `iJIT_NotifyEvent` or other library errors, always use pip wheels for PyTorch instead of conda.
 
 ---
 

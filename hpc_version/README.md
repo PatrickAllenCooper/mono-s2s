@@ -74,15 +74,18 @@ cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# Install PyTorch with CUDA support
-conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
+# Install PyTorch via pip wheels (conda has MKL library conflicts on Alpine)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 # Install other required packages
 pip install transformers datasets rouge-score scipy pandas tqdm
 
-# Verify installation
-python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
-# Note: CUDA will show False on login nodes, True on GPU compute nodes
+# Verify PyTorch works
+python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}')"
+# Note: CUDA shows False on login nodes, True on GPU compute nodes
+
+# Verify all imports work
+python -c "import torch; import transformers; import datasets; from rouge_score import rouge_scorer; print('✓ All packages work!')"
 
 # Make scripts executable
 chmod +x run_all.sh jobs/*.sh scripts/*.py
