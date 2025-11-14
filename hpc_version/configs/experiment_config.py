@@ -21,11 +21,12 @@ class ExperimentConfig:
     # Default to environment variables, fall back to Alpine defaults
     # On CURC clusters, $SCRATCH and $PROJECT are automatically set by SLURM
     SCRATCH_DIR = os.environ.get("SCRATCH", f"/scratch/alpine/{os.environ.get('USER', 'your_username')}")
-    PROJECT_DIR = os.environ.get("PROJECT", f"/pl/active/{os.environ.get('USER', 'your_username')}")
+    PROJECT_DIR = os.environ.get("PROJECT", f"/projects/{os.environ.get('USER', 'your_username')}")
     
     # CURC Cluster-Specific Examples:
     # Summit:  SCRATCH=/scratch/summit/$USER, PROJECT=/projects/$USER
-    # Alpine:  SCRATCH=/scratch/alpine/$USER, PROJECT=/pl/active/$USER (default above)
+    # Alpine:  SCRATCH=/scratch/alpine/$USER, PROJECT=/projects/$USER (default above)
+    #          Note: /pl/active/$USER requires PetaLibrary allocation
     # Blanca:  SCRATCH=/rc_scratch/$USER, PROJECT=/projects/your_group
     
     # Experiment directories (created automatically)

@@ -48,7 +48,7 @@ export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 
 # Set HPC paths for Alpine
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
-export PROJECT=${PROJECT:-/pl/active/$USER}
+export PROJECT=${PROJECT:-/projects/$USER}
 
 # Print environment info
 echo ""

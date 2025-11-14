@@ -37,7 +37,7 @@ export TOKENIZERS_PARALLELISM=false
 export CUDA_LAUNCH_BLOCKING=1
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
-export PROJECT=${PROJECT:-/pl/active/$USER}
+export PROJECT=${PROJECT:-/projects/$USER}
 
 # Print GPU info
 echo "GPU Information:"

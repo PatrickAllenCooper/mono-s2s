@@ -34,7 +34,7 @@ export CUBLAS_WORKSPACE_CONFIG=:16:8
 export TOKENIZERS_PARALLELISM=false
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
-export PROJECT=${PROJECT:-/pl/active/$USER}
+export PROJECT=${PROJECT:-/projects/$USER}
 
 # Navigate and run
 cd $SLURM_SUBMIT_DIR/scripts
