@@ -77,8 +77,8 @@ cd mono-s2s/hpc_version
 # Install PyTorch via pip wheels (conda has MKL library conflicts on Alpine)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# Install other required packages
-pip install transformers datasets rouge-score scipy pandas tqdm
+# Install other required packages (including sentencepiece for T5)
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
 
 # Verify PyTorch works
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}')"
