@@ -46,9 +46,9 @@ export CUDA_LAUNCH_BLOCKING=1
 # Set experiment seed (can be overridden)
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 
-# Set HPC paths (customize)
-export SCRATCH=${SCRATCH:-/scratch/$USER}
-export PROJECT=${PROJECT:-/projects/$USER}
+# Set HPC paths for Alpine
+export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
+export PROJECT=${PROJECT:-/pl/active/$USER}
 
 # Print environment info
 echo ""

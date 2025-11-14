@@ -36,8 +36,8 @@ export CUBLAS_WORKSPACE_CONFIG=:16:8
 export TOKENIZERS_PARALLELISM=false
 export CUDA_LAUNCH_BLOCKING=1
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
-export SCRATCH=${SCRATCH:-/scratch/$USER}
-export PROJECT=${PROJECT:-/projects/$USER}
+export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
+export PROJECT=${PROJECT:-/pl/active/$USER}
 
 # Print GPU info
 echo "GPU Information:"

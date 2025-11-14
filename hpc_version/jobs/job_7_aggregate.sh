@@ -30,8 +30,8 @@ source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s
 # Set environment variables
 export PYTHONHASHSEED=42
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
-export SCRATCH=${SCRATCH:-/scratch/$USER}
-export PROJECT=${PROJECT:-/projects/$USER}
+export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
+export PROJECT=${PROJECT:-/pl/active/$USER}
 
 # Navigate and run
 cd $SLURM_SUBMIT_DIR/scripts
