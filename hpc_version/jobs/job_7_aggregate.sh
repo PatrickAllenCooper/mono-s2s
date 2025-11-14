@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=mono_s2s_aggregate
-#SBATCH --partition=gpu
+#SBATCH --partition=aa100
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
