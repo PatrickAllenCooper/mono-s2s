@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=mono_s2s_data
-#SBATCH --partition=aa100
+#SBATCH --partition=amilan
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
