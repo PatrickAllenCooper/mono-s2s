@@ -33,6 +33,11 @@ export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
+# Redirect HuggingFace cache to scratch
+export HF_HOME="$SCRATCH/hf_cache"
+export HF_DATASETS_CACHE="$SCRATCH/hf_cache/datasets"
+export TRANSFORMERS_CACHE="$SCRATCH/hf_cache/transformers"
+
 # Navigate and run
 cd $SLURM_SUBMIT_DIR/scripts
 

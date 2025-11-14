@@ -39,6 +39,11 @@ export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
+# Redirect HuggingFace cache to scratch
+export HF_HOME="$SCRATCH/hf_cache"
+export HF_DATASETS_CACHE="$SCRATCH/hf_cache/datasets"
+export TRANSFORMERS_CACHE="$SCRATCH/hf_cache/transformers"
+
 # Print GPU info
 echo "GPU Information:"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
