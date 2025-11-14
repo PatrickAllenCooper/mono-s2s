@@ -62,113 +62,191 @@ echo ""
 
 # Stage 0: Setup
 echo "Stage 0: Setup and environment verification..."
-JOB0=$(sbatch --parsable jobs/job_0_setup.sh)
-echo "  Job ID: $JOB0"
-
-check_job_status $JOB0 "stage_0_setup" || {
-    echo "❌ Setup failed. Aborting."
-    exit 1
-}
+if [ -f "${SCRATCH}/mono_s2s_work/stage_0_setup_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB0="completed"
+else
+    JOB0=$(sbatch --parsable jobs/job_0_setup.sh)
+    echo "  Job ID: $JOB0"
+    check_job_status $JOB0 "stage_0_setup" || {
+        echo "❌ Setup failed. Aborting."
+        exit 1
+    }
+fi
 
 # Stage 1: Data Preparation
 echo ""
 echo "Stage 1: Data preparation..."
-JOB1=$(sbatch --parsable --dependency=afterok:$JOB0 jobs/job_1_data.sh)
-echo "  Job ID: $JOB1"
-echo "  Depends on: $JOB0"
-
-check_job_status $JOB1 "stage_1_data_prep" || {
-    echo "❌ Data preparation failed. Aborting."
-    exit 1
-}
+if [ -f "${SCRATCH}/mono_s2s_work/stage_1_data_prep_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB1="completed"
+else
+    if [ "$JOB0" = "completed" ]; then
+        JOB1=$(sbatch --parsable jobs/job_1_data.sh)
+    else
+        JOB1=$(sbatch --parsable --dependency=afterok:$JOB0 jobs/job_1_data.sh)
+    fi
+    echo "  Job ID: $JOB1"
+    check_job_status $JOB1 "stage_1_data_prep" || {
+        echo "❌ Data preparation failed. Aborting."
+        exit 1
+    }
+fi
 
 # Stage 2: Train Baseline (depends on data)
 echo ""
 echo "Stage 2: Train baseline model (unconstrained)..."
-JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh)
-echo "  Job ID: $JOB2"
-echo "  Depends on: $JOB1"
-echo "  ⏱  Expected time: 4-12 hours"
+if [ -f "${SCRATCH}/mono_s2s_work/stage_2_train_baseline_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB2="completed"
+else
+    if [ "$JOB1" = "completed" ]; then
+        JOB2=$(sbatch --parsable jobs/job_2_baseline.sh)
+    else
+        JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh)
+    fi
+    echo "  Job ID: $JOB2"
+    echo "  ⏱  Expected time: 4-12 hours"
+fi
 
 # Stage 3: Train Monotonic (depends on data, can run parallel with baseline)
 echo ""
 echo "Stage 3: Train monotonic model (W≥0 constraints)..."
-JOB3=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_3_monotonic.sh)
-echo "  Job ID: $JOB3"
-echo "  Depends on: $JOB1"
-echo "  ⏱  Expected time: 4-12 hours"
-echo "  ℹ️  Runs in PARALLEL with baseline training"
+if [ -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB3="completed"
+else
+    if [ "$JOB1" = "completed" ]; then
+        JOB3=$(sbatch --parsable jobs/job_3_monotonic.sh)
+    else
+        JOB3=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_3_monotonic.sh)
+    fi
+    echo "  Job ID: $JOB3"
+    echo "  ⏱  Expected time: 4-12 hours"
+    echo "  ℹ️  Runs in PARALLEL with baseline training"
+fi
 
-# Wait for both training jobs
-echo ""
-echo "⏳ Waiting for training jobs to complete..."
-echo "  This may take 4-12 hours depending on configuration"
-echo "  Monitor progress with: squeue -u $USER"
-echo ""
+# Wait for both training jobs (only if they were submitted)
+if [ "$JOB2" != "completed" ] || [ "$JOB3" != "completed" ]; then
+    echo ""
+    echo "⏳ Waiting for training jobs to complete..."
+    echo "  This may take 4-12 hours depending on configuration"
+    echo "  Monitor progress with: squeue -u $USER"
+    echo ""
+fi
 
-check_job_status $JOB2 "stage_2_train_baseline" || {
-    echo "❌ Baseline training failed. Aborting."
-    exit 1
-}
+if [ "$JOB2" != "completed" ]; then
+    check_job_status $JOB2 "stage_2_train_baseline" || {
+        echo "❌ Baseline training failed. Aborting."
+        exit 1
+    }
+fi
 
-check_job_status $JOB3 "stage_3_train_monotonic" || {
-    echo "❌ Monotonic training failed. Aborting."
-    exit 1
-}
+if [ "$JOB3" != "completed" ]; then
+    check_job_status $JOB3 "stage_3_train_monotonic" || {
+        echo "❌ Monotonic training failed. Aborting."
+        exit 1
+    }
+fi
 
 # Stage 4: Comprehensive Evaluation (depends on both models)
 echo ""
 echo "Stage 4: Comprehensive evaluation (all 3 models, all 3 test sets)..."
-JOB4=$(sbatch --parsable --dependency=afterok:$JOB2:$JOB3 jobs/job_4_evaluate.sh)
-echo "  Job ID: $JOB4"
-echo "  Depends on: $JOB2, $JOB3"
-echo "  ⏱  Expected time: 2-4 hours"
-
-check_job_status $JOB4 "stage_4_evaluate" || {
-    echo "❌ Evaluation failed. Aborting."
-    exit 1
-}
+if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB4="completed"
+else
+    # Build dependency list (only on jobs that actually ran)
+    DEPS=""
+    [ "$JOB2" != "completed" ] && DEPS="$JOB2"
+    [ "$JOB3" != "completed" ] && DEPS="$DEPS:$JOB3"
+    DEPS=$(echo $DEPS | sed 's/^://') # Remove leading colon
+    
+    if [ -n "$DEPS" ]; then
+        JOB4=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_4_evaluate.sh)
+    else
+        JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh)
+    fi
+    echo "  Job ID: $JOB4"
+    echo "  ⏱  Expected time: 2-4 hours"
+    
+    check_job_status $JOB4 "stage_4_evaluate" || {
+        echo "❌ Evaluation failed. Aborting."
+        exit 1
+    }
+fi
 
 # Stage 5: UAT Attacks (depends on evaluation)
 echo ""
 echo "Stage 5: UAT attacks with transfer matrix..."
-JOB5=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_5_uat.sh)
-echo "  Job ID: $JOB5"
-echo "  Depends on: $JOB4"
-echo "  ⏱  Expected time: 2-3 hours"
+if [ -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB5="completed"
+else
+    if [ "$JOB4" != "completed" ]; then
+        JOB5=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_5_uat.sh)
+    else
+        JOB5=$(sbatch --parsable jobs/job_5_uat.sh)
+    fi
+    echo "  Job ID: $JOB5"
+    echo "  ⏱  Expected time: 2-3 hours"
+fi
 
 # Stage 6: HotFlip Attacks (can run parallel with UAT)
 echo ""
 echo "Stage 6: HotFlip attacks..."
-JOB6=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_6_hotflip.sh)
-echo "  Job ID: $JOB6"
-echo "  Depends on: $JOB4"
-echo "  ⏱  Expected time: 1-2 hours"
-echo "  ℹ️  Runs in PARALLEL with UAT attacks"
+if [ -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB6="completed"
+else
+    if [ "$JOB4" != "completed" ]; then
+        JOB6=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_6_hotflip.sh)
+    else
+        JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh)
+    fi
+    echo "  Job ID: $JOB6"
+    echo "  ⏱  Expected time: 1-2 hours"
+    echo "  ℹ️  Runs in PARALLEL with UAT attacks"
+fi
 
-# Wait for attack jobs
-check_job_status $JOB5 "stage_5_uat" || {
-    echo "❌ UAT attacks failed. Aborting."
-    exit 1
-}
-
-check_job_status $JOB6 "stage_6_hotflip" || {
-    echo "❌ HotFlip attacks failed. Aborting."
-    exit 1
-}
+# Wait for attack jobs (only if they were submitted)
+if [ "$JOB5" != "completed" ] && [ "$JOB6" != "completed" ]; then
+    check_job_status $JOB5 "stage_5_uat" || {
+        echo "❌ UAT attacks failed. Aborting."
+        exit 1
+    }
+    check_job_status $JOB6 "stage_6_hotflip" || {
+        echo "❌ HotFlip attacks failed. Aborting."
+        exit 1
+    }
+fi
 
 # Stage 7: Aggregate Results (depends on all attacks)
 echo ""
 echo "Stage 7: Aggregate results and final analysis..."
-JOB7=$(sbatch --parsable --dependency=afterok:$JOB5:$JOB6 jobs/job_7_aggregate.sh)
-echo "  Job ID: $JOB7"
-echo "  Depends on: $JOB5, $JOB6"
-echo "  ⏱  Expected time: 5-15 minutes"
-
-check_job_status $JOB7 "stage_7_aggregate" || {
-    echo "❌ Result aggregation failed. Aborting."
-    exit 1
-}
+if [ -f "${SCRATCH}/mono_s2s_work/stage_7_aggregate_complete.flag" ]; then
+    echo "  ✓ Already complete, skipping..."
+    JOB7="completed"
+else
+    # Build dependency list
+    DEPS=""
+    [ "$JOB5" != "completed" ] && DEPS="$JOB5"
+    [ "$JOB6" != "completed" ] && DEPS="$DEPS:$JOB6"
+    DEPS=$(echo $DEPS | sed 's/^://') # Remove leading colon
+    
+    if [ -n "$DEPS" ]; then
+        JOB7=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_7_aggregate.sh)
+    else
+        JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh)
+    fi
+    echo "  Job ID: $JOB7"
+    echo "  ⏱  Expected time: 5-15 minutes"
+    
+    check_job_status $JOB7 "stage_7_aggregate" || {
+        echo "❌ Result aggregation failed. Aborting."
+        exit 1
+    }
+fi
 
 # All done!
 echo ""
