@@ -50,8 +50,8 @@ from utils.common_utils import (
 )
 
 # Import transformers AFTER environment setup
-from transformers import T5ForConditionalGeneration, T5Tokenizer
-from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers import T5ForConditionalGeneration, T5Tokenizer, get_linear_schedule_with_warmup
+from torch.optim import AdamW
 
 
 class MonotonicT5Trainer:
