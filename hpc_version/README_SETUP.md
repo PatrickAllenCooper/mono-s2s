@@ -198,8 +198,8 @@ conda info --envs  # mono_s2s should be in /projects/$USER/miniconda3/envs/
 # 6. Install PyTorch via pip wheels (conda has MKL library conflicts on Alpine)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
-# 7. Install other packages
-pip install transformers datasets rouge-score scipy pandas tqdm
+# 7. Install other packages (including sentencepiece for T5)
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
 
 # 8. Verify PyTorch installation
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"

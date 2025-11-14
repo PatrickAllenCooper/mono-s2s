@@ -81,8 +81,8 @@ conda info --envs
 # Install PyTorch (~3GB - needs space!)
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
-# Install other packages
-pip install transformers datasets rouge-score scipy pandas tqdm
+# Install other packages (including sentencepiece for T5)
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
 
 # Verify everything works
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA: {torch.cuda.is_available()}')"
