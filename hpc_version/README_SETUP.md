@@ -47,14 +47,24 @@ All 7 stages are now fully implemented:
 ### Step 1: Validate Your Setup
 
 ```bash
-# Install Miniconda to /projects (NOT $HOME - home directory is too small!)
+# IMPORTANT: Clean up any existing conda in $HOME (home directory is only ~5GB!)
+# Skip if you haven't installed conda before
+rm -rf ~/miniconda3
+conda env remove -n mono_s2s 2>/dev/null || true
+sed -i '/>>> conda initialize >>>/,/<<< conda initialize <<</d' ~/.bashrc
+source ~/.bashrc
+
+# Install Miniconda to /projects (where you have TBs of space!)
 cd /projects/$USER
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh -b -p /projects/$USER/miniconda3
 /projects/$USER/miniconda3/bin/conda init bash
 source ~/.bashrc
 
-# Create conda environment
+# Verify conda location
+which conda  # Should show: /projects/$USER/miniconda3/bin/conda
+
+# Create conda environment (will be created in /projects/$USER/miniconda3/envs/)
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
 
@@ -162,25 +172,37 @@ All use **identical**:
 **For CURC Alpine (Python 3.6.8 is too old - use Miniconda):**
 
 ```bash
-# 1. Install Miniconda to /projects (NOT $HOME - home dir is too small!)
+# 1. Clean up any existing conda in $HOME (home dir quota is only ~5GB!)
+rm -rf ~/miniconda3
+conda env remove -n mono_s2s 2>/dev/null || true
+sed -i '/>>> conda initialize >>>/,/<<< conda initialize <<</d' ~/.bashrc
+source ~/.bashrc
+
+# 2. Install Miniconda to /projects (where you have TBs of space!)
 cd /projects/$USER
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh -b -p /projects/$USER/miniconda3
 /projects/$USER/miniconda3/bin/conda init bash
 source ~/.bashrc
 
-# 2. Create conda environment with Python 3.10
+# 3. Verify conda is in /projects (not $HOME)
+which conda  # Must show: /projects/$USER/miniconda3/bin/conda
+
+# 4. Create conda environment with Python 3.10
 conda create -n mono_s2s python=3.10 -y
 conda activate mono_s2s
 
-# 3. Install PyTorch with CUDA support
+# 5. Install PyTorch with CUDA support (~3GB download)
 conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia -y
 
-# 4. Install other packages
+# 6. Install other packages
 pip install transformers datasets rouge-score scipy pandas tqdm matplotlib
 
-# 5. Verify installation
+# 7. Verify installation
 python -c "import torch; print(f'PyTorch: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}')"
+
+# 8. Verify conda environment location
+conda info --envs  # mono_s2s should be in /projects/$USER/miniconda3/envs/
 ```
 
 **Note:** Alpine's system Python 3.6.8 is too old for modern PyTorch. Miniconda provides a local Python 3.10 installation. CUDA will be available on GPU compute nodes automatically.

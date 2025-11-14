@@ -45,12 +45,21 @@ ssh your_username@login.rc.colorado.edu
 # Check system Python version
 python3 --version  # Alpine has Python 3.6.8 (too old for PyTorch)
 
-# Install Miniconda to /projects (NOT $HOME - home directory is too small!)
+# IMPORTANT: If you have conda in $HOME, remove it first (home directory is too small!)
+# Skip this if you haven't installed conda yet
+rm -rf ~/miniconda3
+sed -i '/>>> conda initialize >>>/,/<<< conda initialize <<</d' ~/.bashrc
+source ~/.bashrc
+
+# Install Miniconda to /projects (NOT $HOME - home has only ~5GB quota!)
 cd /projects/$USER
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 bash Miniconda3-latest-Linux-x86_64.sh -b -p /projects/$USER/miniconda3
 /projects/$USER/miniconda3/bin/conda init bash
-source ~/.bashrc  # Reload shell configuration
+source ~/.bashrc
+
+# Verify conda is in /projects
+which conda  # Should show: /projects/$USER/miniconda3/bin/conda
 ```
 
 ### 1. Setup (5 minutes)
