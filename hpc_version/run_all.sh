@@ -19,6 +19,10 @@ set -e  # Exit on error
 SEED=${1:-42}
 export EXPERIMENT_SEED=$SEED
 
+# Set SCRATCH and PROJECT for Alpine (needed for flag file checking)
+export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
+export PROJECT=${PROJECT:-/projects/$USER}
+
 echo "=========================================="
 echo "Mono-S2S HPC Experiment Orchestrator"
 echo "=========================================="
