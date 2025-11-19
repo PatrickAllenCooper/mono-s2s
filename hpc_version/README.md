@@ -211,8 +211,9 @@ class NonNegativeParametrization(nn.Module):
         return F.softplus(V)
 
 # Applied to FFN sublayers: wi, wi_0, wi_1, wo
+# Handles T5DenseActDense, T5DenseGatedActDense, and older T5DenseReluDense
 for module in model.modules():
-    if isinstance(module, T5DenseReluDense):
+    if isinstance(module, (T5DenseActDense, T5DenseGatedActDense)):
         P.register_parametrization(sub_module, "weight", 
                                   NonNegativeParametrization())
 ```

@@ -243,19 +243,58 @@ def make_model_monotonic(model):
     Note: This does NOT make the full model globally monotonic due to LayerNorm,
     residual connections, and unconstrained attention.
     """
-    from transformers.models.t5.modeling_t5 import T5DenseReluDense
+    # Try importing the FFN class - handle both old and new transformers versions
+    try:
+        from transformers.models.t5.modeling_t5 import T5DenseReluDense
+        FFN_CLASS = T5DenseReluDense
+    except ImportError:
+        try:
+            # Newer transformers versions use T5DenseActDense
+            from transformers.models.t5.modeling_t5 import T5DenseActDense
+            FFN_CLASS = T5DenseActDense
+        except ImportError:
+            try:
+                # Even newer versions use T5DenseGatedActDense
+                from transformers.models.t5.modeling_t5 import T5DenseGatedActDense
+                FFN_CLASS = T5DenseGatedActDense
+            except ImportError:
+                # Fallback: Use duck typing - find modules with FFN attributes
+                FFN_CLASS = None
     
     modified_count = 0
     
-    for module in model.modules():
-        if isinstance(module, T5DenseReluDense):
-            # Parametrize all FFN weight sublayers
-            for param_name in ["wi", "wi_0", "wi_1", "wo"]:
-                if hasattr(module, param_name):
-                    sub_module = getattr(module, param_name)
-                    if hasattr(sub_module, "weight"):
-                        P.register_parametrization(sub_module, "weight", NonNegativeParametrization())
-                        modified_count += 1
+    # If we found a class, use isinstance
+    if FFN_CLASS is not None:
+        for module in model.modules():
+            if isinstance(module, FFN_CLASS):
+                # Parametrize all FFN weight sublayers
+                for param_name in ["wi", "wi_0", "wi_1", "wo"]:
+                    if hasattr(module, param_name):
+                        sub_module = getattr(module, param_name)
+                        if hasattr(sub_module, "weight"):
+                            P.register_parametrization(sub_module, "weight", NonNegativeParametrization())
+                            modified_count += 1
+    else:
+        # Fallback: Use duck typing - find modules with FFN-like structure
+        print("  Using duck typing to find FFN layers...")
+        for name, module in model.named_modules():
+            # Check if module has FFN-like attributes (wi/wo or wi_0/wi_1/wo)
+            has_ffn_structure = (
+                (hasattr(module, "wi") and hasattr(module, "wo")) or
+                (hasattr(module, "wi_0") and hasattr(module, "wi_1") and hasattr(module, "wo"))
+            )
+            
+            if has_ffn_structure and "DenseActDense" in type(module).__name__:
+                # Parametrize all FFN weight sublayers
+                for param_name in ["wi", "wi_0", "wi_1", "wo"]:
+                    if hasattr(module, param_name):
+                        sub_module = getattr(module, param_name)
+                        if hasattr(sub_module, "weight"):
+                            P.register_parametrization(sub_module, "weight", NonNegativeParametrization())
+                            modified_count += 1
+    
+    if modified_count == 0:
+        raise RuntimeError("No FFN layers found to make monotonic! Check transformers version compatibility.")
     
     print(f"✓ Applied softplus parametrization to {modified_count} weight matrices")
     print(f"  Covers: wi, wi_0, wi_1, wo (handles gated variants)")
