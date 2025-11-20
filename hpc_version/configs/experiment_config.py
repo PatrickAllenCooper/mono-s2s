@@ -103,7 +103,7 @@ class ExperimentConfig:
     # EVALUATION CONFIGURATION
     # ======================================================================
     
-    USE_FULL_TEST_SETS = True  # Set to False for quick testing (200 samples)
+    USE_FULL_TEST_SETS = False  # Set to False for quick testing (200 samples)
     EVAL_BATCH_SIZE = 8
     
     # Quick testing sizes (when USE_FULL_TEST_SETS=False)
