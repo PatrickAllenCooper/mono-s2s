@@ -48,10 +48,10 @@ check_job_status() {
     # Check if completion flag exists
     local flag_file="${SCRATCH}/mono_s2s_work/${job_name}_complete.flag"
     if [ -f "$flag_file" ]; then
-        echo "✓ $job_name completed successfully"
+        echo "[SUCCESS] $job_name completed successfully"
         return 0
     else
-        echo "❌ $job_name FAILED - check logs/job_*_${job_id}.err"
+        echo "[FAILED] $job_name FAILED - check logs/job_*_${job_id}.err"
         return 1
     fi
 }
@@ -63,13 +63,13 @@ echo ""
 # Stage 0: Setup
 echo "Stage 0: Setup and environment verification..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_0_setup_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB0="completed"
 else
     JOB0=$(sbatch --parsable jobs/job_0_setup.sh)
     echo "  Job ID: $JOB0"
     check_job_status $JOB0 "stage_0_setup" || {
-        echo "❌ Setup failed. Aborting."
+        echo "[FAILED] Setup failed. Aborting."
         exit 1
     }
 fi
@@ -78,7 +78,7 @@ fi
 echo ""
 echo "Stage 1: Data preparation..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_1_data_prep_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB1="completed"
 else
     if [ "$JOB0" = "completed" ]; then
@@ -88,7 +88,7 @@ else
     fi
     echo "  Job ID: $JOB1"
     check_job_status $JOB1 "stage_1_data_prep" || {
-        echo "❌ Data preparation failed. Aborting."
+        echo "[FAILED] Data preparation failed. Aborting."
         exit 1
     }
 fi
@@ -97,7 +97,7 @@ fi
 echo ""
 echo "Stage 2: Train baseline model (unconstrained)..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_2_train_baseline_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB2="completed"
 else
     if [ "$JOB1" = "completed" ]; then
@@ -106,14 +106,14 @@ else
         JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh)
     fi
     echo "  Job ID: $JOB2"
-    echo "  ⏱  Expected time: 4-12 hours"
+    echo "  [TIME] Expected time: 4-12 hours"
 fi
 
 # Stage 3: Train Monotonic (depends on data, can run parallel with baseline)
 echo ""
 echo "Stage 3: Train monotonic model (W≥0 constraints)..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB3="completed"
 else
     if [ "$JOB1" = "completed" ]; then
@@ -122,14 +122,14 @@ else
         JOB3=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_3_monotonic.sh)
     fi
     echo "  Job ID: $JOB3"
-    echo "  ⏱  Expected time: 4-12 hours"
-    echo "  ℹ️  Runs in PARALLEL with baseline training"
+    echo "  [TIME] Expected time: 4-12 hours"
+    echo "  [INFO] Runs in PARALLEL with baseline training"
 fi
 
 # Wait for both training jobs (only if they were submitted)
 if [ "$JOB2" != "completed" ] || [ "$JOB3" != "completed" ]; then
     echo ""
-    echo "⏳ Waiting for training jobs to complete..."
+    echo "[WAIT] Waiting for training jobs to complete..."
     echo "  This may take 4-12 hours depending on configuration"
     echo "  Monitor progress with: squeue -u $USER"
     echo ""
@@ -137,14 +137,14 @@ fi
 
 if [ "$JOB2" != "completed" ]; then
     check_job_status $JOB2 "stage_2_train_baseline" || {
-        echo "❌ Baseline training failed. Aborting."
+        echo "[FAILED] Baseline training failed. Aborting."
         exit 1
     }
 fi
 
 if [ "$JOB3" != "completed" ]; then
     check_job_status $JOB3 "stage_3_train_monotonic" || {
-        echo "❌ Monotonic training failed. Aborting."
+        echo "[FAILED] Monotonic training failed. Aborting."
         exit 1
     }
 fi
@@ -153,7 +153,7 @@ fi
 echo ""
 echo "Stage 4: Comprehensive evaluation (all 3 models, all 3 test sets)..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB4="completed"
 else
     # Build dependency list (only on jobs that actually ran)
@@ -168,10 +168,10 @@ else
         JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh)
     fi
     echo "  Job ID: $JOB4"
-    echo "  ⏱  Expected time: 2-4 hours"
+    echo "  [TIME] Expected time: 2-4 hours"
     
     check_job_status $JOB4 "stage_4_evaluate" || {
-        echo "❌ Evaluation failed. Aborting."
+        echo "[FAILED] Evaluation failed. Aborting."
         exit 1
     }
 fi
@@ -180,7 +180,7 @@ fi
 echo ""
 echo "Stage 5: UAT attacks with transfer matrix..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB5="completed"
 else
     if [ "$JOB4" != "completed" ]; then
@@ -189,14 +189,14 @@ else
         JOB5=$(sbatch --parsable jobs/job_5_uat.sh)
     fi
     echo "  Job ID: $JOB5"
-    echo "  ⏱  Expected time: 2-3 hours"
+    echo "  [TIME] Expected time: 2-3 hours"
 fi
 
 # Stage 6: HotFlip Attacks (can run parallel with UAT)
 echo ""
 echo "Stage 6: HotFlip attacks..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB6="completed"
 else
     if [ "$JOB4" != "completed" ]; then
@@ -205,18 +205,18 @@ else
         JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh)
     fi
     echo "  Job ID: $JOB6"
-    echo "  ⏱  Expected time: 1-2 hours"
-    echo "  ℹ️  Runs in PARALLEL with UAT attacks"
+    echo "  [TIME] Expected time: 1-2 hours"
+    echo "  [INFO] Runs in PARALLEL with UAT attacks"
 fi
 
 # Wait for attack jobs (only if they were submitted)
 if [ "$JOB5" != "completed" ] && [ "$JOB6" != "completed" ]; then
     check_job_status $JOB5 "stage_5_uat" || {
-        echo "❌ UAT attacks failed. Aborting."
+        echo "[FAILED] UAT attacks failed. Aborting."
         exit 1
     }
     check_job_status $JOB6 "stage_6_hotflip" || {
-        echo "❌ HotFlip attacks failed. Aborting."
+        echo "[FAILED] HotFlip attacks failed. Aborting."
         exit 1
     }
 fi
@@ -225,7 +225,7 @@ fi
 echo ""
 echo "Stage 7: Aggregate results and final analysis..."
 if [ -f "${SCRATCH}/mono_s2s_work/stage_7_aggregate_complete.flag" ]; then
-    echo "  ✓ Already complete, skipping..."
+    echo "  [SKIP] Already complete, skipping..."
     JOB7="completed"
 else
     # Build dependency list
@@ -240,10 +240,10 @@ else
         JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh)
     fi
     echo "  Job ID: $JOB7"
-    echo "  ⏱  Expected time: 5-15 minutes"
+    echo "  [TIME] Expected time: 5-15 minutes"
     
     check_job_status $JOB7 "stage_7_aggregate" || {
-        echo "❌ Result aggregation failed. Aborting."
+        echo "[FAILED] Result aggregation failed. Aborting."
         exit 1
     }
 fi
@@ -251,7 +251,7 @@ fi
 # All done!
 echo ""
 echo "=========================================="
-echo "✅ ALL STAGES COMPLETED SUCCESSFULLY!"
+echo "[SUCCESS] ALL STAGES COMPLETED SUCCESSFULLY!"
 echo "=========================================="
 echo "Ended: $(date)"
 echo ""
