@@ -56,7 +56,7 @@ test_configs = [
     },
     {
         'name': 'SAMSum',
-        'dataset_name': 'samsum',
+        'dataset_name': 'Samsung/samsum',
         'config': None,
         'split': 'test',
         'text_field': 'dialogue',

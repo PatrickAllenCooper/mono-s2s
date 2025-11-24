@@ -122,7 +122,7 @@ class ExperimentConfig:
     # Training datasets
     TRAIN_DATASETS = [
         ("knkarthick/dialogsum", "dialogue", "summary", "DialogSum"),
-        ("samsum", "dialogue", "summary", "SAMSum"),
+        ("Samsung/samsum", "dialogue", "summary", "SAMSum"),  # Updated: samsum → Samsung/samsum
         ("EdinburghNLP/xsum", "document", "summary", "XSUM"),
         ("knkarthick/AMI", "dialogue", "summary", "AMI"),
         ("knkarthick/highlightsum", "dialogue", "summary", "HighlightSum"),
@@ -134,7 +134,7 @@ class ExperimentConfig:
     TEST_DATASETS = [
         ("cnn_dailymail", "3.0.0", "article", "highlights", "CNN/DM"),
         ("EdinburghNLP/xsum", None, "document", "summary", "XSUM"),
-        ("samsum", None, "dialogue", "summary", "SAMSum"),
+        ("Samsung/samsum", None, "dialogue", "summary", "SAMSum"),  # Updated: samsum → Samsung/samsum
     ]
     
     # ======================================================================
