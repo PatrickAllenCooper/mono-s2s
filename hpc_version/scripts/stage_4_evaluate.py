@@ -220,6 +220,12 @@ def main():
             texts = test_data[dataset_key]['texts']
             references = test_data[dataset_key]['summaries']
             
+            # Skip empty datasets
+            if len(texts) == 0:
+                logger.log(f"[SKIP] No test samples available for {dataset_name}")
+                logger.log(f"  This dataset was not loaded during Stage 1")
+                continue
+            
             results[dataset_key] = {}
             
             # Evaluate each model

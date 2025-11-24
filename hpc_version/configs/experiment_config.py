@@ -75,7 +75,7 @@ class ExperimentConfig:
     # ======================================================================
     
     DECODE_NUM_BEAMS = 4
-    DECODE_LENGTH_PENALTY = 1.0
+    DECODE_LENGTH_PENALTY = 2.0  # >1.0 encourages brevity (important for summarization)
     DECODE_MIN_NEW_TOKENS = 10
     DECODE_MAX_NEW_TOKENS = 128
     DECODE_NO_REPEAT_NGRAM_SIZE = 3
