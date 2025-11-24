@@ -168,7 +168,13 @@ else
         JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh)
     fi
     echo "  Job ID: $JOB4"
-    echo "  [TIME] Expected time: 2-4 hours"
+    
+    # Check config for expected time
+    if grep -q "USE_FULL_TEST_SETS = True" configs/experiment_config.py; then
+        echo "  [TIME] Expected time: 12-16 hours (full test sets)"
+    else
+        echo "  [TIME] Expected time: 1-2 hours (quick test: 200 samples)"
+    fi
     
     check_job_status $JOB4 "stage_4_evaluate" || {
         echo "[FAILED] Evaluation failed. Aborting."
