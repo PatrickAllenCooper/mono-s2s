@@ -279,6 +279,35 @@ cat logs/job_*_<jobid>.err  # Check error logs
 scontrol show job <jobid>   # Check job details
 ```
 
+### Clean All Data & Start Fresh
+
+To remove all experimental data and rerun from scratch:
+
+```bash
+# Interactive mode (asks for confirmation)
+./clean_all.sh
+
+# Force mode (no confirmation)
+./clean_all.sh --force
+
+# Keep HuggingFace cache (don't re-download models/datasets)
+./clean_all.sh --keep-cache
+```
+
+This removes:
+- All completion flags (allows stages to rerun)
+- Cached datasets
+- Model checkpoints
+- Evaluation results
+- SLURM logs
+- HuggingFace cache (optional)
+
+**Use cases:**
+- Configuration changes that require data regeneration
+- Starting over after partial/failed runs
+- Testing different dataset splits
+- Reclaiming disk space
+
 ---
 
 ## Citation & Acknowledgment
@@ -321,6 +350,7 @@ hpc_version/
 ├── utils/
 │   └── common_utils.py         # Shared functions
 ├── run_all.sh                  # ← Run this to start
+├── clean_all.sh                # Reset all experimental data
 ├── validate_setup.sh           # Pre-flight checks
 ├── QUICKSTART.md              # Detailed guide
 └── README_SETUP.md            # Complete setup docs
