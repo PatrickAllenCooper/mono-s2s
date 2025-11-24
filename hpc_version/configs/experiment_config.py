@@ -55,9 +55,9 @@ class ExperimentConfig:
     # TRAINING HYPERPARAMETERS (IDENTICAL for baseline and monotonic)
     # ======================================================================
     
-    LEARNING_RATE = 3e-5
+    LEARNING_RATE = 5e-5  # Increased from 3e-5 for better convergence
     WEIGHT_DECAY = 0.01
-    NUM_EPOCHS = 3
+    NUM_EPOCHS = 5  # Increased from 3 for better training
     BATCH_SIZE = 4
     GRADIENT_ACCUMULATION_STEPS = 1
     MAX_GRAD_NORM = 1.0
