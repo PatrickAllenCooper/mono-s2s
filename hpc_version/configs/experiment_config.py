@@ -122,8 +122,8 @@ class ExperimentConfig:
     # Training datasets
     TRAIN_DATASETS = [
         ("knkarthick/dialogsum", "dialogue", "summary", "DialogSum"),
-        ("samsum", "dialogue", "summary", "SAMSum"),  # Uses trust_remote_code=True
-        ("EdinburghNLP/xsum", "document", "summary", "XSUM"),  # Uses trust_remote_code=True
+        ("Samsung/samsum", "dialogue", "summary", "SAMSum"),  # Samsung namespace
+        ("xsum", "document", "summary", "XSUM"),  # Lowercase xsum uses Parquet format
         ("knkarthick/AMI", "dialogue", "summary", "AMI"),
         ("knkarthick/highlightsum", "dialogue", "summary", "HighlightSum"),
         ("ccdv/arxiv-summarization", "article", "abstract", "arXiv"),
@@ -133,8 +133,8 @@ class ExperimentConfig:
     # Test datasets
     TEST_DATASETS = [
         ("cnn_dailymail", "3.0.0", "article", "highlights", "CNN/DM"),
-        ("EdinburghNLP/xsum", None, "document", "summary", "XSUM"),  # Uses trust_remote_code=True
-        ("samsum", None, "dialogue", "summary", "SAMSum"),  # Uses trust_remote_code=True
+        ("xsum", None, "document", "summary", "XSUM"),  # Lowercase xsum uses Parquet format
+        ("Samsung/samsum", None, "dialogue", "summary", "SAMSum"),  # Samsung namespace
     ]
     
     # ======================================================================

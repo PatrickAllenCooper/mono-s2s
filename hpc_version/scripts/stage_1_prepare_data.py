@@ -120,7 +120,7 @@ def main():
         # XSUM
         logger.log("Loading XSUM test...")
         xsum_texts, xsum_sums = load_dataset_split(
-            "EdinburghNLP/xsum", "test", "document", "summary",
+            "xsum", "test", "document", "summary",
             max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
         )
         test_data['xsum'] = {'texts': xsum_texts, 'summaries': xsum_sums}
@@ -128,7 +128,7 @@ def main():
         # SAMSum
         logger.log("Loading SAMSum test...")
         samsum_texts, samsum_sums = load_dataset_split(
-            "samsum", "test", "dialogue", "summary",
+            "Samsung/samsum", "test", "dialogue", "summary",
             max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
         )
         test_data['samsum'] = {'texts': samsum_texts, 'summaries': samsum_sums}

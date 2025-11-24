@@ -48,7 +48,7 @@ test_configs = [
     },
     {
         'name': 'XSUM',
-        'dataset_name': 'EdinburghNLP/xsum',
+        'dataset_name': 'xsum',
         'config': None,
         'split': 'test',
         'text_field': 'document',
@@ -56,7 +56,7 @@ test_configs = [
     },
     {
         'name': 'SAMSum',
-        'dataset_name': 'samsum',
+        'dataset_name': 'Samsung/samsum',
         'config': None,
         'split': 'test',
         'text_field': 'dialogue',
@@ -83,14 +83,12 @@ for test_config in test_configs:
             dataset = load_dataset(
                 test_config['dataset_name'], 
                 test_config['config'], 
-                split=test_config['split'],
-                trust_remote_code=True
+                split=test_config['split']
             )
         else:
             dataset = load_dataset(
                 test_config['dataset_name'], 
-                split=test_config['split'],
-                trust_remote_code=True
+                split=test_config['split']
             )
         print(f"        ✓ Loaded {len(dataset)} total samples")
         
