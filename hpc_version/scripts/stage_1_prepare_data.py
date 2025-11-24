@@ -128,7 +128,7 @@ def main():
         # SAMSum
         logger.log("Loading SAMSum test...")
         samsum_texts, samsum_sums = load_dataset_split(
-            "Samsung/samsum", "test", "dialogue", "summary",
+            "samsum", "test", "dialogue", "summary",
             max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
         )
         test_data['samsum'] = {'texts': samsum_texts, 'summaries': samsum_sums}

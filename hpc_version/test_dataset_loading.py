@@ -56,7 +56,7 @@ test_configs = [
     },
     {
         'name': 'SAMSum',
-        'dataset_name': 'Samsung/samsum',
+        'dataset_name': 'samsum',
         'config': None,
         'split': 'test',
         'text_field': 'dialogue',
@@ -83,12 +83,14 @@ for test_config in test_configs:
             dataset = load_dataset(
                 test_config['dataset_name'], 
                 test_config['config'], 
-                split=test_config['split']
+                split=test_config['split'],
+                trust_remote_code=True
             )
         else:
             dataset = load_dataset(
                 test_config['dataset_name'], 
-                split=test_config['split']
+                split=test_config['split'],
+                trust_remote_code=True
             )
         print(f"        ✓ Loaded {len(dataset)} total samples")
         

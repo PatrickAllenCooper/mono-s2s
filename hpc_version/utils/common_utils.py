@@ -485,9 +485,9 @@ def load_dataset_split(dataset_name, split, text_field, summary_field,
     
     try:
         if config:
-            dataset = load_dataset(dataset_name, config, split=split)
+            dataset = load_dataset(dataset_name, config, split=split, trust_remote_code=True)
         else:
-            dataset = load_dataset(dataset_name, split=split)
+            dataset = load_dataset(dataset_name, split=split, trust_remote_code=True)
         
         texts = []
         summaries = []
