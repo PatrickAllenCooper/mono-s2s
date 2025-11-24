@@ -117,23 +117,13 @@ def main():
         )
         test_data['cnn_dm'] = {'texts': cnn_texts, 'summaries': cnn_sums}
         
-        # XSUM
-        logger.log("Loading XSUM test...")
-        xsum_texts, xsum_sums = load_dataset_split(
-            "xsum", "test", "document", "summary",
-            max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
-        )
-        test_data['xsum'] = {'texts': xsum_texts, 'summaries': xsum_sums}
+        # XSUM and SAMSum - currently disabled due to HuggingFace API issues
+        # Initialize with empty lists to prevent errors in evaluation
+        test_data['xsum'] = {'texts': [], 'summaries': []}
+        test_data['samsum'] = {'texts': [], 'summaries': []}
+        logger.log("Note: XSUM and SAMSum temporarily disabled (HF API issues)")
         
-        # SAMSum
-        logger.log("Loading SAMSum test...")
-        samsum_texts, samsum_sums = load_dataset_split(
-            "Samsung/samsum", "test", "dialogue", "summary",
-            max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
-        )
-        test_data['samsum'] = {'texts': samsum_texts, 'summaries': samsum_sums}
-        
-        total_test = len(cnn_texts) + len(xsum_texts) + len(samsum_texts)
+        total_test = len(cnn_texts)
         logger.log(f"\n✓ Total test samples: {total_test}")
         
         # ===================================================================

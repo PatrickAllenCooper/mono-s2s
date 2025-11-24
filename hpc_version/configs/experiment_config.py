@@ -131,10 +131,12 @@ class ExperimentConfig:
     ]
     
     # Test datasets
+    # NOTE: XSUM and SAMSum currently have HuggingFace API compatibility issues
+    # Using CNN/DailyMail only for initial experiments
     TEST_DATASETS = [
         ("cnn_dailymail", "3.0.0", "article", "highlights", "CNN/DM"),
-        ("xsum", None, "document", "summary", "XSUM"),  # Lowercase xsum uses Parquet format
-        ("Samsung/samsum", None, "dialogue", "summary", "SAMSum"),  # Samsung namespace
+        # ("xsum", None, "document", "summary", "XSUM"),  # TODO: Fix HF API issue
+        # ("samsum", None, "dialogue", "summary", "SAMSum"),  # TODO: Find correct path
     ]
     
     # ======================================================================
