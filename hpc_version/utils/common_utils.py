@@ -611,7 +611,7 @@ class StageLogger:
         if success:
             create_completion_flag(self.stage_name)
         
-        return success
+        return 0 if success else 1  # Return int exit code, not bool
 
 
 # ======================================================================
