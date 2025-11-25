@@ -122,12 +122,10 @@ class ExperimentConfig:
     # Training datasets
     TRAIN_DATASETS = [
         ("knkarthick/dialogsum", "dialogue", "summary", "DialogSum"),
-        ("Samsung/samsum", "dialogue", "summary", "SAMSum"),  # Samsung namespace
-        ("xsum", "document", "summary", "XSUM"),  # Lowercase xsum uses Parquet format
+        # Removed: samsum, xsum, MEETING_SUMMARY due to HuggingFace API issues
         ("knkarthick/AMI", "dialogue", "summary", "AMI"),
         ("knkarthick/highlightsum", "dialogue", "summary", "HighlightSum"),
         ("ccdv/arxiv-summarization", "article", "abstract", "arXiv"),
-        ("knkarthick/MEETING_SUMMARY", "dialogue", "summary", "MEETING_SUMMARY"),
     ]
     
     # Test datasets
