@@ -56,15 +56,7 @@ def main():
         train_texts_all = []
         train_summaries_all = []
         
-        for dataset_name, text_field, summary_field, label in [
-            ("knkarthick/dialogsum", "dialogue", "summary", "DialogSum"),
-            ("samsum", "dialogue", "summary", "SAMSum"),
-            ("EdinburghNLP/xsum", "document", "summary", "XSUM"),
-            ("knkarthick/AMI", "dialogue", "summary", "AMI"),
-            ("knkarthick/highlightsum", "dialogue", "summary", "HighlightSum"),
-            ("ccdv/arxiv-summarization", "article", "abstract", "arXiv"),
-            ("knkarthick/MEETING_SUMMARY", "dialogue", "summary", "MEETING_SUMMARY"),
-        ]:
+        for dataset_name, text_field, summary_field, label in ExperimentConfig.TRAIN_DATASETS:
             texts, summaries = load_dataset_split(
                 dataset_name, "train", text_field, summary_field
             )
@@ -84,12 +76,7 @@ def main():
         val_texts_all = []
         val_summaries_all = []
         
-        for dataset_name, text_field, summary_field, label in [
-            ("knkarthick/dialogsum", "dialogue", "summary", "DialogSum"),
-            ("samsum", "dialogue", "summary", "SAMSum"),
-            ("EdinburghNLP/xsum", "document", "summary", "XSUM"),
-            ("ccdv/arxiv-summarization", "article", "abstract", "arXiv"),
-        ]:
+        for dataset_name, text_field, summary_field, label in ExperimentConfig.TRAIN_DATASETS:
             texts, summaries = load_dataset_split(
                 dataset_name, "validation", text_field, summary_field
             )
@@ -206,12 +193,12 @@ def main():
             "seed": ExperimentConfig.CURRENT_SEED,
             "training": {
                 "total_samples": len(train_texts_all),
-                "sources": 7,
+                "sources": len(ExperimentConfig.TRAIN_DATASETS),
                 "splits": "train"
             },
             "validation": {
                 "total_samples": len(val_texts_all),
-                "sources": 4,
+                "sources": len(ExperimentConfig.TRAIN_DATASETS),
                 "splits": "validation (NOT test - no leakage!)"
             },
             "test": {
@@ -235,9 +222,9 @@ def main():
         logger.log("\n" + "="*80)
         logger.log("DATA PREPARATION SUMMARY")
         logger.log("="*80)
-        logger.log(f"Training:   {len(train_texts_all):,} samples (7 datasets, train splits)")
+        logger.log(f"Training:   {len(train_texts_all):,} samples ({len(ExperimentConfig.TRAIN_DATASETS)} datasets, train splits)")
         logger.log(f"Validation: {len(val_texts_all):,} samples (validation splits - NO TEST!)")
-        logger.log(f"Test:       {total_test:,} samples (3 datasets, test splits)")
+        logger.log(f"Test:       {total_test:,} samples (CNN/DailyMail only)")
         logger.log(f"Attack Opt: {len(attack_opt_texts):,} samples (CNN/DM validation)")
         logger.log(f"Attack Eval: {len(attack_eval_texts):,} samples (CNN/DM test)")
         logger.log("="*80)
