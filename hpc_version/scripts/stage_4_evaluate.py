@@ -297,6 +297,12 @@ def main():
             ('samsum', 'SAMSum')
         ]:
             logger.log(f"\n{dataset_name}:")
+            
+            # Skip datasets that weren't evaluated (no test samples)
+            if dataset_key not in results:
+                logger.log(f"  [SKIPPED] No test samples available")
+                continue
+            
             for model_key, model_display_name in [
                 ('standard_t5', 'Standard T5'),
                 ('baseline_t5', 'Baseline T5'),
