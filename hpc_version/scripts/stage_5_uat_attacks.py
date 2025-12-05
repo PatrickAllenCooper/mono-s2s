@@ -21,7 +21,7 @@ Data splits:
 - Attack evaluation: CNN/DM test split (1000 samples)
 
 Inputs:
-- attack_data.pt (from stage 1) - trigger_opt and trigger_eval splits
+- attack_data.pt (from stage 1) - optimization and evaluation splits
 - evaluation_results.json (from stage 4) - for baseline ROUGE
 - All three model checkpoints
 
@@ -373,10 +373,10 @@ def main():
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
         attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'))
         
-        trigger_opt_texts = attack_data['trigger_opt']['texts']
-        trigger_opt_summaries = attack_data['trigger_opt']['summaries']
-        trigger_eval_texts = attack_data['trigger_eval']['texts']
-        trigger_eval_summaries = attack_data['trigger_eval']['summaries']
+        trigger_opt_texts = attack_data['optimization']['texts']
+        trigger_opt_summaries = attack_data['optimization']['summaries']
+        trigger_eval_texts = attack_data['evaluation']['texts']
+        trigger_eval_summaries = attack_data['evaluation']['summaries']
         
         logger.log(f"  Trigger optimization: {len(trigger_opt_texts)} samples")
         logger.log(f"  Trigger evaluation: {len(trigger_eval_texts)} samples")

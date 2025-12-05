@@ -21,7 +21,7 @@ Attack parameters:
 - beam_size: Number of candidate replacements per position (default: 10)
 
 Inputs:
-- attack_data.pt (from stage 1) - trigger_eval split
+- attack_data.pt (from stage 1) - evaluation split
 - All three model checkpoints
 
 Outputs:
@@ -303,9 +303,9 @@ def main():
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
         attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'))
         
-        # Use trigger_eval split for HotFlip
-        attack_texts = attack_data['trigger_eval']['texts']
-        attack_summaries = attack_data['trigger_eval']['summaries']
+        # Use evaluation split for HotFlip
+        attack_texts = attack_data['evaluation']['texts']
+        attack_summaries = attack_data['evaluation']['summaries']
         
         # Limit to a reasonable subset for HotFlip (it's expensive)
         max_samples = 200 if ExperimentConfig.USE_FULL_TEST_SETS else 100
