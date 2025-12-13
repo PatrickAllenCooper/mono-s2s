@@ -226,7 +226,7 @@ if [ $ERRORS -eq 0 ]; then
     echo "Next steps:"
     echo "  1. Edit configs/experiment_config.py with your paths and partition"
     echo "  2. Make scripts executable: chmod +x run_all.sh jobs/*.sh scripts/*.py"
-    echo "  3. Review QUICKSTART.md for detailed instructions"
+    echo "  3. Review ../README.md for detailed instructions"
     echo "  4. Submit jobs: ./run_all.sh"
     echo ""
     exit 0
@@ -234,7 +234,7 @@ else
     echo -e "${RED}✗ Found $ERRORS critical error(s)${NC}"
     echo ""
     echo "Please fix the errors above before proceeding."
-    echo "See QUICKSTART.md for help."
+    echo "See ../README.md for help."
     echo ""
     exit 1
 fi
