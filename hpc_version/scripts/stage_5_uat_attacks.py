@@ -584,7 +584,7 @@ def main():
                 'trigger_opt_samples': len(trigger_opt_texts),
                 'trigger_eval_samples': len(trigger_eval_texts),
             },
-            'learned_triggers': {k: v['trigger_text'] for k, v in triggers.items()},
+            'learned_triggers': {k: v['text'] for k, v in triggers.items()},
             'results': all_results,
             'transfer_matrix': transfer_matrix
         }
