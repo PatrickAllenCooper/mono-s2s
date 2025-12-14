@@ -85,14 +85,32 @@ class AggressiveUATAttack:
         return {k: v.to(self.device) for k, v in enc.items()}
     
     def _safe_pack(self, enc, max_len=512):
-        """Truncate from left (trigger side) to keep source content"""
+        """Truncate from left (trigger side) to keep source content.
+
+        Supports both:
+        - tensor batch: {"input_ids": (B, L), "attention_mask": (B, L)}
+        - list batch:   {"input_ids": List[List[int]], "attention_mask": List[List[int]]}
+        """
         input_ids = enc["input_ids"]
         attn = enc["attention_mask"]
-        if input_ids.size(1) > max_len:
-            extra = input_ids.size(1) - max_len
-            input_ids = input_ids[:, extra:]
-            attn = attn[:, extra:]
-        return {"input_ids": input_ids, "attention_mask": attn}
+
+        # Tensor path
+        if torch.is_tensor(input_ids):
+            if input_ids.size(1) > max_len:
+                extra = input_ids.size(1) - max_len
+                input_ids = input_ids[:, extra:]
+                attn = attn[:, extra:]
+            return {"input_ids": input_ids, "attention_mask": attn}
+
+        # List path (ragged)
+        packed_ids, packed_attn = [], []
+        for ids_i, attn_i in zip(input_ids, attn):
+            if len(ids_i) > max_len:
+                ids_i = ids_i[-max_len:]
+                attn_i = attn_i[-max_len:]
+            packed_ids.append(ids_i)
+            packed_attn.append(attn_i)
+        return {"input_ids": packed_ids, "attention_mask": packed_attn}
     
     def _get_disruptive_vocab(self):
         """Get vocabulary likely to disrupt the model"""
@@ -128,33 +146,72 @@ class AggressiveUATAttack:
     
     def compute_loss_batch(self, texts, summaries, trigger_ids, max_src_len=512):
         """
-        Compute average NLL of reference summaries given (trigger ⊕ source).
+        Compute average per-example NLL of reference summaries given (trigger ⊕ source).
+
+        This is a true batched implementation (with micro-batching) for speed.
         """
-        losses = []
-        for text, summary in zip(texts, summaries):
-            # Encode source
-            enc = self._encode_source(text)
-            if len(trigger_ids) > 0:
-                enc["input_ids"] = self._insert_ids_prefix(enc["input_ids"], trigger_ids)
-                enc["attention_mask"] = torch.cat(
-                    [torch.ones(1, len(trigger_ids), device=self.device), enc["attention_mask"]],
-                    dim=1
-                )
-            enc = self._safe_pack(enc, max_len=max_src_len)
-            
-            # Encode target
-            tgt = self.tokenizer(summary, return_tensors="pt", truncation=True, max_length=128).to(self.device)
-            
+        self.model.eval()
+
+        bs = int(getattr(ExperimentConfig, "ATTACK_LOSS_BATCH_SIZE", 8))
+        all_losses = []
+
+        # Tokenize targets once per micro-batch; labels use -100 on padding.
+        pad_id = self.tokenizer.pad_token_id
+
+        for start in range(0, len(texts), bs):
+            batch_texts = texts[start:start + bs]
+            batch_summaries = summaries[start:start + bs]
+
+            # Ragged encode sources without truncation; we'll do left-truncation after trigger insert.
+            src = self.tokenizer(
+                ["summarize: " + t for t in batch_texts],
+                padding=False,
+                truncation=False
+            )
+
+            if trigger_ids is not None and len(trigger_ids) > 0:
+                trig = list(map(int, trigger_ids))
+                src["input_ids"] = [trig + ids for ids in src["input_ids"]]
+                src["attention_mask"] = [[1] * len(trig) + m for m in src["attention_mask"]]
+
+            src = self._safe_pack(src, max_len=max_src_len)
+
+            # Pad to tensor batch
+            src_t = self.tokenizer.pad(src, padding=True, return_tensors="pt").to(self.device)
+
+            # Targets
+            tgt = self.tokenizer(
+                batch_summaries,
+                padding=True,
+                truncation=True,
+                max_length=128,
+                return_tensors="pt"
+            ).to(self.device)
+            labels = tgt["input_ids"].clone()
+            labels[labels == pad_id] = -100
+
             with torch.no_grad():
                 out = self.model(
-                    input_ids=enc["input_ids"],
-                    attention_mask=enc["attention_mask"],
-                    labels=tgt.input_ids
+                    input_ids=src_t["input_ids"],
+                    attention_mask=src_t["attention_mask"],
+                    labels=labels
                 )
-                loss = out.loss.item()
-            losses.append(loss)
-        
-        return float(np.mean(losses)), losses
+
+                # Per-example loss (mean over non-pad target tokens)
+                # logits: (B, T, V), labels: (B, T)
+                logits = out.logits
+                token_loss = F.cross_entropy(
+                    logits.view(-1, logits.size(-1)),
+                    labels.view(-1),
+                    reduction="none",
+                    ignore_index=-100
+                ).view(labels.size(0), labels.size(1))
+
+                denom = (labels != -100).sum(dim=1).clamp(min=1)
+                ex_loss = token_loss.sum(dim=1) / denom
+                all_losses.extend(ex_loss.detach().cpu().tolist())
+
+        return float(np.mean(all_losses)) if all_losses else 0.0, all_losses
     
     def learn_universal_trigger(self, texts, summaries, num_iterations=50, num_restarts=3):
         """

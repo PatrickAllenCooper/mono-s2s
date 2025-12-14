@@ -98,6 +98,9 @@ class ExperimentConfig:
     ATTACK_NUM_GRAD_STEPS = 50
     ATTACK_NUM_RESTARTS = 3
     ATTACK_NUM_ITERATIONS = 50
+    # Micro-batch size used inside attack loss computations (stage 5/6).
+    # Larger is faster but may OOM depending on GPU + sequence lengths.
+    ATTACK_LOSS_BATCH_SIZE = 8
     
     # ======================================================================
     # EVALUATION CONFIGURATION
