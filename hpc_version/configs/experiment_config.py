@@ -75,9 +75,12 @@ class ExperimentConfig:
     # ======================================================================
     
     DECODE_NUM_BEAMS = 4
-    DECODE_LENGTH_PENALTY = 2.0  # >1.0 encourages brevity (important for summarization)
+    # HF/beam-search length penalty: values >1 tend to favor longer generations;
+    # keep at 1.0 (neutral) to reduce over-generation after fine-tuning.
+    DECODE_LENGTH_PENALTY = 1.0
     DECODE_MIN_NEW_TOKENS = 10
-    DECODE_MAX_NEW_TOKENS = 128
+    # Cap generation length to curb over-generation in fine-tuned models.
+    DECODE_MAX_NEW_TOKENS = 64
     DECODE_NO_REPEAT_NGRAM_SIZE = 3
     DECODE_EARLY_STOPPING = True
     
