@@ -109,7 +109,9 @@ def create_attack_summary(uat_results, hotflip_results):
     table_lines.append("\nTransfer Matrix (ΔROUGE-L when trigger from row attacks column):")
     table_lines.append("-"*100)
     
-    header = f"{'Source \\ Target':<20}"
+    # Avoid backslashes inside f-string expression braces (SyntaxError on some Python versions).
+    source_target_label = "Source \\ Target"
+    header = f"{source_target_label:<20}"
     for model_key, model_name in [
         ('standard_t5', 'Std T5'),
         ('baseline_t5', 'Base T5'),
