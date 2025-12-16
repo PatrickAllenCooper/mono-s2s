@@ -51,12 +51,22 @@ def create_comparison_table(eval_results):
     table_lines.append("="*100)
     table_lines.append("ROUGE SCORE COMPARISON (with 95% Confidence Intervals)")
     table_lines.append("="*100)
+
+    dataset_name_map = {
+        'cnn_dm': 'CNN/DailyMail',
+        'xsum': 'XSUM',
+        'samsum': 'SAMSum',
+    }
+
+    # Prefer a consistent order, but only include datasets that exist.
+    preferred_order = ['cnn_dm', 'xsum', 'samsum']
+    dataset_keys = [k for k in preferred_order if k in eval_results]
+    if not dataset_keys:
+        # Fall back to any dataset keys present (sorted for determinism).
+        dataset_keys = sorted(list(eval_results.keys()))
     
-    for dataset_key, dataset_name in [
-        ('cnn_dm', 'CNN/DailyMail'),
-        ('xsum', 'XSUM'),
-        ('samsum', 'SAMSum')
-    ]:
+    for dataset_key in dataset_keys:
+        dataset_name = dataset_name_map.get(dataset_key, dataset_key)
         table_lines.append(f"\n{dataset_name}:")
         table_lines.append("-"*100)
         table_lines.append(f"{'Model':<20} | {'ROUGE-1':^30} | {'ROUGE-2':^30} | {'ROUGE-L':^30}")
@@ -206,6 +216,22 @@ def main():
         
         logger.log("Loading evaluation results...")
         eval_results = load_json(os.path.join(results_dir, 'evaluation_results.json'))
+
+        # Determine which datasets are actually present (avoid KeyError for skipped datasets).
+        dataset_name_map = {
+            'cnn_dm': 'CNN/DailyMail',
+            'xsum': 'XSUM',
+            'samsum': 'SAMSum',
+        }
+        preferred_order = ['cnn_dm', 'xsum', 'samsum']
+        available_datasets = [k for k in preferred_order if k in eval_results]
+        other_datasets = sorted([k for k in eval_results.keys() if k not in preferred_order])
+        available_datasets.extend(other_datasets)
+
+        missing = [k for k in preferred_order if k not in eval_results]
+        if missing:
+            logger.log(f"⚠️  Missing evaluation datasets (skipped earlier): "
+                       f"{', '.join(dataset_name_map.get(k, k) for k in missing)}")
         
         logger.log("Loading UAT results...")
         uat_results = load_json(os.path.join(results_dir, 'uat_results.json'))
@@ -268,7 +294,7 @@ def main():
                     }
                     for model_key in ['standard_t5', 'baseline_t5', 'monotonic_t5']
                 }
-                for dataset_key in ['cnn_dm', 'xsum', 'samsum']
+                for dataset_key in available_datasets
             },
             'attack_summary': {
                 'uat': {
