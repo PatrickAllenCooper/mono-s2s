@@ -63,8 +63,8 @@ echo "=========================================="
 echo ""
 echo "This will DELETE the following:"
 echo ""
-echo "  1. Completion flags (all stages)"
-echo "     ${WORK_DIR}/*_complete.flag"
+echo "  1. All stage flags (all stages)"
+echo "     ${WORK_DIR}/**/*.flag"
 echo ""
 echo "  2. Cached datasets"
 echo "     ${WORK_DIR}/data_cache/"
@@ -139,11 +139,15 @@ echo "CLEANING..."
 echo "=========================================="
 echo ""
 
-# 1. Remove completion flags
-echo "[1/7] Removing completion flags..."
+# 1. Remove all flags (completion markers)
+echo "[1/7] Removing all stage flags..."
 if [ -d "$WORK_DIR" ]; then
-    rm -f ${WORK_DIR}/*_complete.flag 2>/dev/null || true
-    echo "  [SUCCESS] Completion flags removed"
+    # Remove any flag files (not just *_complete.flag) anywhere under WORK_DIR.
+    # This prevents `run_all.sh` from skipping stages due to stale markers.
+    shopt -s nullglob globstar
+    rm -f "${WORK_DIR}"/**/*.flag 2>/dev/null || true
+    shopt -u nullglob globstar
+    echo "  [SUCCESS] Stage flags removed"
 else
     echo "  [SKIP] Work directory does not exist"
 fi
