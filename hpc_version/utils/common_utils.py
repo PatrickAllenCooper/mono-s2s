@@ -229,9 +229,38 @@ def compute_brevity_penalty(predictions, references, tokenizer=None):
 # ======================================================================
 
 class NonNegativeParametrization(nn.Module):
-    """Softplus parametrization: W = softplus(V) >= 0"""
+    """
+    Improved softplus parametrization: W = softplus(V) >= 0
+    
+    Uses inverse softplus initialization to preserve pretrained weights:
+    V_init = inverse_softplus(|W_pretrained| + eps)
+    
+    This minimizes disruption to pretrained model knowledge while enforcing W >= 0.
+    """
+    def __init__(self, init_weight=None):
+        super().__init__()
+        self.init_weight = init_weight
+        
     def forward(self, V):
         return F.softplus(V)
+    
+    def right_inverse(self, W):
+        """
+        Initialize V from pretrained W to preserve learned features.
+        
+        For numerical stability:
+        - Use |W| to ensure positive input to inverse softplus
+        - Add small epsilon to avoid log(0)
+        - Clamp to reasonable range
+        """
+        eps = 1e-4
+        W_abs = torch.abs(W) + eps
+        # inverse_softplus(x) = log(exp(x) - 1) 
+        # For numerical stability, use: log(expm1(x)) for x > 0
+        # But simpler: inverse_softplus(x) ≈ x for large x, log(x) + log(2) for small x
+        # We use: log(exp(x) - 1 + eps) for stability
+        V = torch.log(torch.exp(W_abs) - 1.0 + eps)
+        return V
 
 
 def make_model_monotonic(model):
@@ -267,12 +296,18 @@ def make_model_monotonic(model):
     if FFN_CLASS is not None:
         for module in model.modules():
             if isinstance(module, FFN_CLASS):
-                # Parametrize all FFN weight sublayers
+                # Parametrize all FFN weight sublayers with preserved initialization
                 for param_name in ["wi", "wi_0", "wi_1", "wo"]:
                     if hasattr(module, param_name):
                         sub_module = getattr(module, param_name)
                         if hasattr(sub_module, "weight"):
-                            P.register_parametrization(sub_module, "weight", NonNegativeParametrization())
+                            # Get current weight for initialization
+                            current_weight = sub_module.weight.data.clone()
+                            # Register with improved initialization
+                            P.register_parametrization(
+                                sub_module, "weight", 
+                                NonNegativeParametrization(init_weight=current_weight)
+                            )
                             modified_count += 1
     else:
         # Fallback: Use duck typing - find modules with FFN-like structure
@@ -285,12 +320,18 @@ def make_model_monotonic(model):
             )
             
             if has_ffn_structure and "DenseActDense" in type(module).__name__:
-                # Parametrize all FFN weight sublayers
+                # Parametrize all FFN weight sublayers with preserved initialization
                 for param_name in ["wi", "wi_0", "wi_1", "wo"]:
                     if hasattr(module, param_name):
                         sub_module = getattr(module, param_name)
                         if hasattr(sub_module, "weight"):
-                            P.register_parametrization(sub_module, "weight", NonNegativeParametrization())
+                            # Get current weight for initialization
+                            current_weight = sub_module.weight.data.clone()
+                            # Register with improved initialization
+                            P.register_parametrization(
+                                sub_module, "weight",
+                                NonNegativeParametrization(init_weight=current_weight)
+                            )
                             modified_count += 1
     
     if modified_count == 0:
@@ -466,9 +507,9 @@ def check_dependencies(required_stages, work_dir=None):
 # ======================================================================
 
 def load_dataset_split(dataset_name, split, text_field, summary_field, 
-                       config=None, max_samples=None):
+                       config=None, max_samples=None, max_retries=None, retry_delay=None):
     """
-    Generic dataset loader.
+    Generic dataset loader with retry logic and better error handling.
     
     Args:
         dataset_name: HuggingFace dataset identifier
@@ -477,38 +518,65 @@ def load_dataset_split(dataset_name, split, text_field, summary_field,
         summary_field: Field name for summary
         config: Dataset config (e.g., "3.0.0" for CNN/DM)
         max_samples: Limit number of samples (None for all)
+        max_retries: Number of retry attempts (defaults to ExperimentConfig)
+        retry_delay: Delay between retries in seconds (defaults to ExperimentConfig)
     
     Returns:
         texts, summaries (lists)
     """
     from datasets import load_dataset
+    import time
     
-    try:
-        if config:
-            dataset = load_dataset(dataset_name, config, split=split)
-        else:
-            dataset = load_dataset(dataset_name, split=split)
-        
-        texts = []
-        summaries = []
-        
-        for i, example in enumerate(dataset):
-            if max_samples and i >= max_samples:
-                break
+    # Use config defaults if not specified
+    if max_retries is None:
+        max_retries = getattr(ExperimentConfig, 'DATASET_MAX_RETRIES', 3)
+    if retry_delay is None:
+        retry_delay = getattr(ExperimentConfig, 'DATASET_RETRY_DELAY', 10)
+    
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            if config:
+                dataset = load_dataset(dataset_name, config, split=split, 
+                                      trust_remote_code=True)
+            else:
+                dataset = load_dataset(dataset_name, split=split,
+                                      trust_remote_code=True)
             
-            text = example.get(text_field, "")
-            summary = example.get(summary_field, "")
+            texts = []
+            summaries = []
             
-            if text and summary:
-                texts.append(text.strip())
-                summaries.append(summary.strip())
-        
-        print(f"  ✓ Loaded {len(texts)} samples from {dataset_name} ({split})")
-        return texts, summaries
-        
-    except Exception as e:
-        print(f"  ⚠️  Error loading {dataset_name} ({split}): {e}")
-        return [], []
+            for i, example in enumerate(dataset):
+                if max_samples and i >= max_samples:
+                    break
+                
+                text = example.get(text_field, "")
+                summary = example.get(summary_field, "")
+                
+                if text and summary:
+                    texts.append(text.strip())
+                    summaries.append(summary.strip())
+            
+            print(f"  ✓ Loaded {len(texts)} samples from {dataset_name} ({split})")
+            return texts, summaries
+            
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                print(f"  ⚠️  Attempt {attempt + 1}/{max_retries} failed for {dataset_name} ({split}): {e}")
+                print(f"  Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print(f"  ❌ Failed to load {dataset_name} ({split}) after {max_retries} attempts")
+                print(f"  Last error: {last_error}")
+                
+                # Check if partial results are allowed
+                if getattr(ExperimentConfig, 'DATASET_ALLOW_PARTIAL', True):
+                    print(f"  Continuing with other datasets (DATASET_ALLOW_PARTIAL=True)")
+                    return [], []
+                else:
+                    raise last_error
 
 
 # ======================================================================

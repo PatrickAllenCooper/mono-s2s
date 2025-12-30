@@ -104,13 +104,27 @@ def main():
         )
         test_data['cnn_dm'] = {'texts': cnn_texts, 'summaries': cnn_sums}
         
-        # XSUM and SAMSum - currently disabled due to HuggingFace API issues
-        # Initialize with empty lists to prevent errors in evaluation
-        test_data['xsum'] = {'texts': [], 'summaries': []}
-        test_data['samsum'] = {'texts': [], 'summaries': []}
-        logger.log("Note: XSUM and SAMSum temporarily disabled (HF API issues)")
+        # XSUM - with retry logic and graceful fallback
+        logger.log("Loading XSUM test...")
+        xsum_texts, xsum_sums = load_dataset_split(
+            "xsum", "test", "document", "summary",
+            max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
+        )
+        test_data['xsum'] = {'texts': xsum_texts, 'summaries': xsum_sums}
+        if len(xsum_texts) == 0:
+            logger.log("  ⚠️  XSUM dataset could not be loaded, will be skipped in evaluation")
         
-        total_test = len(cnn_texts)
+        # SAMSum - with retry logic and graceful fallback
+        logger.log("Loading SAMSum test...")
+        samsum_texts, samsum_sums = load_dataset_split(
+            "samsum", "test", "dialogue", "summary",
+            max_samples=ExperimentConfig.QUICK_TEST_SIZE if not ExperimentConfig.USE_FULL_TEST_SETS else None
+        )
+        test_data['samsum'] = {'texts': samsum_texts, 'summaries': samsum_sums}
+        if len(samsum_texts) == 0:
+            logger.log("  ⚠️  SAMSum dataset could not be loaded, will be skipped in evaluation")
+        
+        total_test = len(cnn_texts) + len(xsum_texts) + len(samsum_texts)
         logger.log(f"\n✓ Total test samples: {total_test}")
         
         # ===================================================================
@@ -224,7 +238,10 @@ def main():
         logger.log("="*80)
         logger.log(f"Training:   {len(train_texts_all):,} samples ({len(ExperimentConfig.TRAIN_DATASETS)} datasets, train splits)")
         logger.log(f"Validation: {len(val_texts_all):,} samples (validation splits - NO TEST!)")
-        logger.log(f"Test:       {total_test:,} samples (CNN/DailyMail only)")
+        logger.log(f"Test:       {total_test:,} samples total")
+        logger.log(f"  - CNN/DailyMail: {len(test_data['cnn_dm']['texts']):,}")
+        logger.log(f"  - XSUM: {len(test_data['xsum']['texts']):,}")
+        logger.log(f"  - SAMSum: {len(test_data['samsum']['texts']):,}")
         logger.log(f"Attack Opt: {len(attack_opt_texts):,} samples (CNN/DM validation)")
         logger.log(f"Attack Eval: {len(attack_eval_texts):,} samples (CNN/DM test)")
         logger.log("="*80)

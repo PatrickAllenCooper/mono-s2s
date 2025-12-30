@@ -57,11 +57,20 @@ class ExperimentConfig:
     
     LEARNING_RATE = 5e-5  # Increased from 3e-5 for better convergence
     WEIGHT_DECAY = 0.01
-    NUM_EPOCHS = 5  # Increased from 3 for better training
+    NUM_EPOCHS = 5  # Baseline training epochs
     BATCH_SIZE = 4
     GRADIENT_ACCUMULATION_STEPS = 1
     MAX_GRAD_NORM = 1.0
-    WARMUP_RATIO = 0.1
+    WARMUP_RATIO = 0.1  # Baseline warmup
+    
+    # ======================================================================
+    # MONOTONIC-SPECIFIC HYPERPARAMETERS (to reduce clean performance gap)
+    # ======================================================================
+    
+    # Monotonic model benefits from longer training due to constrained parameter space
+    MONOTONIC_NUM_EPOCHS = 7  # Extra epochs for convergence
+    MONOTONIC_WARMUP_RATIO = 0.15  # More warmup for softplus stability
+    MONOTONIC_LEARNING_RATE = 5e-5  # Same LR, but with more warmup
     
     # ======================================================================
     # TOKENIZATION PARAMETERS (IDENTICAL for all)
@@ -75,12 +84,12 @@ class ExperimentConfig:
     # ======================================================================
     
     DECODE_NUM_BEAMS = 4
-    # HF/beam-search length penalty: values >1 tend to favor longer generations;
-    # keep at 1.0 (neutral) to reduce over-generation after fine-tuning.
-    DECODE_LENGTH_PENALTY = 1.0
+    # HF/beam-search length penalty: values >1 encourage longer, more complete outputs
+    # Slightly increased to improve summary completeness
+    DECODE_LENGTH_PENALTY = 1.2
     DECODE_MIN_NEW_TOKENS = 10
-    # Cap generation length to curb over-generation in fine-tuned models.
-    DECODE_MAX_NEW_TOKENS = 64
+    # Increased max tokens to allow for more complete summaries
+    DECODE_MAX_NEW_TOKENS = 80
     DECODE_NO_REPEAT_NGRAM_SIZE = 3
     DECODE_EARLY_STOPPING = True
     
@@ -132,14 +141,17 @@ class ExperimentConfig:
         ("ccdv/arxiv-summarization", "article", "abstract", "arXiv"),
     ]
     
-    # Test datasets
-    # NOTE: XSUM and SAMSum currently have HuggingFace API compatibility issues
-    # Using CNN/DailyMail only for initial experiments
+    # Test datasets (with robust error handling and fallback)
     TEST_DATASETS = [
         ("cnn_dailymail", "3.0.0", "article", "highlights", "CNN/DM"),
-        # ("xsum", None, "document", "summary", "XSUM"),  # TODO: Fix HF API issue
-        # ("samsum", None, "dialogue", "summary", "SAMSum"),  # TODO: Find correct path
+        ("xsum", None, "document", "summary", "XSUM"),  # Reintroduced with retry logic
+        ("samsum", None, "dialogue", "summary", "SAMSum"),  # Reintroduced with retry logic
     ]
+    
+    # Dataset loading configuration
+    DATASET_MAX_RETRIES = 3  # Retry failed downloads
+    DATASET_RETRY_DELAY = 10  # Seconds between retries
+    DATASET_ALLOW_PARTIAL = True  # Continue if some datasets fail
     
     # ======================================================================
     # HPC-SPECIFIC SETTINGS

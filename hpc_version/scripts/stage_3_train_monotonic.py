@@ -71,12 +71,12 @@ class MonotonicT5Trainer:
         self.checkpoint_dir = checkpoint_dir
         self.history_path = history_path
         
-        # Use config hyperparameters (IDENTICAL to baseline)
-        self.learning_rate = ExperimentConfig.LEARNING_RATE
+        # Use monotonic-specific hyperparameters (tuned for better convergence)
+        self.learning_rate = ExperimentConfig.MONOTONIC_LEARNING_RATE
         self.weight_decay = ExperimentConfig.WEIGHT_DECAY
-        self.num_epochs = ExperimentConfig.NUM_EPOCHS
+        self.num_epochs = ExperimentConfig.MONOTONIC_NUM_EPOCHS  # More epochs for convergence
         self.max_grad_norm = ExperimentConfig.MAX_GRAD_NORM
-        self.warmup_ratio = ExperimentConfig.WARMUP_RATIO
+        self.warmup_ratio = ExperimentConfig.MONOTONIC_WARMUP_RATIO  # More warmup for stability
         
         # Optimizer (IDENTICAL to baseline)
         self.optimizer = AdamW(
