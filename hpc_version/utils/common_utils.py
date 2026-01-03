@@ -360,7 +360,7 @@ def load_model(model_type, checkpoint_path=None, device='cuda'):
     print(f"\nLoading {model_type} model...")
     
     # Load base model
-    model = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME).to(device)
+    model = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME, legacy=False).to(device)
     
     # Verify T5 architecture
     assert model.config.model_type == "t5", \

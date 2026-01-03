@@ -116,13 +116,37 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB3="completed"
 else
+    # Number of epochs (must match MONOTONIC_NUM_EPOCHS in configs/experiment_config.py)
+    MONOTONIC_EPOCHS=7
+    
+    # Determine initial dependency
     if [ "$JOB1" = "completed" ]; then
-        JOB3=$(sbatch --parsable jobs/job_3_monotonic.sh)
+        LAST_ID=""
     else
-        JOB3=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_3_monotonic.sh)
+        LAST_ID=$JOB1
     fi
-    echo "  Job ID: $JOB3"
-    echo "  [TIME] Expected time: 4-12 hours"
+
+    echo "  Submitting chain of $MONOTONIC_EPOCHS jobs (one per epoch) to avoid 24h timeout..."
+    
+    for (( i=1; i<=MONOTONIC_EPOCHS; i++ ))
+    do
+        if [ -z "$LAST_ID" ]; then
+             # First job, no dependency
+             JOB_ID=$(sbatch --parsable jobs/job_3_monotonic.sh --max_epochs_per_run 1)
+        else
+             # Dependent on previous job (either data prep or previous epoch)
+             JOB_ID=$(sbatch --parsable --dependency=afterok:$LAST_ID jobs/job_3_monotonic.sh --max_epochs_per_run 1)
+        fi
+        
+        # Strip cluster name if present (e.g., 12345;cluster)
+        JOB_ID=$(echo "$JOB_ID" | cut -d';' -f1)
+        LAST_ID=$JOB_ID
+        echo "    Epoch $i: Job $JOB_ID"
+    done
+    
+    JOB3=$LAST_ID
+    echo "  Final Job ID: $JOB3"
+    echo "  [TIME] Expected time: 4-12 hours (total for chain)"
     echo "  [INFO] Runs in PARALLEL with baseline training"
 fi
 

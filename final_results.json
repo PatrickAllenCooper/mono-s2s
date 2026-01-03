@@ -1,0 +1,294 @@
+{
+  "experiment_info": {
+    "seed": 42,
+    "model_name": "t5-small",
+    "use_full_test_sets": false,
+    "timestamp": "2025-12-15 20:29:39"
+  },
+  "training_summary": {
+    "baseline": {
+      "best_val_loss": 2.2531785969564058,
+      "training_time_minutes": 366.75816189050676,
+      "num_epochs": 5,
+      "hyperparameters": {
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "batch_size": 4,
+        "warmup_ratio": 0.1,
+        "max_grad_norm": 1.0
+      }
+    },
+    "monotonic": {
+      "best_val_loss": 2.5619723826733023,
+      "training_time_minutes": 554.3603396773339,
+      "num_epochs": 5,
+      "hyperparameters": {
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "batch_size": 4,
+        "warmup_ratio": 0.1,
+        "max_grad_norm": 1.0
+      },
+      "constraint_info": {
+        "type": "softplus_parametrization",
+        "formula": "W = softplus(V) >= 0",
+        "scope": "FFN sublayers only (wi, wi_0, wi_1, wo)",
+        "globally_monotonic": false,
+        "reason": "LayerNorm, residuals, and attention unconstrained"
+      }
+    }
+  },
+  "evaluation_summary": {
+    "cnn_dm": {
+      "standard_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.32446164610268896,
+            "lower": 0.3067655913472979,
+            "upper": 0.3407616485953124,
+            "ci_width": 0.033996057248014466
+          },
+          "rouge2": {
+            "mean": 0.11928048288027428,
+            "lower": 0.10494898500973007,
+            "upper": 0.13463065064094892,
+            "ci_width": 0.02968166563121885
+          },
+          "rougeLsum": {
+            "mean": 0.2648674655687602,
+            "lower": 0.24825382699992699,
+            "upper": 0.2807076776544667,
+            "ci_width": 0.032453850654539707
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 1.2071572580645162,
+          "avg_pred_length": 59.875,
+          "avg_ref_length": 49.6
+        }
+      },
+      "baseline_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.28593684546479897,
+            "lower": 0.2720344210534441,
+            "upper": 0.29935832676024965,
+            "ci_width": 0.02732390570680554
+          },
+          "rouge2": {
+            "mean": 0.10454878083983062,
+            "lower": 0.09225550517424258,
+            "upper": 0.11752037396625799,
+            "ci_width": 0.025264868792015407
+          },
+          "rougeLsum": {
+            "mean": 0.2292804655829994,
+            "lower": 0.2165967186878334,
+            "upper": 0.24158616244356315,
+            "ci_width": 0.024989443755729757
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 2.0686491935483873,
+          "avg_pred_length": 102.605,
+          "avg_ref_length": 49.6
+        }
+      },
+      "monotonic_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.26958674484035305,
+            "lower": 0.25578666183083965,
+            "upper": 0.2819622071869929,
+            "ci_width": 0.02617554535615324
+          },
+          "rouge2": {
+            "mean": 0.08752004035629092,
+            "lower": 0.07709769924540605,
+            "upper": 0.0976041255561652,
+            "ci_width": 0.02050642631075915
+          },
+          "rougeLsum": {
+            "mean": 0.21658635568638585,
+            "lower": 0.20510286081480755,
+            "upper": 0.22749913022700202,
+            "ci_width": 0.02239626941219447
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 2.0421370967741934,
+          "avg_pred_length": 101.29,
+          "avg_ref_length": 49.6
+        }
+      }
+    }
+  },
+  "attack_summary": {
+    "uat": {
+      "learned_triggers": {
+        "standard_t5": "\u201d. shown \u00bb informed beach",
+        "baseline_t5": "poly 2016. properties researchers behavior",
+        "monotonic_t5": "]. challenging gegen groupe07"
+      },
+      "results": {
+        "standard_t5": {
+          "trigger_text": "\u201d. shown \u00bb informed beach",
+          "trigger_ids": [
+            1141,
+            2008,
+            1168,
+            4862,
+            2608
+          ],
+          "rouge_deltas": {
+            "rouge1": -0.00397707171322631,
+            "rouge2": -0.005182814030092769,
+            "rougeLsum": -0.004430571435670799
+          },
+          "nll_increase": 0.00965727548846835,
+          "clean_rouge": {
+            "rouge1": 0.2836198809051519,
+            "rouge2": 0.08950867525786056,
+            "rougeLsum": 0.23146993807780608
+          },
+          "attack_rouge": {
+            "rouge1": 0.2796428091919256,
+            "rouge2": 0.08432586122776779,
+            "rougeLsum": 0.22703936664213528
+          }
+        },
+        "baseline_t5": {
+          "trigger_text": "poly 2016. properties researchers behavior",
+          "trigger_ids": [
+            4251,
+            4619,
+            2605,
+            4768,
+            3889
+          ],
+          "rouge_deltas": {
+            "rouge1": 0.0068357223031840775,
+            "rouge2": 0.007322039809331715,
+            "rougeLsum": 0.006000359620724205
+          },
+          "nll_increase": 0.009211724206246458,
+          "clean_rouge": {
+            "rouge1": 0.2534256735134319,
+            "rouge2": 0.08347013011725848,
+            "rougeLsum": 0.20329333301028368
+          },
+          "attack_rouge": {
+            "rouge1": 0.260261395816616,
+            "rouge2": 0.0907921699265902,
+            "rougeLsum": 0.2092936926310079
+          }
+        },
+        "monotonic_t5": {
+          "trigger_text": "]. challenging gegen groupe07",
+          "trigger_ids": [
+            4275,
+            4421,
+            2995,
+            4986,
+            4560
+          ],
+          "rouge_deltas": {
+            "rouge1": 0.0005069535950429083,
+            "rouge2": -0.0012572082859811234,
+            "rougeLsum": -0.001166431966467124
+          },
+          "nll_increase": 0.002820177410767051,
+          "clean_rouge": {
+            "rouge1": 0.24519450591894548,
+            "rouge2": 0.07151161631935388,
+            "rougeLsum": 0.19625490010174845
+          },
+          "attack_rouge": {
+            "rouge1": 0.2457014595139884,
+            "rouge2": 0.07025440803337275,
+            "rougeLsum": 0.19508846813528133
+          }
+        }
+      },
+      "transfer_matrix": {
+        "standard_t5": {
+          "standard_t5": -0.004255800062023335,
+          "baseline_t5": -0.0004959401072054392,
+          "monotonic_t5": -3.333277548431268e-05
+        },
+        "baseline_t5": {
+          "standard_t5": -0.0036790479809821197,
+          "baseline_t5": 0.006339383978466423,
+          "monotonic_t5": -0.0010706422066562027
+        },
+        "monotonic_t5": {
+          "standard_t5": -0.004462173371967748,
+          "baseline_t5": 0.006390606739666488,
+          "monotonic_t5": -0.002650652765158218
+        }
+      }
+    },
+    "hotflip": {
+      "results": {
+        "standard_t5": {
+          "model_name": "Standard T5",
+          "avg_degradation": 0.2143525356036221,
+          "std_degradation": 0.19743066150624716,
+          "success_rate": 0.7,
+          "avg_orig_loss": 2.462952210307121,
+          "avg_attack_loss": 2.877512894868851,
+          "min_degradation": -0.045175522445819155,
+          "max_degradation": 0.8069197770747326,
+          "num_samples": 100
+        },
+        "baseline_t5": {
+          "model_name": "Baseline T5",
+          "avg_degradation": 0.14600196016138292,
+          "std_degradation": 0.1382139001214381,
+          "success_rate": 0.54,
+          "avg_orig_loss": 2.6290762346982954,
+          "avg_attack_loss": 2.9422243094444274,
+          "min_degradation": -0.06174428102148394,
+          "max_degradation": 0.7214032902552598,
+          "num_samples": 100
+        },
+        "monotonic_t5": {
+          "model_name": "Monotonic T5",
+          "avg_degradation": 0.09351895044638604,
+          "std_degradation": 0.11070027372304889,
+          "success_rate": 0.39,
+          "avg_orig_loss": 3.236089662313461,
+          "avg_attack_loss": 3.480720725059509,
+          "min_degradation": -0.057607030689491565,
+          "max_degradation": 0.5575815925191379,
+          "num_samples": 100
+        }
+      },
+      "statistical_tests": {
+        "standard_vs_baseline": {
+          "t_stat": 2.8218841787213864,
+          "p_value": 0.005261048251863251,
+          "significant": "**"
+        },
+        "standard_vs_monotonic": {
+          "t_stat": 5.3116395850630305,
+          "p_value": 2.907417224859042e-07,
+          "significant": "***"
+        },
+        "baseline_vs_monotonic": {
+          "t_stat": 2.9489315683357447,
+          "p_value": 0.003572501831876363,
+          "significant": "**"
+        }
+      }
+    }
+  },
+  "key_findings": {
+    "best_rouge_cnn_dm": "standard_t5",
+    "most_robust_uat": "monotonic_t5",
+    "most_robust_hotflip": "monotonic_t5"
+  }
+}

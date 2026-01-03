@@ -34,6 +34,7 @@ os.environ.setdefault("CUDA_LAUNCH_BLOCKING", "1")
 
 import sys
 import time
+import argparse
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -245,12 +246,19 @@ class MonotonicT5Trainer:
         avg_loss = total_loss / len(self.val_loader)
         return avg_loss
     
-    def train(self):
+    def train(self, max_epochs_per_run=None):
         """Full training loop"""
         print(f"\nStarting training from epoch {self.start_epoch + 1}/{self.num_epochs}")
         print("="*80)
         
+        epochs_run = 0
+        
         for epoch in range(self.start_epoch, self.num_epochs):
+            # Check if we reached max epochs for this run
+            if max_epochs_per_run is not None and epochs_run >= max_epochs_per_run:
+                print(f"\nReached max epochs per run ({max_epochs_per_run}). Stopping.")
+                break
+
             print(f"\nEpoch {epoch + 1}/{self.num_epochs}")
             print("-"*80)
             
@@ -274,17 +282,27 @@ class MonotonicT5Trainer:
             
             # Save checkpoint
             self.save_checkpoint(epoch + 1, val_loss, is_best)
+            
+            epochs_run += 1
         
-        print("\n" + "="*80)
-        print("✓ Training complete!")
-        print(f"  Best validation loss: {self.best_val_loss:.4f}")
-        print("="*80)
+        is_complete = (self.start_epoch + epochs_run) >= self.num_epochs
         
-        return self.train_losses, self.val_losses
+        if is_complete:
+            print("\n" + "="*80)
+            print("✓ Training complete!")
+            print(f"  Best validation loss: {self.best_val_loss:.4f}")
+            print("="*80)
+        
+        return self.train_losses, self.val_losses, is_complete
 
 
 def main():
     """Run monotonic model training"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--max_epochs_per_run", type=int, default=None,
+                      help="Maximum number of epochs to run in this job")
+    args = parser.parse_args()
+
     logger = StageLogger("stage_3_train_monotonic")
     
     try:
@@ -352,7 +370,8 @@ def main():
         # Initialize model
         logger.log("Initializing monotonic model (T5 with W≥0 FFN constraints)...")
         model = T5ForConditionalGeneration.from_pretrained(
-            ExperimentConfig.MODEL_NAME
+            ExperimentConfig.MODEL_NAME,
+            legacy=False
         ).to(device)
         
         # Verify T5 architecture
@@ -406,7 +425,7 @@ def main():
         logger.log("  All hyperparameters IDENTICAL to baseline for fair comparison")
         
         start_time = time.time()
-        train_losses, val_losses = trainer.train()
+        train_losses, val_losses, is_complete = trainer.train(max_epochs_per_run=args.max_epochs_per_run)
         training_time = time.time() - start_time
         
         # Save results
@@ -446,8 +465,12 @@ def main():
         logger.log(f"  Final train loss: {train_losses[-1]:.4f}")
         logger.log(f"  Final val loss: {val_losses[-1]:.4f}")
         
-        # Mark complete
-        logger.complete(success=True)
+        # Mark complete only if actually finished all epochs
+        if is_complete:
+            logger.complete(success=True)
+        else:
+            logger.log(f"\nJob finished (partial run). Completed {len(train_losses)} epochs so far.")
+            
         return 0
         
     except Exception as e:

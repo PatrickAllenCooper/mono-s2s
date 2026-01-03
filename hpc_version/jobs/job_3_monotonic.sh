@@ -57,7 +57,7 @@ echo "Using softplus reparametrization: W = softplus(V)"
 echo "Training with IDENTICAL settings as baseline for fair comparison"
 echo ""
 
-python stage_3_train_monotonic.py
+python stage_3_train_monotonic.py "$@"
 
 EXIT_CODE=$?
 
