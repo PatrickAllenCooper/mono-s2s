@@ -340,8 +340,7 @@ def main():
         # Initialize model
         logger.log("Initializing baseline model (unconstrained T5)...")
         model = T5ForConditionalGeneration.from_pretrained(
-            ExperimentConfig.MODEL_NAME,
-            legacy=False
+            ExperimentConfig.MODEL_NAME
         ).to(device)
         
         # Verify T5 architecture

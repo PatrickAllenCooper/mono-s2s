@@ -370,8 +370,7 @@ def main():
         # Initialize model
         logger.log("Initializing monotonic model (T5 with W≥0 FFN constraints)...")
         model = T5ForConditionalGeneration.from_pretrained(
-            ExperimentConfig.MODEL_NAME,
-            legacy=False
+            ExperimentConfig.MODEL_NAME
         ).to(device)
         
         # Verify T5 architecture

@@ -77,7 +77,7 @@ def main():
         from transformers import T5ForConditionalGeneration, T5Tokenizer
         
         tokenizer = T5Tokenizer.from_pretrained(ExperimentConfig.MODEL_NAME)
-        model = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME, legacy=False)
+        model = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME)
         
         # Verify T5 architecture
         assert model.config.model_type == "t5", \
