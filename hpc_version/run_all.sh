@@ -67,6 +67,7 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_0_setup_complete.flag" ]; then
     JOB0="completed"
 else
     JOB0=$(sbatch --parsable jobs/job_0_setup.sh)
+    JOB0=$(echo "$JOB0" | cut -d';' -f1)
     echo "  Job ID: $JOB0"
     check_job_status $JOB0 "stage_0_setup" || {
         echo "[FAILED] Setup failed. Aborting."
@@ -86,6 +87,7 @@ else
     else
         JOB1=$(sbatch --parsable --dependency=afterok:$JOB0 jobs/job_1_data.sh)
     fi
+    JOB1=$(echo "$JOB1" | cut -d';' -f1)
     echo "  Job ID: $JOB1"
     check_job_status $JOB1 "stage_1_data_prep" || {
         echo "[FAILED] Data preparation failed. Aborting."
@@ -105,6 +107,7 @@ else
     else
         JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh)
     fi
+    JOB2=$(echo "$JOB2" | cut -d';' -f1)
     echo "  Job ID: $JOB2"
     echo "  [TIME] Expected time: 4-12 hours"
 fi
@@ -191,6 +194,7 @@ else
     else
         JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh)
     fi
+    JOB4=$(echo "$JOB4" | cut -d';' -f1)
     echo "  Job ID: $JOB4"
     
     # Check config for expected time
@@ -218,6 +222,7 @@ else
     else
         JOB5=$(sbatch --parsable jobs/job_5_uat.sh)
     fi
+    JOB5=$(echo "$JOB5" | cut -d';' -f1)
     echo "  Job ID: $JOB5"
     echo "  [TIME] Expected time: 2-3 hours"
 fi
@@ -234,6 +239,7 @@ else
     else
         JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh)
     fi
+    JOB6=$(echo "$JOB6" | cut -d';' -f1)
     echo "  Job ID: $JOB6"
     echo "  [TIME] Expected time: 1-2 hours"
     echo "  [INFO] Runs in PARALLEL with UAT attacks"
@@ -269,6 +275,7 @@ else
     else
         JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh)
     fi
+    JOB7=$(echo "$JOB7" | cut -d';' -f1)
     echo "  Job ID: $JOB7"
     echo "  [TIME] Expected time: 5-15 minutes"
     
