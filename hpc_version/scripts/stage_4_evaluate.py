@@ -148,7 +148,7 @@ def main():
         # Load test data
         logger.log("Loading test data...")
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
-        test_data = torch.load(os.path.join(data_cache_dir, 'test_data.pt'))
+        test_data = torch.load(os.path.join(data_cache_dir, 'test_data.pt'), weights_only=False)
         
         logger.log(f"  CNN/DailyMail: {len(test_data['cnn_dm']['texts'])} samples")
         logger.log(f"  XSUM: {len(test_data['xsum']['texts'])} samples")

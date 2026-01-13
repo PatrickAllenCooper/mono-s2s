@@ -373,7 +373,7 @@ def load_model(model_type, checkpoint_path=None, device='cuda'):
     # Load fine-tuned weights if provided
     if checkpoint_path and os.path.exists(checkpoint_path):
         print(f"  Loading checkpoint from: {checkpoint_path}")
-        state_dict = torch.load(checkpoint_path, map_location=device)
+        state_dict = torch.load(checkpoint_path, map_location=device, weights_only=False)
         model.load_state_dict(state_dict)
         model.eval()
         is_pretrained_only = False
@@ -634,7 +634,7 @@ def load_checkpoint(checkpoint_dir):
     latest_checkpoint = os.path.join(checkpoint_dir, f'checkpoint_epoch_{latest_epoch}.pt')
     
     print(f"  Found checkpoint: epoch {latest_epoch}")
-    return torch.load(latest_checkpoint, map_location='cpu')
+    return torch.load(latest_checkpoint, map_location='cpu', weights_only=False)
 
 
 # ======================================================================

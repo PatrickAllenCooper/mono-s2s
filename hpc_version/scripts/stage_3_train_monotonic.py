@@ -127,7 +127,7 @@ class MonotonicT5Trainer:
         )
         
         print(f"\n🔄 Loading checkpoint from {latest_checkpoint}")
-        checkpoint = torch.load(latest_checkpoint, map_location=self.device)
+        checkpoint = torch.load(latest_checkpoint, map_location=self.device, weights_only=False)
         
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -137,7 +137,7 @@ class MonotonicT5Trainer:
         
         # Load history
         if os.path.exists(self.history_path):
-            history = torch.load(self.history_path)
+            history = torch.load(self.history_path, weights_only=False)
             self.train_losses = history.get('train_losses', [])
             self.val_losses = history.get('val_losses', [])
         
@@ -327,8 +327,8 @@ def main():
         logger.log("Loading training and validation data...")
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
         
-        train_data = torch.load(os.path.join(data_cache_dir, 'train_data.pt'))
-        val_data = torch.load(os.path.join(data_cache_dir, 'val_data.pt'))
+        train_data = torch.load(os.path.join(data_cache_dir, 'train_data.pt'), weights_only=False)
+        val_data = torch.load(os.path.join(data_cache_dir, 'val_data.pt'), weights_only=False)
         
         logger.log(f"  Training samples: {len(train_data['texts'])}")
         logger.log(f"  Validation samples: {len(val_data['texts'])}")

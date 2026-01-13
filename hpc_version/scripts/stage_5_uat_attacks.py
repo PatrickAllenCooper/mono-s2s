@@ -428,7 +428,7 @@ def main():
         # Load attack data
         logger.log("Loading attack data...")
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
-        attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'))
+        attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'), weights_only=False)
         
         trigger_opt_texts = attack_data['optimization']['texts']
         trigger_opt_summaries = attack_data['optimization']['summaries']

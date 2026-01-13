@@ -301,7 +301,7 @@ def main():
         # Load attack data
         logger.log("Loading attack data...")
         data_cache_dir = ExperimentConfig.DATA_CACHE_DIR
-        attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'))
+        attack_data = torch.load(os.path.join(data_cache_dir, 'attack_data.pt'), weights_only=False)
         
         # Use evaluation split for HotFlip
         attack_texts = attack_data['evaluation']['texts']
