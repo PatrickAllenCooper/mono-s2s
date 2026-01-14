@@ -137,7 +137,13 @@ class MonotonicT5Trainer:
         
         # Load history
         if os.path.exists(self.history_path):
-            history = torch.load(self.history_path, weights_only=False)
+            # Handle both JSON and pickle formats for backwards compatibility
+            import json
+            try:
+                with open(self.history_path, 'r') as f:
+                    history = json.load(f)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                history = torch.load(self.history_path, weights_only=False)
             self.train_losses = history.get('train_losses', [])
             self.val_losses = history.get('val_losses', [])
         
@@ -171,13 +177,15 @@ class MonotonicT5Trainer:
             torch.save(self.model.state_dict(), best_path)
             print(f"  ✓ Best model saved: best_model.pt")
         
-        # Save history
+        # Save history as JSON (consistent with final save)
         history = {
             'train_losses': self.train_losses,
             'val_losses': self.val_losses,
             'best_val_loss': self.best_val_loss
         }
-        torch.save(history, self.history_path)
+        import json
+        with open(self.history_path, 'w') as f:
+            json.dump(history, f, indent=2)
     
     def train_epoch(self):
         """Train for one epoch"""
