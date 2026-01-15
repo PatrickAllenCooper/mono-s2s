@@ -1,0 +1,300 @@
+\documentclass[10pt]{beamer}
+
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+
+\usepackage{pgfplots}
+\usepgfplotslibrary{dateplot}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{xspace}
+
+\title{Monotone LLMs}
+\subtitle{Research Group Update}
+\date{}
+\author{}
+\institute{}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Table of contents}
+  \setbeamertemplate{section in toc}[sections numbered]
+  \tableofcontents
+\end{frame}
+
+\section{Method}
+
+%==============================================================================
+% SLIDE 1: MONOTONIC CONSTRAINTS
+%==============================================================================
+\begin{frame}{Monotonic Feed-Forward Layers}
+
+\begin{block}{Key Idea}
+Enforce $W \geq 0$ in FFN sublayers only via softplus reparameterization:
+\[
+W = \log(1 + \exp(V)) \geq 0
+\]
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{itemize}
+    \item \textbf{Scope:} T5 FFN projections (\texttt{wi}, \texttt{wo})
+    \item \textbf{Unconstrained:} Attention, LayerNorm, residuals
+    \item \textbf{Init:} $V_{\text{init}} = \text{softplus}^{-1}(|W_{\text{pre}}| + \epsilon)$
+\end{itemize}
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 2: TRAINING PROTOCOL
+%==============================================================================
+\begin{frame}{Training Protocol}
+
+\begin{table}
+    \caption{Training configuration (T5-small)}
+    \begin{tabular}{lcc}
+      \toprule
+      & Baseline & Monotonic \\
+      \midrule
+      Epochs & 5 & 7 \\
+      Warmup & 10\% & 15\% \\
+      Learning Rate & \multicolumn{2}{c}{$5\times10^{-5}$} \\
+      Best Val Loss & 2.25 & 2.56 \\
+      Training Time & 367 min & 554 min \\
+      \bottomrule
+    \end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\textbf{Data:} DialogSum, HighlightSum, arXiv ($\sim$50K examples)\\
+\textbf{Eval:} CNN/DailyMail (200 samples), ROUGE with 95\% bootstrap CIs
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 3: CLEAN PERFORMANCE
+%==============================================================================
+\begin{frame}{Clean Performance: ROUGE Scores}
+
+\begin{table}
+    \caption{ROUGE scores on CNN/DailyMail (higher is better)}
+    \begin{tabular}{lccc}
+      \toprule
+      Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
+      \midrule
+      Standard T5  & \textbf{0.325} & \textbf{0.119} & \textbf{0.265} \\
+      Baseline T5  & 0.286 & 0.105 & 0.229 \\
+      Monotonic T5 & 0.270 & 0.088 & 0.217 \\
+      \bottomrule
+    \end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+
+\begin{alertblock}{Performance Gap}
+Monotonic model: $\sim$5.5 ROUGE-1 points below standard T5\\
+Trade-off for robustness gains (see next slides)
+\end{alertblock}
+
+\end{frame}
+
+\section{Results}
+
+%==============================================================================
+% SLIDE 4: UAT EXPLANATION
+%==============================================================================
+\begin{frame}{Universal Adversarial Triggers (UAT)}
+
+\begin{block}{What is UAT?}
+Short, \textbf{input-agnostic} token sequences prepended to any input to maximize model loss. Optimized once, applied universally.
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{table}
+    \caption{Learned triggers and their effect}
+    \begin{tabular}{lll}
+      \toprule
+      Model & Trigger Found & $\Delta$ROUGE-L \\
+      \midrule
+      Standard  & \texttt{". shown » informed beach} & $-0.004$ \\
+      Baseline  & \texttt{poly 2016. properties...} & $+0.006$ \\
+      Monotonic & \texttt{]. challenging gegen groupe07} & $-0.001$ \\
+      \bottomrule
+    \end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\alert{Monotonic model:} Smallest degradation, triggers less effective
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 5: HOTFLIP EXPLANATION
+%==============================================================================
+\begin{frame}{HotFlip Attacks: What Are They?}
+
+\begin{block}{HotFlip Attack}
+\textbf{Gradient-based} token replacement attack:
+\begin{enumerate}
+    \item Compute gradient of loss w.r.t.\ input token embeddings
+    \item Identify tokens where replacement maximizes loss increase
+    \item Replace up to $k$ tokens (we use $k=5$)
+\end{enumerate}
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{exampleblock}{Example: Summarization Attack}
+\textbf{Original:} ``The mayor announced new funding for schools...''\\
+\textbf{HotFlip:} ``The \alert{villain} announced \alert{catastrophic} funding...''\\
+$\rightarrow$ Summary quality degrades or becomes nonsensical
+\end{exampleblock}
+
+\vspace{0.2cm}
+
+\textbf{Why it matters:} Tests model sensitivity to small, targeted perturbations
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 6: HOTFLIP RESULTS
+%==============================================================================
+\begin{frame}{HotFlip Results}
+
+\begin{table}
+    \caption{HotFlip attack results (lower = more robust)}
+    \begin{tabular}{lccc}
+      \toprule
+      Model & ROUGE Degradation & Success Rate & $\Delta$Loss \\
+      \midrule
+      Standard T5  & 21.4\% & 70\% & +0.41 \\
+      Baseline T5  & 14.6\% & 54\% & +0.31 \\
+      \alert{Monotonic T5} & \alert{9.4\%} & \alert{39\%} & \alert{+0.24} \\
+      \bottomrule
+    \end{tabular}
+\end{table}
+
+\vspace{0.3cm}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Key Findings:}
+\begin{itemize}
+    \item \textbf{56\% less} degradation vs standard
+    \item Success rate: 70\% $\rightarrow$ 39\%
+\end{itemize}
+
+\column{0.5\textwidth}
+\textbf{Implication:}
+\begin{itemize}
+    \item Non-negative weights reduce gradient exploitability
+    \item No adversarial training required
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 7: TRANSFER MATRIX
+%==============================================================================
+\begin{frame}{UAT Transfer Matrix}
+
+\begin{block}{Transfer Attack}
+Apply trigger optimized on Model A to attack Model B
+\end{block}
+
+\vspace{0.3cm}
+
+\begin{table}
+    \caption{$\Delta$ROUGE-L when trigger from row attacks column (* = same model)}
+    \begin{tabular}{lccc}
+      \toprule
+      Source $\backslash$ Target & Std T5 & Base T5 & Mono T5 \\
+      \midrule
+      Standard T5  & $-0.004$* & $-0.001$ & $-0.000$ \\
+      Baseline T5  & $-0.004$ & $+0.006$* & $-0.001$ \\
+      Monotonic T5 & $-0.005$ & $+0.006$ & $-0.003$* \\
+      \bottomrule
+    \end{tabular}
+\end{table}
+
+\vspace{0.2cm}
+
+\alert{Monotonic model:} Most resistant to transferred attacks
+
+\end{frame}
+
+%==============================================================================
+% SLIDE 8: SUMMARY
+%==============================================================================
+\begin{frame}{Experimental Summary}
+
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Clean Performance:}
+\begin{itemize}
+    \item Monotonic: 0.270 ROUGE-1
+    \item Baseline: 0.286 ROUGE-1
+    \item Gap: $\sim$6\% relative
+\end{itemize}
+
+\vspace{0.3cm}
+
+\textbf{Robustness Gains:}
+\begin{itemize}
+    \item HotFlip degradation: $-56\%$
+    \item Attack success: $-44\%$
+    \item UAT effect: near zero
+\end{itemize}
+
+\column{0.5\textwidth}
+\begin{alertblock}{Key Takeaway}
+Modest clean performance cost buys substantial robustness improvement
+\end{alertblock}
+
+\vspace{0.3cm}
+
+\textbf{Next Steps:}
+\begin{itemize}
+    \item Scale to T5-base/large
+    \item Full test set evaluation
+    \item Additional attack types
+\end{itemize}
+\end{columns}
+
+\end{frame}
+
+\section{Theory}
+
+%==============================================================================
+% SLIDE 9: THEORY PLACEHOLDER 1
+%==============================================================================
+\begin{frame}{Theory: Monotonicity Fundamentals}
+% To be filled
+\end{frame}
+
+%==============================================================================
+% SLIDE 10: THEORY PLACEHOLDER 2
+%==============================================================================
+\begin{frame}{Theory: Why Monotonicity Improves Robustness}
+% To be filled
+\end{frame}
+
+{\setbeamercolor{palette primary}{fg=black, bg=yellow}
+\begin{frame}[standout]
+  Questions?
+\end{frame}
+}
+
+\end{document}
