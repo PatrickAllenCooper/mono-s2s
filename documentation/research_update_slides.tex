@@ -37,7 +37,7 @@
 \begin{frame}{Monotonic Feed-Forward Layers}
 
 \begin{block}{Key Idea}
-Enforce $W \geq 0$ in FFN sublayers only via softplus reparameterization:
+Enforce $W \geq 0$ in FFN sublayers via softplus reparameterization:
 \[
 W = \log(1 + \exp(V)) \geq 0
 \]
@@ -68,7 +68,6 @@ W = \log(1 + \exp(V)) \geq 0
       Warmup & 10\% & 15\% \\
       Learning Rate & \multicolumn{2}{c}{$5\times10^{-5}$} \\
       Best Val Loss & 2.25 & 2.56 \\
-      Training Time & 367 min & 554 min \\
       \bottomrule
     \end{tabular}
 \end{table}
@@ -76,17 +75,17 @@ W = \log(1 + \exp(V)) \geq 0
 \vspace{0.2cm}
 
 \textbf{Data:} DialogSum, HighlightSum, arXiv ($\sim$50K examples)\\
-\textbf{Eval:} CNN/DailyMail (200 samples), ROUGE with 95\% bootstrap CIs
+\textbf{Eval:} CNN/DailyMail, ROUGE with 95\% bootstrap CIs
 
 \end{frame}
 
 %==============================================================================
 % SLIDE 3: CLEAN PERFORMANCE
 %==============================================================================
-\begin{frame}{Clean Performance: ROUGE Scores}
+\begin{frame}{Clean Performance}
 
 \begin{table}
-    \caption{ROUGE scores on CNN/DailyMail (higher is better)}
+    \caption{ROUGE scores on CNN/DailyMail}
     \begin{tabular}{lccc}
       \toprule
       Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
@@ -100,70 +99,53 @@ W = \log(1 + \exp(V)) \geq 0
 
 \vspace{0.3cm}
 
-\begin{alertblock}{Performance Gap}
-Monotonic model: $\sim$5.5 ROUGE-1 points below standard T5\\
-Trade-off for robustness gains (see next slides)
-\end{alertblock}
+Monotonic model incurs $\sim$6\% relative ROUGE-1 drop vs baseline.
 
 \end{frame}
 
 \section{Results}
 
 %==============================================================================
-% SLIDE 4: UAT EXPLANATION
+% SLIDE 4: WHY HOTFLIP
 %==============================================================================
-\begin{frame}{Universal Adversarial Triggers (UAT)}
+\begin{frame}{Why HotFlip Attacks?}
 
-\begin{block}{What is UAT?}
-Short, \textbf{input-agnostic} token sequences prepended to any input to maximize model loss. Optimized once, applied universally.
+\begin{block}{HotFlip is a First-Order Attack}
+Uses gradient $\nabla_e \mathcal{L}$ w.r.t.\ input embeddings to find adversarial token replacements that maximally increase loss.
 \end{block}
 
 \vspace{0.3cm}
 
-\begin{table}
-    \caption{Learned triggers and their effect}
-    \begin{tabular}{lll}
-      \toprule
-      Model & Trigger Found & $\Delta$ROUGE-L \\
-      \midrule
-      Standard  & \texttt{". shown » informed beach} & $-0.004$ \\
-      Baseline  & \texttt{poly 2016. properties...} & $+0.006$ \\
-      Monotonic & \texttt{]. challenging gegen groupe07} & $-0.001$ \\
-      \bottomrule
-    \end{tabular}
-\end{table}
+\textbf{Why this matters for monotonicity:}
+\begin{itemize}
+    \item Monotone FFNs constrain gradient sign: $\frac{\partial f}{\partial x} \geq 0$
+    \item Adversarial gradients cannot exploit sign-flipping directions
+    \item If monotonicity helps, HotFlip should be \emph{less effective}
+\end{itemize}
 
-\vspace{0.2cm}
+\vspace{0.3cm}
 
-\alert{Monotonic model:} Smallest degradation, triggers less effective
+\alert{HotFlip directly tests whether non-negative weights reduce gradient exploitability.}
 
 \end{frame}
 
 %==============================================================================
-% SLIDE 5: HOTFLIP EXPLANATION
+% SLIDE 5: HOTFLIP PROCEDURE
 %==============================================================================
-\begin{frame}{HotFlip Attacks: What Are They?}
+\begin{frame}{HotFlip Attack Procedure}
 
-\begin{block}{HotFlip Attack}
-\textbf{Gradient-based} token replacement attack:
 \begin{enumerate}
-    \item Compute gradient of loss w.r.t.\ input token embeddings
-    \item Identify tokens where replacement maximizes loss increase
-    \item Replace up to $k$ tokens (we use $k=5$)
+    \item \textbf{Compute gradient:} $g = \nabla_{e_i} \mathcal{L}(x, y)$ for each input token $i$
+    \item \textbf{Score replacements:} For candidate token $t'$, compute $g^\top (e_{t'} - e_i)$
+    \item \textbf{Select flip:} Choose $(i, t')$ maximizing score
+    \item \textbf{Repeat:} Apply up to $k=5$ flips per example
 \end{enumerate}
-\end{block}
 
 \vspace{0.3cm}
 
-\begin{exampleblock}{Example: Summarization Attack}
-\textbf{Original:} ``The mayor announced new funding for schools...''\\
-\textbf{HotFlip:} ``The \alert{villain} announced \alert{catastrophic} funding...''\\
-$\rightarrow$ Summary quality degrades or becomes nonsensical
+\begin{exampleblock}{Intuition}
+Gradient points toward embedding changes that increase loss most rapidly. HotFlip follows this direction in the discrete token space.
 \end{exampleblock}
-
-\vspace{0.2cm}
-
-\textbf{Why it matters:} Tests model sensitivity to small, targeted perturbations
 
 \end{frame}
 
@@ -173,10 +155,10 @@ $\rightarrow$ Summary quality degrades or becomes nonsensical
 \begin{frame}{HotFlip Results}
 
 \begin{table}
-    \caption{HotFlip attack results (lower = more robust)}
+    \caption{HotFlip attack on CNN/DailyMail (lower = more robust)}
     \begin{tabular}{lccc}
       \toprule
-      Model & ROUGE Degradation & Success Rate & $\Delta$Loss \\
+      Model & Degradation & Success Rate & $\Delta$Loss \\
       \midrule
       Standard T5  & 21.4\% & 70\% & +0.41 \\
       Baseline T5  & 14.6\% & 54\% & +0.31 \\
@@ -187,91 +169,68 @@ $\rightarrow$ Summary quality degrades or becomes nonsensical
 
 \vspace{0.3cm}
 
-\begin{columns}[T]
-\column{0.5\textwidth}
-\textbf{Key Findings:}
 \begin{itemize}
-    \item \textbf{56\% less} degradation vs standard
-    \item Success rate: 70\% $\rightarrow$ 39\%
+    \item \textbf{Degradation:} Average ROUGE-L drop under attack
+    \item \textbf{Success Rate:} Fraction with $>$10\% degradation
+    \item \textbf{$\Delta$Loss:} Mean NLL increase from flips
 \end{itemize}
-
-\column{0.5\textwidth}
-\textbf{Implication:}
-\begin{itemize}
-    \item Non-negative weights reduce gradient exploitability
-    \item No adversarial training required
-\end{itemize}
-\end{columns}
 
 \end{frame}
 
 %==============================================================================
-% SLIDE 7: TRANSFER MATRIX
+% SLIDE 7: INTERPRETATION
 %==============================================================================
-\begin{frame}{UAT Transfer Matrix}
+\begin{frame}{Interpretation}
 
-\begin{block}{Transfer Attack}
-Apply trigger optimized on Model A to attack Model B
-\end{block}
+\begin{columns}[T]
+\column{0.5\textwidth}
+\textbf{Monotonic vs Standard:}
+\begin{itemize}
+    \item 56\% less ROUGE degradation
+    \item 44\% lower attack success
+    \item 41\% smaller loss increase
+\end{itemize}
 
-\vspace{0.3cm}
+\column{0.5\textwidth}
+\textbf{Monotonic vs Baseline:}
+\begin{itemize}
+    \item 36\% less degradation
+    \item 28\% lower success rate
+    \item 22\% smaller loss increase
+\end{itemize}
+\end{columns}
 
-\begin{table}
-    \caption{$\Delta$ROUGE-L when trigger from row attacks column (* = same model)}
-    \begin{tabular}{lccc}
-      \toprule
-      Source $\backslash$ Target & Std T5 & Base T5 & Mono T5 \\
-      \midrule
-      Standard T5  & $-0.004$* & $-0.001$ & $-0.000$ \\
-      Baseline T5  & $-0.004$ & $+0.006$* & $-0.001$ \\
-      Monotonic T5 & $-0.005$ & $+0.006$ & $-0.003$* \\
-      \bottomrule
-    \end{tabular}
-\end{table}
+\vspace{0.5cm}
 
-\vspace{0.2cm}
-
-\alert{Monotonic model:} Most resistant to transferred attacks
+\begin{alertblock}{Takeaway}
+Non-negative weight constraints reduce gradient-based attack effectiveness without adversarial training.
+\end{alertblock}
 
 \end{frame}
 
 %==============================================================================
 % SLIDE 8: SUMMARY
 %==============================================================================
-\begin{frame}{Experimental Summary}
+\begin{frame}{Summary}
 
-\begin{columns}[T]
-\column{0.5\textwidth}
-\textbf{Clean Performance:}
+\textbf{Clean performance:} Monotonic model pays $\sim$6\% ROUGE cost
+
+\vspace{0.3cm}
+
+\textbf{Robustness gain:} Under HotFlip attack:
 \begin{itemize}
-    \item Monotonic: 0.270 ROUGE-1
-    \item Baseline: 0.286 ROUGE-1
-    \item Gap: $\sim$6\% relative
+    \item ROUGE degradation: 21.4\% $\rightarrow$ 9.4\%
+    \item Attack success: 70\% $\rightarrow$ 39\%
 \end{itemize}
 
 \vspace{0.3cm}
 
-\textbf{Robustness Gains:}
-\begin{itemize}
-    \item HotFlip degradation: $-56\%$
-    \item Attack success: $-44\%$
-    \item UAT effect: near zero
-\end{itemize}
-
-\column{0.5\textwidth}
-\begin{alertblock}{Key Takeaway}
-Modest clean performance cost buys substantial robustness improvement
-\end{alertblock}
-
-\vspace{0.3cm}
-
-\textbf{Next Steps:}
+\textbf{Next steps:}
 \begin{itemize}
     \item Scale to T5-base/large
     \item Full test set evaluation
-    \item Additional attack types
+    \item Certified robustness bounds
 \end{itemize}
-\end{columns}
 
 \end{frame}
 
@@ -287,7 +246,7 @@ Modest clean performance cost buys substantial robustness improvement
 %==============================================================================
 % SLIDE 10: THEORY PLACEHOLDER 2
 %==============================================================================
-\begin{frame}{Theory: Why Monotonicity Improves Robustness}
+\begin{frame}{Theory: Robustness Implications}
 % To be filled
 \end{frame}
 
