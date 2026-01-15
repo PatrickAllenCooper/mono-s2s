@@ -45,13 +45,43 @@ check_job_status() {
         sleep 30
     done
     
+    # Give filesystem a moment to sync (helps with NFS delays)
+    sleep 5
+    
     # Check if completion flag exists
     local flag_file="${SCRATCH}/mono_s2s_work/${job_name}_complete.flag"
     if [ -f "$flag_file" ]; then
         echo "[SUCCESS] $job_name completed successfully"
+        cat "$flag_file"
         return 0
     else
-        echo "[FAILED] $job_name FAILED - check logs/job_*_${job_id}.err"
+        echo "[FAILED] $job_name FAILED or flag not created"
+        echo "  Expected flag: $flag_file"
+        echo "  Check job logs:"
+        echo "    Output: logs/job_*_${job_id}.out"
+        echo "    Errors: logs/job_*_${job_id}.err"
+        
+        # Check if SLURM output files exist
+        if ls logs/job_*_${job_id}.out 2>/dev/null; then
+            echo ""
+            echo "  Last 20 lines of job output:"
+            tail -n 20 logs/job_*_${job_id}.out | sed 's/^/    /'
+        fi
+        
+        # For monotonic training, check if it's actually complete but flag missing
+        if [[ "$job_name" == "stage_3_train_monotonic" ]]; then
+            local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/monotonic_checkpoints"
+            if [ -d "$checkpoint_dir" ]; then
+                local epoch_count=$(ls "$checkpoint_dir"/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
+                echo ""
+                echo "  [DIAGNOSTIC] Found $epoch_count epoch checkpoints"
+                if [ $epoch_count -ge 7 ]; then
+                    echo "  [INFO] Training may have completed but flag wasn't created."
+                    echo "  [FIX] Run: ./fix_completion_flag.sh to manually verify and fix"
+                fi
+            fi
+        fi
+        
         return 1
     fi
 }

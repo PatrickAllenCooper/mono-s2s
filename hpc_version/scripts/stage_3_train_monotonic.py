@@ -257,6 +257,7 @@ class MonotonicT5Trainer:
     def train(self, max_epochs_per_run=None):
         """Full training loop"""
         print(f"\nStarting training from epoch {self.start_epoch + 1}/{self.num_epochs}")
+        print(f"Resume state: start_epoch={self.start_epoch}, target={self.num_epochs}")
         print("="*80)
         
         epochs_run = 0
@@ -293,13 +294,25 @@ class MonotonicT5Trainer:
             
             epochs_run += 1
         
-        is_complete = (self.start_epoch + epochs_run) >= self.num_epochs
+        # Calculate completion status
+        total_epochs_completed = self.start_epoch + epochs_run
+        is_complete = total_epochs_completed >= self.num_epochs
+        
+        print(f"\n[COMPLETION CHECK]")
+        print(f"  start_epoch={self.start_epoch}")
+        print(f"  epochs_run={epochs_run}")
+        print(f"  total_epochs_completed={total_epochs_completed}")
+        print(f"  target_epochs={self.num_epochs}")
+        print(f"  is_complete={is_complete}")
         
         if is_complete:
             print("\n" + "="*80)
-            print("✓ Training complete!")
+            print("✓ ALL TRAINING COMPLETE!")
+            print(f"  Total epochs completed: {total_epochs_completed}/{self.num_epochs}")
             print(f"  Best validation loss: {self.best_val_loss:.4f}")
             print("="*80)
+        else:
+            print(f"\n[INFO] Partial training complete ({total_epochs_completed}/{self.num_epochs} epochs)")
         
         return self.train_losses, self.val_losses, is_complete
 

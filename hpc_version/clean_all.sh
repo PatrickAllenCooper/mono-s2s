@@ -69,8 +69,10 @@ echo ""
 echo "  2. Cached datasets"
 echo "     ${WORK_DIR}/data_cache/"
 echo ""
-echo "  3. Model checkpoints"
-echo "     ${WORK_DIR}/checkpoints/"
+echo "  3. Model checkpoints (BOTH models, ALL epochs)"
+echo "     ${WORK_DIR}/checkpoints/baseline_checkpoints/"
+echo "     ${WORK_DIR}/checkpoints/monotonic_checkpoints/"
+echo "     This deletes ALL training progress - you'll start from scratch"
 echo ""
 echo "  4. Evaluation results"
 echo "     ${RESULTS_DIR}/"
@@ -166,10 +168,21 @@ fi
 echo ""
 echo "[3/7] Removing model checkpoints..."
 if [ -d "${WORK_DIR}/checkpoints" ]; then
+    # Show what's being deleted
+    if [ -d "${WORK_DIR}/checkpoints/baseline_checkpoints" ]; then
+        BASELINE_COUNT=$(ls "${WORK_DIR}/checkpoints/baseline_checkpoints"/*.pt 2>/dev/null | wc -l)
+        echo "  - Baseline checkpoints: $BASELINE_COUNT files"
+    fi
+    if [ -d "${WORK_DIR}/checkpoints/monotonic_checkpoints" ]; then
+        MONOTONIC_COUNT=$(ls "${WORK_DIR}/checkpoints/monotonic_checkpoints"/*.pt 2>/dev/null | wc -l)
+        echo "  - Monotonic checkpoints: $MONOTONIC_COUNT files"
+    fi
+    
+    # Delete entire checkpoints directory
     rm -rf ${WORK_DIR}/checkpoints
-    echo "  [SUCCESS] Checkpoints removed"
+    echo "  [SUCCESS] All checkpoints removed"
 else
-    echo "  [SKIP] Checkpoints do not exist"
+    echo "  [SKIP] Checkpoints directory does not exist"
 fi
 
 # 4. Remove evaluation results
@@ -229,6 +242,11 @@ echo ""
 echo "=========================================="
 echo "[SUCCESS] ALL DATA CLEANED!"
 echo "=========================================="
+echo ""
+echo "Verification:"
+echo "  Checkpoints: $([ -d "${WORK_DIR}/checkpoints" ] && echo "⚠️  Still exist!" || echo "✓ Deleted")"
+echo "  Data cache:  $([ -d "${WORK_DIR}/data_cache" ] && echo "⚠️  Still exist!" || echo "✓ Deleted")"
+echo "  Results:     $([ -d "${RESULTS_DIR}" ] && echo "⚠️  Still exist!" || echo "✓ Deleted")"
 echo ""
 echo "You can now rerun the experiment from scratch:"
 echo "  ./run_all.sh"
