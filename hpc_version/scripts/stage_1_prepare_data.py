@@ -84,8 +84,8 @@ def main():
             val_summaries_all.extend(summaries)
             logger.log(f"  {label}: {len(texts)} samples")
         
-        logger.log(f"\n✓ Total validation samples: {len(val_texts_all)}")
-        logger.log(f"  ⚠️  CRITICAL: Using VALIDATION splits (test sets untouched)")
+        logger.log(f"\nTotal validation samples: {len(val_texts_all)}")
+        logger.log(f"  CRITICAL: Using VALIDATION splits (test sets untouched)")
         
         # ===================================================================
         # Load Test Data (for final evaluation)
@@ -112,7 +112,7 @@ def main():
         )
         test_data['xsum'] = {'texts': xsum_texts, 'summaries': xsum_sums}
         if len(xsum_texts) == 0:
-            logger.log("  ⚠️  XSUM dataset could not be loaded, will be skipped in evaluation")
+            logger.log("  WARNING: XSUM dataset could not be loaded, will be skipped in evaluation")
         
         # SAMSum - with retry logic and graceful fallback
         logger.log("Loading SAMSum test...")
@@ -122,7 +122,7 @@ def main():
         )
         test_data['samsum'] = {'texts': samsum_texts, 'summaries': samsum_sums}
         if len(samsum_texts) == 0:
-            logger.log("  ⚠️  SAMSum dataset could not be loaded, will be skipped in evaluation")
+            logger.log("  WARNING: SAMSum dataset could not be loaded, will be skipped in evaluation")
         
         total_test = len(cnn_texts) + len(xsum_texts) + len(samsum_texts)
         logger.log(f"\n✓ Total test samples: {total_test}")
@@ -249,7 +249,7 @@ def main():
         return logger.complete(success=True)
         
     except Exception as e:
-        logger.log(f"\n❌ ERROR in data preparation: {e}")
+        logger.log(f"\nERROR in data preparation: {e}")
         import traceback
         logger.log(traceback.format_exc())
         return logger.complete(success=False)

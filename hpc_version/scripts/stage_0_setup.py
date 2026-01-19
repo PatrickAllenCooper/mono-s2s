@@ -54,23 +54,23 @@ def main():
         # Validate configuration
         logger.log("Validating configuration...")
         if not ExperimentConfig.validate_config():
-            logger.log("⚠️  Configuration validation failed (non-fatal)")
+            logger.log("WARNING: Configuration validation failed (non-fatal)")
         
         # Test PyTorch + CUDA
         logger.log("Testing PyTorch and CUDA...")
         import torch
         
         if torch.cuda.is_available():
-            logger.log(f"✓ CUDA available: {torch.cuda.get_device_name(0)}")
+            logger.log(f"CUDA available: {torch.cuda.get_device_name(0)}")
             logger.log(f"  CUDA version: {torch.version.cuda}")
             logger.log(f"  cuDNN version: {torch.backends.cudnn.version()}")
             
             # Test GPU with small tensor
             x = torch.randn(100, 100).cuda()
             y = torch.mm(x, x.t())
-            logger.log(f"✓ GPU tensor operations working")
+            logger.log(f"GPU tensor operations working")
         else:
-            logger.log("⚠️  No CUDA available - training will be VERY slow!")
+            logger.log("WARNING: No CUDA available - training will be VERY slow!")
         
         # Download and verify T5 model
         logger.log(f"Downloading T5 model: {ExperimentConfig.MODEL_NAME}...")
@@ -112,7 +112,7 @@ def main():
         return 0
         
     except Exception as e:
-        logger.log(f"\n❌ ERROR in setup stage: {e}")
+        logger.log(f"\nERROR in setup stage: {e}")
         import traceback
         logger.log(traceback.format_exc())
         logger.complete(success=False)

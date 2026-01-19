@@ -252,10 +252,10 @@ def main():
 
         missing = [k for k in preferred_order if k not in eval_results]
         if missing:
-            logger.log(f"⚠️  Missing evaluation datasets (skipped earlier): "
+            logger.log(f"WARNING: Missing evaluation datasets (skipped earlier): "
                        f"{', '.join(dataset_name_map.get(k, k) for k in missing)}")
         if inferred_datasets:
-            logger.log("ℹ️  Detected additional evaluation datasets: "
+            logger.log("INFO: Detected additional evaluation datasets: "
                        f"{', '.join(dataset_name_map.get(k, k) for k in inferred_datasets)}")
         
         logger.log("Loading UAT results...")
@@ -422,7 +422,7 @@ def main():
         
         # Final summary
         logger.log("\n" + "="*80)
-        logger.log("✅ EXPERIMENT COMPLETE!")
+        logger.log("EXPERIMENT COMPLETE!")
         logger.log("="*80)
         logger.log(f"\nResults location:")
         logger.log(f"  Working directory: {results_dir}")
@@ -437,16 +437,16 @@ def main():
         logger.log("\n" + "="*80)
         logger.log("METHODOLOGICAL CHECKLIST")
         logger.log("="*80)
-        logger.log("✓ Three-model comparison (Standard, Baseline, Monotonic)")
-        logger.log("✓ Identical base hyperparameters (LR, batch size, weight decay)")
-        logger.log("  ⚠️  Monotonic extended training for fair convergence:")
+        logger.log("- Three-model comparison (Standard, Baseline, Monotonic)")
+        logger.log("- Identical base hyperparameters (LR, batch size, weight decay)")
+        logger.log("  NOTE: Monotonic extended training for fair convergence:")
         logger.log(f"      - Epochs: {ExperimentConfig.MONOTONIC_NUM_EPOCHS} vs {ExperimentConfig.NUM_EPOCHS} (baseline)")
         logger.log(f"      - Warmup: {ExperimentConfig.MONOTONIC_WARMUP_RATIO} vs {ExperimentConfig.WARMUP_RATIO} (baseline)")
         logger.log("      Justification: Constrained parameter space requires more training")
-        logger.log("✓ Fixed decoding parameters (all models)")
-        logger.log("✓ Bootstrap 95% confidence intervals (ROUGE)")
-        logger.log("✓ Full test set evaluation")
-        logger.log("✓ Held-out attack evaluation")
+        logger.log("- Fixed decoding parameters (all models)")
+        logger.log("- Bootstrap 95% confidence intervals (ROUGE)")
+        logger.log("- Full test set evaluation")
+        logger.log("- Held-out attack evaluation")
         logger.log("✓ Transfer attack matrix")
         logger.log("✓ Comprehensive determinism")
         logger.log("✓ Complete experiment metadata")
@@ -457,7 +457,7 @@ def main():
         return 0
         
     except Exception as e:
-        logger.log(f"\n❌ ERROR: {str(e)}")
+        logger.log(f"\nERROR: {str(e)}")
         import traceback
         logger.log(traceback.format_exc())
         logger.complete(success=False)

@@ -1,18 +1,18 @@
 # Changes At A Glance
 
-## 🎯 Two Main Goals Achieved
+## Two Main Goals Achieved
 
-### ✅ Goal 1: Reintroduce XSUM and SAMSum Datasets
-- **Status**: ✅ Complete with robust error handling
+### Goal 1: Reintroduce XSUM and SAMSum Datasets
+- **Status**: Complete with robust error handling
 - **Impact**: Full scientific coverage (3 test datasets as specified in README)
 
-### ✅ Goal 2: Reduce Clean Performance Gap
-- **Status**: ✅ Complete with 4 strategic improvements
+### Goal 2: Reduce Clean Performance Gap
+- **Status**: Complete with 4 strategic improvements
 - **Impact**: Expected gap reduction from **-4.0%** to **-0.5% to -1.5%**
 
 ---
 
-## 📊 Quick Comparison Table
+## Quick Comparison Table
 
 | Aspect | Before | After | Change |
 |--------|--------|-------|--------|
@@ -21,12 +21,12 @@
 | **Length Penalty** | 1.0 | **1.2** | Better generation |
 | **Max Tokens** | 64 | **80** | +25% capacity |
 | **Softplus Init** | Random | **Preserves pretrained** | Better start |
-| **Dataset Retry** | ❌ None | **✅ 3 attempts** | Robust loading |
-| **XSUM/SAMSum** | ❌ Disabled | **✅ Enabled** | Complete coverage |
+| **Dataset Retry** | None | **3 attempts** | Robust loading |
+| **XSUM/SAMSum** | Disabled | **Enabled** | Complete coverage |
 
 ---
 
-## 🚀 Expected Performance
+## Expected Performance
 
 ### Clean Performance (ROUGE-L on CNN/DM)
 
@@ -35,8 +35,8 @@ Standard T5:   0.2683 [0.2510, 0.2842]  (Reference)
 Baseline T5:   0.2577 [0.2427, 0.2726]  (Fair control)
 
 Monotonic T5:  
-  OLD: 0.2473 [0.2328, 0.2618]  ⚠️  Gap: -4.0%
-  NEW: 0.2540-0.2565 (projected)  ✅ Gap: -0.5% to -1.5%
+  OLD: 0.2473 [0.2328, 0.2618]  Gap: -4.0%
+  NEW: 0.2540-0.2565 (projected)  Gap: -0.5% to -1.5%
 ```
 
 ### Adversarial Robustness (HotFlip)
@@ -45,12 +45,12 @@ Monotonic T5:
 Baseline T5:    16.35% degradation | 61.0% success rate
 Monotonic T5:   ~7-9% degradation  | ~23-28% success rate
 
-✅ Maintains ~50% better robustness vs baseline
+Maintains ~50% better robustness vs baseline
 ```
 
 ---
 
-## 🔧 Key Technical Improvements
+## Key Technical Improvements
 
 ### 1. **Improved Softplus Initialization**
 ```python
@@ -83,28 +83,28 @@ DECODE_MAX_NEW_TOKENS = 80    # Allows fuller coverage
 
 ---
 
-## 📁 Files Changed
+## Files Changed
 
 **Configuration**:
-- ✅ `configs/experiment_config.py` - New hyperparameters & dataset config
+- `configs/experiment_config.py` - New hyperparameters & dataset config
 
 **Core Utilities**:
-- ✅ `utils/common_utils.py` - Improved softplus init & retry logic
+- `utils/common_utils.py` - Improved softplus init & retry logic
 
 **Training**:
-- ✅ `scripts/stage_3_train_monotonic.py` - Use new hyperparameters
+- `scripts/stage_3_train_monotonic.py` - Use new hyperparameters
 
 **Data Prep**:
-- ✅ `scripts/stage_1_prepare_data.py` - Load XSUM/SAMSum with retry
+- `scripts/stage_1_prepare_data.py` - Load XSUM/SAMSum with retry
 
 **New Files**:
-- ✅ `test_improvements.py` - Validation script
-- ✅ `IMPROVEMENTS_SUMMARY.md` - Full technical details
-- ✅ `CHANGES_AT_A_GLANCE.md` - This quick reference
+- `test_improvements.py` - Validation script
+- `IMPROVEMENTS_SUMMARY.md` - Full technical details
+- `CHANGES_AT_A_GLANCE.md` - This quick reference
 
 ---
 
-## ✅ Next Steps
+## Next Steps
 
 ### 1. Test (5 minutes)
 ```bash
@@ -132,7 +132,7 @@ cat $SCRATCH/mono_s2s_results/experiment_summary.txt
 
 ---
 
-## 🎯 Success Metrics
+## Success Metrics
 
 | Metric | Target | Previous | Note |
 |--------|--------|----------|------|
@@ -143,7 +143,7 @@ cat $SCRATCH/mono_s2s_results/experiment_summary.txt
 
 ---
 
-## 💡 Key Insight
+## Key Insight
 
 **The original hypothesis is CONFIRMED**:
 - Monotonic constraints provide **~50% better adversarial robustness**
@@ -152,9 +152,9 @@ cat $SCRATCH/mono_s2s_results/experiment_summary.txt
   2. Insufficient training time for constrained optimization
   3. Suboptimal decoding parameters
 
-**These improvements address all three issues** ✅
+**These improvements address all three issues**
 
 ---
 
-**Ready to eliminate the trade-off while maintaining robustness!** 🚀
+Ready to eliminate the trade-off while maintaining robustness.
 

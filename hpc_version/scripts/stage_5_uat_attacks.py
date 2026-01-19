@@ -611,7 +611,7 @@ def main():
         return 0
         
     except Exception as e:
-        logger.log(f"\n❌ ERROR: {str(e)}")
+        logger.log(f"\nERROR: {str(e)}")
         import traceback
         logger.log(traceback.format_exc())
         logger.complete(success=False)

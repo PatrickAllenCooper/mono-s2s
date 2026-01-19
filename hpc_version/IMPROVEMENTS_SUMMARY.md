@@ -5,7 +5,7 @@
 
 ---
 
-## 🎯 Motivation
+## Motivation
 
 Previous results showed:
 - **Strong robustness gains**: Monotonic T5 reduced HotFlip degradation by ~50% (8.06% vs 16.35%)
@@ -18,7 +18,7 @@ Previous results showed:
 
 ---
 
-## 📊 Changes Made
+## Changes Made
 
 ### 1. **Monotonic-Specific Hyperparameters** 
 
@@ -127,7 +127,7 @@ if len(samsum_texts) == 0:
 
 ---
 
-## 📈 Expected Results
+## Expected Results
 
 ### Clean Performance Improvement
 
@@ -161,7 +161,7 @@ if len(samsum_texts) == 0:
 
 ---
 
-## 🧪 Testing Before Full Run
+## Testing Before Full Run
 
 **New test script**: `hpc_version/test_improvements.py`
 
@@ -171,16 +171,16 @@ python test_improvements.py
 ```
 
 **Tests**:
-1. ✅ Configuration parameters
-2. ✅ Dataset loading (CNN/DM, XSUM, SAMSum) with retry
-3. ✅ Softplus initialization preservation  
-4. ✅ Monotonic model creation
+1. Configuration parameters
+2. Dataset loading (CNN/DM, XSUM, SAMSum) with retry
+3. Softplus initialization preservation  
+4. Monotonic model creation
 
 **Run this BEFORE** submitting the full pipeline to catch issues early!
 
 ---
 
-## 📝 Files Modified
+## Files Modified
 
 ### Configuration
 - `hpc_version/configs/experiment_config.py`
@@ -210,7 +210,7 @@ python test_improvements.py
 
 ---
 
-## 🚀 Next Steps
+## Next Steps
 
 ### 1. **Test Locally** (Recommended)
 
@@ -259,22 +259,22 @@ tail -f $SCRATCH/mono_s2s_work/stage_logs/stage_6_hotflip.log
 
 ---
 
-## 🎯 Success Criteria
+## Success Criteria
 
 ### Minimum Success
-- ✅ Pipeline completes without errors
-- ✅ Robustness gains maintained (degradation ≤ 10%)
-- ✅ Clean performance gap reduced to ≤ 2.5%
+- Pipeline completes without errors
+- Robustness gains maintained (degradation ≤ 10%)
+- Clean performance gap reduced to ≤ 2.5%
 
 ### Full Success  
-- ✅ All three datasets (CNN/DM, XSUM, SAMSum) evaluated
-- ✅ Clean performance gap reduced to ≤ 1.5%
-- ✅ Robustness still strong across all datasets
-- ✅ Hypothesis confirmed with **minimal trade-off**
+- All three datasets (CNN/DM, XSUM, SAMSum) evaluated
+- Clean performance gap reduced to ≤ 1.5%
+- Robustness still strong across all datasets
+- Hypothesis confirmed with **minimal trade-off**
 
 ---
 
-## 📊 Risk Assessment
+## Risk Assessment
 
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
@@ -285,7 +285,7 @@ tail -f $SCRATCH/mono_s2s_work/stage_logs/stage_6_hotflip.log
 
 ---
 
-## 🔄 Rollback Plan
+## Rollback Plan
 
 If results are worse, revert to previous config:
 
@@ -301,7 +301,7 @@ And in `stage_1_prepare_data.py`, set XSUM/SAMSum to empty lists.
 
 ---
 
-## 📚 References
+## References
 
 - **README.md**: Project specification (3 test datasets required)
 - **Previous results**: Stage 7 output showing 4% gap
@@ -310,7 +310,7 @@ And in `stage_1_prepare_data.py`, set XSUM/SAMSum to empty lists.
 
 ---
 
-## ✅ Completion Checklist
+## Completion Checklist
 
 - [x] Updated configuration with monotonic-specific hyperparameters
 - [x] Improved softplus initialization in common_utils.py
@@ -325,5 +325,5 @@ And in `stage_1_prepare_data.py`, set XSUM/SAMSum to empty lists.
 
 ---
 
-**Ready to proceed with testing and full pipeline run!**
+Ready to proceed with testing and full pipeline run.
 

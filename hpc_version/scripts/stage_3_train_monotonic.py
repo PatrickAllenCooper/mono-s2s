@@ -408,7 +408,7 @@ def main():
         logger.log("✓ Monotonic constraints applied")
         logger.log("  Constraint: W = softplus(V) >= 0")
         logger.log("  Scope: FFN sublayers (wi, wi_0, wi_1, wo)")
-        logger.log("  ⚠️  Note: Full model is NOT globally monotonic")
+        logger.log("  NOTE: Full model is NOT globally monotonic")
         logger.log("    (LayerNorm + residuals + attention remain unconstrained)")
         
         # Setup checkpoint paths
@@ -494,7 +494,7 @@ def main():
         return 0
         
     except Exception as e:
-        logger.log(f"\n❌ ERROR: {str(e)}")
+        logger.log(f"\nERROR: {str(e)}")
         import traceback
         logger.log(traceback.format_exc())
         logger.complete(success=False)

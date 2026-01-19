@@ -130,14 +130,14 @@ Stage 0 → Stage 1 → ┬ Stage 2 (Baseline)     ┐
 
 | Stage | GPU | Memory | Time |
 |------:|:---:|:------:|:----:|
-| 0 Setup | ❌ | 16 GB | 30 min |
-| 1 Data prep | ❌ | 32 GB | 2 hr |
-| 2 Train baseline | ✅ | 64 GB | 10–12 hr |
-| 3 Train monotonic | ✅ | 64 GB | 10–12 hr |
-| 4 Evaluate | ✅ | 32 GB | 2–4 hr |
-| 5 UAT | ✅ | 16 GB | 2–3 hr |
-| 6 HotFlip | ✅ | 16 GB | 1–2 hr |
-| 7 Aggregate | ❌ | 8 GB | 15 min |
+| 0 Setup | No | 16 GB | 30 min |
+| 1 Data prep | No | 32 GB | 2 hr |
+| 2 Train baseline | Yes | 64 GB | 10–12 hr |
+| 3 Train monotonic | Yes | 64 GB | 10–12 hr |
+| 4 Evaluate | Yes | 32 GB | 2–4 hr |
+| 5 UAT | Yes | 16 GB | 2–3 hr |
+| 6 HotFlip | Yes | 16 GB | 1–2 hr |
+| 7 Aggregate | No | 8 GB | 15 min |
 
 ---
 

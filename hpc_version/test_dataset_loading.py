@@ -26,9 +26,9 @@ print("")
 print("Testing HuggingFace datasets library...")
 try:
     from datasets import load_dataset
-    print("  ✓ datasets library imported successfully")
+    print("  datasets library imported successfully")
 except ImportError as e:
-    print(f"  ❌ Failed to import datasets: {e}")
+    print(f"  ERROR: Failed to import datasets: {e}")
     sys.exit(1)
 
 print("")
@@ -101,16 +101,16 @@ for test_config in test_configs:
             print(f"        Available fields: {list(example.keys())}")
             
             if test_config['text_field'] in example:
-                print(f"        ✓ Text field '{test_config['text_field']}' found")
+                print(f"        Text field '{test_config['text_field']}' found")
             else:
-                print(f"        ❌ Text field '{test_config['text_field']}' NOT FOUND")
+                print(f"        ERROR: Text field '{test_config['text_field']}' NOT FOUND")
                 results.append({'name': test_config['name'], 'status': 'FAIL', 'reason': f"Text field missing"})
                 continue
                 
             if test_config['summary_field'] in example:
-                print(f"        ✓ Summary field '{test_config['summary_field']}' found")
+                print(f"        Summary field '{test_config['summary_field']}' found")
             else:
-                print(f"        ❌ Summary field '{test_config['summary_field']}' NOT FOUND")
+                print(f"        ERROR: Summary field '{test_config['summary_field']}' NOT FOUND")
                 results.append({'name': test_config['name'], 'status': 'FAIL', 'reason': f"Summary field missing"})
                 continue
         
@@ -142,7 +142,7 @@ for test_config in test_configs:
         
         # Success
         print("")
-        print(f"  ✅ {test_config['name']}: SUCCESS ({len(texts)} samples)")
+        print(f"  SUCCESS: {test_config['name']} ({len(texts)} samples)")
         results.append({
             'name': test_config['name'], 
             'status': 'SUCCESS', 
@@ -152,7 +152,7 @@ for test_config in test_configs:
         })
         
     except Exception as e:
-        print(f"\n  ❌ {test_config['name']}: FAILED")
+        print(f"\n  FAILED: {test_config['name']}")
         print(f"     Error: {type(e).__name__}: {str(e)}")
         results.append({
             'name': test_config['name'], 
@@ -169,11 +169,11 @@ print("")
 
 for result in results:
     if result['status'] == 'SUCCESS':
-        print(f"✅ {result['name']:20s} SUCCESS - {result['samples']} samples")
+        print(f"SUCCESS: {result['name']:20s} - {result['samples']} samples")
         print(f"   Avg text length: {result['avg_text_len']:.1f} words")
         print(f"   Avg summary length: {result['avg_summary_len']:.1f} words")
     else:
-        print(f"❌ {result['name']:20s} FAILED")
+        print(f"FAILED: {result['name']:20s}")
         print(f"   Reason: {result['reason']}")
     print("")
 
@@ -183,12 +183,12 @@ total_count = len(results)
 
 print("="*80)
 if success_count == total_count:
-    print(f"✅ ALL {total_count} DATASETS LOADED SUCCESSFULLY")
+    print(f"ALL {total_count} DATASETS LOADED SUCCESSFULLY")
     print("")
     print("You can proceed with Stage 1 data preparation.")
     sys.exit(0)
 else:
-    print(f"❌ {total_count - success_count}/{total_count} DATASETS FAILED")
+    print(f"ERROR: {total_count - success_count}/{total_count} DATASETS FAILED")
     print("")
     print("Fix the issues above before running Stage 1.")
     sys.exit(1)

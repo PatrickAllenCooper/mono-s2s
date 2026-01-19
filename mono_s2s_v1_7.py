@@ -14,19 +14,19 @@ Examines the capacity of monotonicity to allow LLMs to become resilient with res
 
 This revision addresses critical methodological issues to ensure fair comparison:
 
-### ✓ Model Comparison Fairness
-- [✓] Train THREE models from same starting checkpoint:
+### Model Comparison Fairness
+- Train THREE models from same starting checkpoint:
   1. Standard T5 (pre-trained, not fine-tuned) - for reference only
   2. Unconstrained T5 baseline (fine-tuned with same data/hyperparameters)
   3. Monotonic T5 (fine-tuned with same data/hyperparameters + constraints)
-- [✓] All models use identical: tokenizer, max lengths, optimizer, LR schedule, epochs, batch size, gradient clip, compute budget
+- All models use identical: tokenizer, max lengths, optimizer, LR schedule, epochs, batch size, gradient clip, compute budget
 
-### ✓ Evaluation Protocol
-- [✓] Full test sets (not 200-sample subsets): CNN/DM v3.0.0, XSUM, SAMSum
-- [✓] Fixed decoding parameters: num_beams=4, length_penalty=1.0, min_new_tokens=10, max_new_tokens=128, no_repeat_ngram_size=3
-- [✓] ROUGE configuration: rouge-score library, stemming=True, lowercase=True
-- [✓] Bootstrap 95% confidence intervals (1000 resamples)
-- [✓] Length statistics: avg input/output tokens, length ratios, brevity penalty
+### Evaluation Protocol
+- Full test sets (not 200-sample subsets): CNN/DM v3.0.0, XSUM, SAMSum
+- Fixed decoding parameters: num_beams=4, length_penalty=1.0, min_new_tokens=10, max_new_tokens=128, no_repeat_ngram_size=3
+- ROUGE configuration: rouge-score library, stemming=True, lowercase=True
+- Bootstrap 95% confidence intervals (1000 resamples)
+- Length statistics: avg input/output tokens, length ratios, brevity penalty
 - [✓] Multi-seed evaluation: 5 random seeds with mean ± std
 
 ### ✓ Training Symmetry
@@ -713,7 +713,7 @@ def make_model_monotonic(model):
     print(f"  - Covers both standard (wi, wo) and gated (wi_0, wi_1, wo) FFN variants")
     print(f"  - No clamping needed (W = softplus(V) ≥ 0 always)")
     print(f"  - Gradients preserved for proper optimization")
-    print(f"  ⚠️  Note: Model is NOT globally monotonic (LayerNorm + residuals + attention break it)")
+    print(f"  NOTE: Model is NOT globally monotonic (LayerNorm + residuals + attention break it)")
     return model
 
 """### Create All Three Models"""
@@ -1236,7 +1236,7 @@ arxiv_val_x, arxiv_val_y = _materialize(_collect_pairs_arxiv("validation"), "ArX
 val_texts = dlg_val_x + sam_val_x + meet_val_x + xsum_val_x + ami_val_x + highlight_val_x + arxiv_val_x
 val_summaries = dlg_val_y + sam_val_y + meet_val_y + xsum_val_y + ami_val_y + highlight_val_y + arxiv_val_y
 
-print(f"  ⚠️  CRITICAL: All validation data uses 'validation' splits (NOT 'test' splits)")
+print(f"  CRITICAL: All validation data uses 'validation' splits (NOT 'test' splits)")
 print(f"  This ensures test sets remain untouched for final evaluation (no data leakage)")
 
 print(f"Total validation samples: {len(val_texts)}")
@@ -2106,16 +2106,16 @@ else:
             print(f"  • Note: Monotonic model summary length differs significantly ({len_diff_percent:+.1f}%)")
 
 
-        print("\n💡 Interpretation:")
+        print("\nInterpretation:")
         if not np.isnan(rouge_l_diff_percent) and abs(rouge_l_diff_percent) < 10:
              print("  The monotonic constraint (W ≥ 0) on the fine-tuned model, after training,")
              print("  appears to preserve summarization quality reasonably well compared to the")
              print("  standard model, based on ROUGE scores.")
-             print("  ✓ Ready for adversarial robustness testing!")
+             print("  Ready for adversarial robustness testing!")
         else:
              print("  The monotonic constraint seems to have impacted summarization quality more significantly.")
              print("  This might affect the interpretation of adversarial testing results.")
-             print("  ⚠️  Consider if the observed quality difference is acceptable for your goals.")
+             print("  Consider if the observed quality difference is acceptable for your goals.")
 
 
         # ======================================================================
@@ -2269,7 +2269,7 @@ print("="*80)
 
 # Ensure all three models are available
 if model_baseline_finetuned is None or model_monotonic_finetuned is None:
-    print("\n⚠️  Cannot perform comprehensive three-way evaluation:")
+    print("\nWARNING: Cannot perform comprehensive three-way evaluation:")
     if model_baseline_finetuned is None:
         print("    - Baseline model not trained/loaded")
     if model_monotonic_finetuned is None:
@@ -2387,9 +2387,9 @@ else:
         print(f"  ✓ 95% CIs OVERLAP - No significant difference in quality")
     else:
         if monotonic_rl > baseline_rl:
-            print(f"  ✓ Monotonic BETTER - CIs do not overlap")
+            print(f"  Monotonic BETTER - CIs do not overlap")
         else:
-            print(f"  ⚠️  Baseline BETTER - CIs do not overlap")
+            print(f"  WARNING: Baseline BETTER - CIs do not overlap")
     
     print("\n" + "="*80)
 
@@ -2506,7 +2506,7 @@ if os.path.exists(baseline_best_path):
     
     print(f"   Fine-tuned baseline loaded from: {baseline_best_path}")
 else:
-    print(f"   ⚠️  Baseline checkpoint not found: {baseline_best_path}")
+    print(f"   WARNING: Baseline checkpoint not found: {baseline_best_path}")
     print(f"   Baseline model will not be included in UAT evaluation.")
     model_baseline_finetuned = None
 
@@ -2530,7 +2530,7 @@ if os.path.exists(monotonic_best_path):
 
     print(f"   Fine-tuned monotonic loaded from: {monotonic_best_path}")
 else:
-    print(f"   ⚠️  Monotonic checkpoint not found: {monotonic_best_path}")
+    print(f"   WARNING: Monotonic checkpoint not found: {monotonic_best_path}")
     print(f"   Please run the fine-tuning code first!")
     model_monotonic_finetuned = None
 
@@ -2692,7 +2692,7 @@ print("✓ Model 1: Standard T5 (pre-trained only)")
 
 # Model 2: Baseline T5 (fine-tuned, unconstrained) - load if not already loaded
 if model_baseline_finetuned is None:
-    print("\n⚠️  WARNING: Baseline fine-tuned model not found.")
+    print("\nWARNING: Baseline fine-tuned model not found.")
     print("    Attempting to load from checkpoint...")
     baseline_checkpoint_dir = os.path.join(ExperimentConfig.SAVE_PATH, 'baseline_checkpoints')
     baseline_best_path = os.path.join(baseline_checkpoint_dir, 'best_model.pt')
@@ -2701,21 +2701,21 @@ if model_baseline_finetuned is None:
         model_baseline_finetuned = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME).to(device)
         model_baseline_finetuned.load_state_dict(torch.load(baseline_best_path, map_location=device))
         model_baseline_finetuned.eval()
-        print(f"    ✓ Loaded from: {baseline_best_path}")
+        print(f"    Loaded from: {baseline_best_path}")
     else:
-        print(f"    ✗ Checkpoint not found: {baseline_best_path}")
-        print("    ⚠️  This is NOT a fair comparison without the baseline model!")
+        print(f"    Checkpoint not found: {baseline_best_path}")
+        print("    WARNING: This is NOT a fair comparison without the baseline model!")
 
 if model_baseline_finetuned is not None:
-    print("✓ Model 2: Baseline T5 (fine-tuned, unconstrained)")
+    print("Model 2: Baseline T5 (fine-tuned, unconstrained)")
 else:
-    print("✗ Model 2: Baseline T5 NOT AVAILABLE - will use Standard as fallback")
+    print("Model 2: Baseline T5 NOT AVAILABLE - will use Standard as fallback")
 
 # Model 3: Monotonic T5 (fine-tuned, W≥0) - already loaded above
 if model_monotonic_finetuned is not None:
-    print("✓ Model 3: Monotonic T5 (fine-tuned, W≥0)")
+    print("Model 3: Monotonic T5 (fine-tuned, W≥0)")
 else:
-    print("⚠️  Model 3: Monotonic T5 NOT AVAILABLE")
+    print("WARNING: Model 3: Monotonic T5 NOT AVAILABLE")
 
 # Build models dict with appropriate labels
 models_to_test = {}
@@ -2728,14 +2728,14 @@ if model_baseline_finetuned is not None:
     models_to_test['Baseline T5 (fine-tuned, unconstrained)'] = model_baseline_finetuned
 else:
     models_to_test['Baseline T5 (FALLBACK: pre-trained only)'] = model_standard
-    print("    ⚠️  WARNING: Using pre-trained Standard T5 as Baseline fallback - NOT A FAIR COMPARISON!")
+    print("    WARNING: Using pre-trained Standard T5 as Baseline fallback - NOT A FAIR COMPARISON!")
 
 # Include Monotonic (or mark fallback)
 if model_monotonic_finetuned is not None:
     models_to_test['Monotonic T5 (fine-tuned, W≥0)'] = model_monotonic_finetuned
 else:
     models_to_test['Monotonic T5 (FALLBACK: unfinetuned)'] = model_monotonic_unfinetuned
-    print("    ⚠️  WARNING: Using unfinetuned Monotonic as fallback - NOT A FAIR COMPARISON!")
+    print("    WARNING: Using unfinetuned Monotonic as fallback - NOT A FAIR COMPARISON!")
 
 print("\n" + "="*80)
 print("MODELS FOR ATTACK EVALUATION:")
@@ -3188,7 +3188,7 @@ for source_model_name in model_names_list:
     
     # If trigger IDs not stored in all_results, try to reconstruct from trigger_text
     if source_trigger_ids is None or len(source_trigger_ids) == 0:
-        print(f"\n⚠️  Cannot perform transfer attack from {source_model_name} - trigger IDs not available")
+        print(f"\nWARNING: Cannot perform transfer attack from {source_model_name} - trigger IDs not available")
         continue
     
     print(f"\n--- Transfer from {source_model_name} ---")
@@ -3237,7 +3237,7 @@ for src in model_names_list:
     print()
 
 # Analyze transferability
-print("\n📊 Transferability Analysis:")
+print("\nTransferability Analysis:")
 for src in model_names_list:
     if src not in transfer_matrix:
         continue
@@ -3683,7 +3683,7 @@ print("\n" + "="*80)
 print("FINAL SUMMARY")
 print("="*80)
 
-print("\n🎯 Key Findings:")
+print("\nKey Findings:")
 print(f"  1. Standard T5 degradation:           {std_degradation:.2%}")
 
 if 'Monotonic (before FT)' in all_results:
@@ -3961,7 +3961,7 @@ print("="*80)
 
 # Check if all_attack_results exists (from HotFlip attack evaluation)
 if 'all_attack_results' not in globals() or not all_attack_results:
-    print("\n⚠️  HotFlip attack results not available.")
+    print("\nWARNING: HotFlip attack results not available.")
     print("Please run the HotFlip attack section first.")
 else:
 print("\nVulnerability Ranking (Higher = More Vulnerable):")
@@ -4028,7 +4028,7 @@ print("="*80)
 
 # Ensure models are loaded (from previous cells)
 if 'model_standard' not in globals() or 'model_monotonic_unfinetuned' not in globals() or 'model_monotonic_finetuned' not in globals():
-    print("⚠️  Models not loaded. Please run the model loading cells first.")
+    print("WARNING: Models not loaded. Please run the model loading cells first.")
 else:
     models_to_attack = {
         'Standard T5': model_standard,
@@ -4038,7 +4038,7 @@ else:
 
     # Ensure test data for attack is loaded (from previous cells)
     if 'uat_test_texts' not in globals() or 'uat_test_summaries' not in globals():
-         print("⚠️  Test data for attack not loaded. Please run the data loading cell first.")
+         print("WARNING: Test data for attack not loaded. Please run the data loading cell first.")
     else:
         # Use a subset of the test data for the attack to keep it tractable
         num_attack_samples = 100 # Using 100 samples for attack
@@ -4050,7 +4050,7 @@ else:
 
         # Try to load existing results
         if os.path.exists(HOTFLIP_RESULTS_FILE):
-            print(f"\n📁 Found existing Hotflip results file: {HOTFLIP_RESULTS_FILE}")
+            print(f"\nFound existing Hotflip results file: {HOTFLIP_RESULTS_FILE}")
             try:
                 with open(HOTFLIP_RESULTS_FILE, 'r') as f:
                     loaded_results = json.load(f)
@@ -4074,7 +4074,7 @@ else:
                     models_to_attack = temp_models_to_attack # Update models_to_attack for the loop below
 
             except Exception as e:
-                print(f"   ⚠️  Error loading results: {e}. Re-running attack for all models.")
+                print(f"   WARNING: Error loading results: {e}. Re-running attack for all models.")
                 all_attack_results = {} # Clear partial results if loading failed
                 # models_to_attack remains the original full list
 
@@ -4121,9 +4121,9 @@ else:
             try:
                 with open(HOTFLIP_RESULTS_FILE, 'w') as f:
                     json.dump(all_attack_results, f, indent=2) # Save the full dict
-                print(f"\n✓ Hotflip results saved to: {HOTFLIP_RESULTS_FILE}")
+                print(f"\nHotflip results saved to: {HOTFLIP_RESULTS_FILE}")
             except Exception as e:
-                 print(f"\n⚠️  Error saving Hotflip results to {HOTFLIP_RESULTS_FILE}: {e}")
+                 print(f"\nWARNING: Error saving Hotflip results to {HOTFLIP_RESULTS_FILE}: {e}")
 
 
         print("\n" + "="*80)
@@ -4153,17 +4153,17 @@ if all_attack_results:
         else:
             t_stat2, p_value2 = float('nan'), float('nan')
             sig2 = 'ns'
-            print("\n⚠️  Not enough samples to perform statistical significance test.")
+            print("\nWARNING: Not enough samples to perform statistical significance test.")
 
     else:
-        print("\n⚠️  Could not calculate comparative stats (missing Standard T5 or Monotonic (finetuned) results).")
+        print("\nWARNING: Could not calculate comparative stats (missing Standard T5 or Monotonic (finetuned) results).")
         std_deg = float('nan')
         mono_finetuned_deg = float('nan')
         improvement_finetuned = float('nan')
         t_stat2, p_value2 = float('nan'), float('nan')
         sig2 = 'ns'
 else:
-     print("\n⚠️  No Hotflip results available to calculate comparative stats.")
+     print("\nWARNING: No Hotflip results available to calculate comparative stats.")
      std_deg = float('nan')
      mono_finetuned_deg = float('nan')
      improvement_finetuned = float('nan')
@@ -4597,7 +4597,7 @@ print("""
   - Current run uses seed: {ExperimentConfig.CURRENT_SEED}
   - See multi-seed evaluation instructions above
 
-📊 Results saved in: {ExperimentConfig.SAVE_PATH}
+Results saved in: {ExperimentConfig.SAVE_PATH}
   - experiment_metadata.json: Complete experiment configuration
   - Model checkpoints: baseline_checkpoints/, monotonic_checkpoints/
   - Evaluation results: Various JSON files with comprehensive metrics

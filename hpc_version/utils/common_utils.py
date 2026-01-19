@@ -337,9 +337,9 @@ def make_model_monotonic(model):
     if modified_count == 0:
         raise RuntimeError("No FFN layers found to make monotonic! Check transformers version compatibility.")
     
-    print(f"✓ Applied softplus parametrization to {modified_count} weight matrices")
+    print(f"Applied softplus parametrization to {modified_count} weight matrices")
     print(f"  Covers: wi, wi_0, wi_1, wo (handles gated variants)")
-    print(f"  ⚠️  Note: Model is NOT globally monotonic (LayerNorm + residuals + attention)")
+    print(f"  NOTE: Model is NOT globally monotonic (LayerNorm + residuals + attention)")
     return model
 
 
@@ -380,7 +380,7 @@ def load_model(model_type, checkpoint_path=None, device='cuda'):
         print(f"✓ Loaded fine-tuned {model_type} model")
     else:
         if checkpoint_path:
-            print(f"  ⚠️  Checkpoint not found: {checkpoint_path}")
+            print(f"  WARNING: Checkpoint not found: {checkpoint_path}")
         model.eval()
         is_pretrained_only = True
         print(f"✓ Using pre-trained {model_type} model")
@@ -494,7 +494,7 @@ def check_dependencies(required_stages, work_dir=None):
             missing.append(stage)
     
     if missing:
-        print(f"\n❌ Missing dependencies: {', '.join(missing)}")
+        print(f"\nERROR: Missing dependencies: {', '.join(missing)}")
         print(f"   Please run these stages first before proceeding.")
         return False
     else:
@@ -564,11 +564,11 @@ def load_dataset_split(dataset_name, split, text_field, summary_field,
         except Exception as e:
             last_error = e
             if attempt < max_retries - 1:
-                print(f"  ⚠️  Attempt {attempt + 1}/{max_retries} failed for {dataset_name} ({split}): {e}")
+                print(f"  WARNING: Attempt {attempt + 1}/{max_retries} failed for {dataset_name} ({split}): {e}")
                 print(f"  Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
-                print(f"  ❌ Failed to load {dataset_name} ({split}) after {max_retries} attempts")
+                print(f"  ERROR: Failed to load {dataset_name} ({split}) after {max_retries} attempts")
                 print(f"  Last error: {last_error}")
                 
                 # Check if partial results are allowed

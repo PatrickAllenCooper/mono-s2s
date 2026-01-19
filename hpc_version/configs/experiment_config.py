@@ -224,7 +224,7 @@ class ExperimentConfig:
             print(f"  Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
         else:
             device = torch.device("cpu")
-            print("⚠️  Using CPU (no GPU available)")
+            print("WARNING: Using CPU (no GPU available)")
         return device
     
     @classmethod
@@ -247,7 +247,7 @@ class ExperimentConfig:
             issues.append(f"Large batch size ({cls.BATCH_SIZE}) with full test sets may cause OOM")
         
         if issues:
-            print("\n⚠️  Configuration Issues:")
+            print("\nWARNING: Configuration Issues:")
             for issue in issues:
                 print(f"  - {issue}")
             return False

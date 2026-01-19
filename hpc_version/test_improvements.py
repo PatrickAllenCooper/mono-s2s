@@ -51,7 +51,7 @@ def test_config():
     print(f"  Retry delay: {config.DATASET_RETRY_DELAY}s")
     print(f"  Allow partial: {config.DATASET_ALLOW_PARTIAL}")
     
-    print("\n✅ Configuration test passed!\n")
+    print("\nConfiguration test passed!\n")
 
 
 def test_dataset_loading():
@@ -76,9 +76,9 @@ def test_dataset_loading():
         max_samples=10
     )
     if len(xsum_texts) > 0:
-        print(f"   ✓ Loaded {len(xsum_texts)} samples")
+        print(f"   Loaded {len(xsum_texts)} samples")
     else:
-        print(f"   ⚠️  XSUM loading failed (will be skipped in evaluation)")
+        print(f"   WARNING: XSUM loading failed (will be skipped in evaluation)")
     
     # Test SAMSum (may need retry)
     print("\n3. Testing SAMSum (test, 10 samples)...")
@@ -87,11 +87,11 @@ def test_dataset_loading():
         max_samples=10
     )
     if len(samsum_texts) > 0:
-        print(f"   ✓ Loaded {len(samsum_texts)} samples")
+        print(f"   Loaded {len(samsum_texts)} samples")
     else:
-        print(f"   ⚠️  SAMSum loading failed (will be skipped in evaluation)")
+        print(f"   WARNING: SAMSum loading failed (will be skipped in evaluation)")
     
-    print("\n✅ Dataset loading test completed!\n")
+    print("\nDataset loading test completed!\n")
     return len(xsum_texts) > 0, len(samsum_texts) > 0
 
 
@@ -125,9 +125,9 @@ def test_softplus_initialization():
     print(f"  Relative error: {relative_error:.6f}")
     
     if relative_error < 0.1:  # Less than 10% error
-        print("\n✅ Softplus initialization preserves weights well!\n")
+        print("\nSoftplus initialization preserves weights well!\n")
     else:
-        print(f"\n⚠️  Warning: Relative error is high ({relative_error:.2%})\n")
+        print(f"\nWARNING: Relative error is high ({relative_error:.2%})\n")
 
 
 def test_monotonic_model_creation():
@@ -157,7 +157,7 @@ def test_monotonic_model_creation():
             print(f"  All weights non-negative: {(new_weight >= 0).all()}")
             break
     
-    print("\n✅ Monotonic model creation test passed!\n")
+    print("\nMonotonic model creation test passed!\n")
 
 
 def main():
@@ -186,24 +186,24 @@ def main():
         print("="*80)
         print("SUMMARY")
         print("="*80)
-        print("\n✅ All tests passed!")
+        print("\nAll tests passed!")
         print("\nDataset availability:")
-        print(f"  - CNN/DailyMail: ✓ Available")
-        print(f"  - XSUM: {'✓ Available' if xsum_ok else '⚠️  Not available (will be skipped)'}")
-        print(f"  - SAMSum: {'✓ Available' if samsum_ok else '⚠️  Not available (will be skipped)'}")
+        print(f"  - CNN/DailyMail: Available")
+        print(f"  - XSUM: {'Available' if xsum_ok else 'Not available (will be skipped)'}")
+        print(f"  - SAMSum: {'Available' if samsum_ok else 'Not available (will be skipped)'}")
         
         print("\nImprovements ready:")
-        print("  ✓ Monotonic model: 7 epochs, 15% warmup, improved init")
-        print("  ✓ Decoding: length_penalty=1.2, max_tokens=80")
-        print("  ✓ Dataset retry logic with graceful fallback")
+        print("  - Monotonic model: 7 epochs, 15% warmup, improved init")
+        print("  - Decoding: length_penalty=1.2, max_tokens=80")
+        print("  - Dataset retry logic with graceful fallback")
         
-        print("\n🚀 Ready to run full pipeline!")
+        print("\nReady to run full pipeline!")
         print("   Run: ./run_all.sh\n")
         
         return 0
         
     except Exception as e:
-        print(f"\n❌ TEST FAILED: {str(e)}")
+        print(f"\nTEST FAILED: {str(e)}")
         import traceback
         traceback.print_exc()
         return 1
