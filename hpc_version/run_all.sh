@@ -54,36 +54,75 @@ check_job_status() {
         echo "[SUCCESS] $job_name completed successfully"
         cat "$flag_file"
         return 0
-    else
-        echo "[FAILED] $job_name FAILED or flag not created"
-        echo "  Expected flag: $flag_file"
-        echo "  Check job logs:"
-        echo "    Output: logs/job_*_${job_id}.out"
-        echo "    Errors: logs/job_*_${job_id}.err"
+    fi
+    
+    # Flag missing - check if training actually completed by verifying checkpoints
+    # This handles the case where training finished but flag wasn't created
+    
+    if [[ "$job_name" == "stage_3_train_monotonic" ]]; then
+        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/monotonic_checkpoints"
+        local expected_epochs=7
         
-        # Check if SLURM output files exist
-        if ls logs/job_*_${job_id}.out 2>/dev/null; then
-            echo ""
-            echo "  Last 20 lines of job output:"
-            tail -n 20 logs/job_*_${job_id}.out | sed 's/^/    /'
-        fi
-        
-        # For monotonic training, check if it's actually complete but flag missing
-        if [[ "$job_name" == "stage_3_train_monotonic" ]]; then
-            local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/monotonic_checkpoints"
-            if [ -d "$checkpoint_dir" ]; then
-                local epoch_count=$(ls "$checkpoint_dir"/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
-                echo ""
-                echo "  [DIAGNOSTIC] Found $epoch_count epoch checkpoints"
-                if [ $epoch_count -ge 7 ]; then
-                    echo "  [INFO] Training may have completed but flag wasn't created."
-                    echo "  [FIX] Run: ./fix_completion_flag.sh to manually verify and fix"
-                fi
+        if [ -d "$checkpoint_dir" ]; then
+            local epoch_count=$(ls "$checkpoint_dir"/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
+            local has_best=$([ -f "$checkpoint_dir/best_model.pt" ] && echo "yes" || echo "no")
+            
+            echo "[DIAGNOSTIC] Checking monotonic training state..."
+            echo "  Epoch checkpoints found: $epoch_count/$expected_epochs"
+            echo "  Best model saved: $has_best"
+            
+            if [ $epoch_count -ge $expected_epochs ] && [ "$has_best" = "yes" ]; then
+                echo "[AUTO-FIX] Training completed but flag missing. Creating flag..."
+                cat > "$flag_file" <<EOF
+Completed at: $(date '+%Y-%m-%d %H:%M:%S')
+Seed: ${EXPERIMENT_SEED:-42}
+Note: Auto-created by run_all.sh after verifying $epoch_count checkpoints
+EOF
+                echo "[SUCCESS] $job_name completed (flag auto-created)"
+                return 0
             fi
         fi
-        
-        return 1
     fi
+    
+    if [[ "$job_name" == "stage_2_train_baseline" ]]; then
+        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/baseline_checkpoints"
+        local expected_epochs=5
+        
+        if [ -d "$checkpoint_dir" ]; then
+            local epoch_count=$(ls "$checkpoint_dir"/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
+            local has_best=$([ -f "$checkpoint_dir/best_model.pt" ] && echo "yes" || echo "no")
+            
+            echo "[DIAGNOSTIC] Checking baseline training state..."
+            echo "  Epoch checkpoints found: $epoch_count/$expected_epochs"
+            echo "  Best model saved: $has_best"
+            
+            if [ $epoch_count -ge $expected_epochs ] && [ "$has_best" = "yes" ]; then
+                echo "[AUTO-FIX] Training completed but flag missing. Creating flag..."
+                cat > "$flag_file" <<EOF
+Completed at: $(date '+%Y-%m-%d %H:%M:%S')
+Seed: ${EXPERIMENT_SEED:-42}
+Note: Auto-created by run_all.sh after verifying $epoch_count checkpoints
+EOF
+                echo "[SUCCESS] $job_name completed (flag auto-created)"
+                return 0
+            fi
+        fi
+    fi
+    
+    # Genuinely failed
+    echo "[FAILED] $job_name FAILED"
+    echo "  Expected flag: $flag_file"
+    echo "  Check job logs:"
+    echo "    Output: logs/job_*_${job_id}.out"
+    echo "    Errors: logs/job_*_${job_id}.err"
+    
+    if ls logs/job_*_${job_id}.out 1>/dev/null 2>&1; then
+        echo ""
+        echo "  Last 20 lines of job output:"
+        tail -n 20 logs/job_*_${job_id}.out 2>/dev/null | sed 's/^/    /'
+    fi
+    
+    return 1
 }
 
 # Submit jobs with dependencies
