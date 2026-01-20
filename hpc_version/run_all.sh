@@ -258,13 +258,36 @@ else
     [ "$JOB3" != "completed" ] && DEPS="$DEPS:$JOB3"
     DEPS=$(echo $DEPS | sed 's/^://') # Remove leading colon
     
+    # Try to submit with dependencies if needed
     if [ -n "$DEPS" ]; then
-        JOB4=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_4_evaluate.sh)
+        echo "  [INFO] Attempting to submit with dependencies: $DEPS"
+        if JOB4=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_4_evaluate.sh 2>&1); then
+            JOB4=$(echo "$JOB4" | cut -d';' -f1)
+            echo "  Job ID: $JOB4"
+        else
+            # Dependency failed - check if prerequisites are actually complete
+            echo "  [WARNING] Dependency submission failed (jobs may have already completed)"
+            echo "  [INFO] Checking if training stages completed via flags..."
+            
+            PREREQ_MET=true
+            [ ! -f "${SCRATCH}/mono_s2s_work/stage_2_train_baseline_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ] && PREREQ_MET=false
+            
+            if [ "$PREREQ_MET" = true ]; then
+                echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."
+                JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh 2>&1)
+                JOB4=$(echo "$JOB4" | cut -d';' -f1)
+                echo "  Job ID: $JOB4"
+            else
+                echo "  [FAILED] Prerequisites not met. Cannot continue."
+                exit 1
+            fi
+        fi
     else
-        JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh)
+        JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh 2>&1)
+        JOB4=$(echo "$JOB4" | cut -d';' -f1)
+        echo "  Job ID: $JOB4"
     fi
-    JOB4=$(echo "$JOB4" | cut -d';' -f1)
-    echo "  Job ID: $JOB4"
     
     # Check config for expected time
     if grep -q "USE_FULL_TEST_SETS = True" configs/experiment_config.py; then
@@ -287,11 +310,23 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ]; then
     JOB5="completed"
 else
     if [ "$JOB4" != "completed" ]; then
-        JOB5=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_5_uat.sh)
+        if JOB5=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_5_uat.sh 2>&1); then
+            JOB5=$(echo "$JOB5" | cut -d';' -f1)
+        else
+            echo "  [WARNING] Dependency submission failed, checking prerequisites..."
+            if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+                echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
+                JOB5=$(sbatch --parsable jobs/job_5_uat.sh 2>&1)
+                JOB5=$(echo "$JOB5" | cut -d';' -f1)
+            else
+                echo "  [FAILED] Stage 4 not complete. Cannot continue."
+                exit 1
+            fi
+        fi
     else
-        JOB5=$(sbatch --parsable jobs/job_5_uat.sh)
+        JOB5=$(sbatch --parsable jobs/job_5_uat.sh 2>&1)
+        JOB5=$(echo "$JOB5" | cut -d';' -f1)
     fi
-    JOB5=$(echo "$JOB5" | cut -d';' -f1)
     echo "  Job ID: $JOB5"
     echo "  [TIME] Expected time: 2-3 hours"
 fi
@@ -304,11 +339,23 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ]; then
     JOB6="completed"
 else
     if [ "$JOB4" != "completed" ]; then
-        JOB6=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_6_hotflip.sh)
+        if JOB6=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_6_hotflip.sh 2>&1); then
+            JOB6=$(echo "$JOB6" | cut -d';' -f1)
+        else
+            echo "  [WARNING] Dependency submission failed, checking prerequisites..."
+            if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+                echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
+                JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh 2>&1)
+                JOB6=$(echo "$JOB6" | cut -d';' -f1)
+            else
+                echo "  [FAILED] Stage 4 not complete. Cannot continue."
+                exit 1
+            fi
+        fi
     else
-        JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh)
+        JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh 2>&1)
+        JOB6=$(echo "$JOB6" | cut -d';' -f1)
     fi
-    JOB6=$(echo "$JOB6" | cut -d';' -f1)
     echo "  Job ID: $JOB6"
     echo "  [TIME] Expected time: 1-2 hours"
     echo "  [INFO] Runs in PARALLEL with UAT attacks"
@@ -340,11 +387,28 @@ else
     DEPS=$(echo $DEPS | sed 's/^://') # Remove leading colon
     
     if [ -n "$DEPS" ]; then
-        JOB7=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_7_aggregate.sh)
+        echo "  [INFO] Attempting to submit with dependencies: $DEPS"
+        if JOB7=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_7_aggregate.sh 2>&1); then
+            JOB7=$(echo "$JOB7" | cut -d';' -f1)
+        else
+            echo "  [WARNING] Dependency submission failed, checking prerequisites..."
+            PREREQ_MET=true
+            [ ! -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ] && PREREQ_MET=false
+            
+            if [ "$PREREQ_MET" = true ]; then
+                echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."
+                JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh 2>&1)
+                JOB7=$(echo "$JOB7" | cut -d';' -f1)
+            else
+                echo "  [FAILED] Prerequisites not met. Cannot continue."
+                exit 1
+            fi
+        fi
     else
-        JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh)
+        JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh 2>&1)
+        JOB7=$(echo "$JOB7" | cut -d';' -f1)
     fi
-    JOB7=$(echo "$JOB7" | cut -d';' -f1)
     echo "  Job ID: $JOB7"
     echo "  [TIME] Expected time: 5-15 minutes"
     
