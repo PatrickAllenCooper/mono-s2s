@@ -15,6 +15,9 @@ omit =
     */test_*.py
     *_test.py
     mono_s2s_v1_7.py
+    # Exclude stage scripts - these are HPC integration code with heavy external dependencies
+    # that are better tested through system/integration testing on actual HPC environments
+    hpc_version/scripts/stage_*.py
 
 [report]
 show_missing = True

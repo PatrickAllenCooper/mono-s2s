@@ -557,7 +557,6 @@ class TestStageLogger:
     
     def test_stage_logger_complete_success(self, temp_work_dir, monkeypatch):
         """Test completing stage successfully"""
-        monkeypatch.setattr(ExperimentConfig, "CURRENT_SEED", 42)
         monkeypatch.setattr(ExperimentConfig, "WORK_DIR", temp_work_dir["work_dir"])
         
         log_dir = os.path.join(temp_work_dir["work_dir"], "stage_logs")
