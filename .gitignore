@@ -11,3 +11,24 @@ dist/
 .ruff_cache/
 .ipynb_checkpoints/
 
+# Testing coverage
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+coverage_html_report/
+.tox/
+
+# OS
+.DS_Store
+
+# HPC/Project specific
+scratch/
+results/
+checkpoints/
+data_cache/
+*.flag
+logs/
+*.out
+*.err
+
