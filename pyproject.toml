@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_backend"
+
+[project]
+name = "mono-s2s"
+version = "1.7.0"
+description = "Monotonic Seq2Seq: Testing local monotonic constraints in T5 for adversarial robustness"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "datasets>=2.14.0",
+    "rouge-score>=0.1.2",
+    "scipy>=1.10.0",
+    "pandas>=2.0.0",
+    "tqdm>=4.65.0",
+    "sentencepiece>=0.1.99",
+    "protobuf>=4.23.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    "pytest-xdist>=3.5.0",
+    "pytest-timeout>=2.2.0",
+    "coverage[toml]>=7.3.0",
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "--cov=hpc_version",
+    "--cov=.",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html:coverage_html_report",
+    "--cov-report=xml:coverage.xml",
+    "--cov-branch",
+    "--cov-fail-under=90",
+    "--strict-markers",
+    "--tb=short",
+    "-v",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests (deselect with '-m \"not slow\"')",
+    "gpu: Tests requiring GPU",
+]
+timeout = 300
+
+[tool.coverage.run]
+branch = true
+source = ["hpc_version", "."]
+relative_files = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/.venv/*",
+    "*/venv/*",
+    "setup.py",
+    "*/test_*.py",
+    "*_test.py",
+    "mono_s2s_v1_7.py",  # Legacy file - will test critical parts only
+]
+concurrency = ["thread", "multiprocessing"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 90
+precision = 2
+exclude_also = [
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "@abstractmethod",
+    "if __name__ == .__main__.:",
+    "if 0:",
+    "if False:",
+    "pragma: no cover",
+    "pass",
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+
+[tool.coverage.xml]
+output = "coverage.xml"

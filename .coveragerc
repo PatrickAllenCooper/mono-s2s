@@ -1,0 +1,37 @@
+# Coverage.py configuration
+# Note: Also defined in pyproject.toml for modern tools
+
+[run]
+branch = True
+source = hpc_version,.
+relative_files = True
+omit =
+    */tests/*
+    */__pycache__/*
+    */site-packages/*
+    */.venv/*
+    */venv/*
+    setup.py
+    */test_*.py
+    *_test.py
+    mono_s2s_v1_7.py
+
+[report]
+show_missing = True
+skip_covered = False
+fail_under = 90
+precision = 2
+exclude_also =
+    def __repr__
+    if TYPE_CHECKING:
+    raise AssertionError
+    raise NotImplementedError
+    @abstractmethod
+    if __name__ == .__main__.:
+    pragma: no cover
+
+[html]
+directory = coverage_html_report
+
+[xml]
+output = coverage.xml
