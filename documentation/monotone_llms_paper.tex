@@ -1,0 +1,709 @@
+%%%%%%%% ICML 2025 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\MSE}{\mathsf{MSE}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Sys}{\mathfrak{S}}
+\newcommand{\Xx}{\mathcal{X}}
+\newcommand{\Yy}{\mathcal{Y}}
+\newcommand{\seq}[1]{\langle #1 \rangle}
+\newcommand{\Relu}{\mathsf{ReLU}}
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2025} with \usepackage[nohyperref]{icml2025} above.
+\usepackage{hyperref}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2025}
+
+% If accepted, instead use the following line for the camera-ready submission:
+% \usepackage[accepted]{icml2025}
+
+% For theorems and such
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{amsthm}
+
+% if you use cleveref..
+\usepackage[capitalize,noabbrev]{cleveref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THEOREMS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Todonotes is useful during development; simply uncomment the next line
+%    and comment out the line below the next line to turn off comments
+%\usepackage[disable,textsize=tiny]{todonotes}
+\usepackage[textsize=tiny]{todonotes}
+
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Monotone LLMs}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Monotone LLMs}
+
+% It is OKAY to include author information, even for blind
+% submissions: the style file will automatically remove it for you
+% unless you've provided the [accepted] option to the icml2025
+% package.
+
+% List of affiliations: The first argument should be a (short)
+% identifier you will use later to specify author affiliations
+% Academic affiliations should list Department, University, City, Region, Country
+% Industry affiliations should list Company, City, Region, Country
+
+% You can specify symbols, otherwise they are numbered in order.
+% Ideally, you should not use this facility. Affiliations will be numbered
+% in order of appearance and this is the preferred way.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Firstname1 Lastname1}{equal,yyy}
+\icmlauthor{Firstname2 Lastname2}{equal,yyy,comp}
+\icmlauthor{Firstname3 Lastname3}{comp}
+\icmlauthor{Firstname4 Lastname4}{sch}
+\icmlauthor{Firstname5 Lastname5}{yyy}
+\icmlauthor{Firstname6 Lastname6}{sch,yyy,comp}
+\icmlauthor{Firstname7 Lastname7}{comp}
+%\icmlauthor{}{sch}
+\icmlauthor{Firstname8 Lastname8}{sch}
+\icmlauthor{Firstname8 Lastname8}{yyy,comp}
+%\icmlauthor{}{sch}
+%\icmlauthor{}{sch}
+\end{icmlauthorlist}
+
+\icmlaffiliation{yyy}{Department of XXX, University of YYY, Location, Country}
+\icmlaffiliation{comp}{Company Name, Location, Country}
+\icmlaffiliation{sch}{School of ZZZ, Institute of WWW, Location, Country}
+
+\icmlcorrespondingauthor{Firstname1 Lastname1}{first1.last1@xxx.edu}
+\icmlcorrespondingauthor{Firstname2 Lastname2}{first2.last2@www.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+As large language models (LLMs) are increasingly deployed in real-world and safety-sensitive settings, their vulnerability to adversarial prompts and jailbreak attacks has emerged as a critical concern. Although existing defenses, including alignment techniques, prompt filtering, and adversarial training, have improved empirical safety, they largely operate as reactive mechanisms and provide limited structural guaranties about model behavior.
+We propose \emph{monotone language models}, an architectural approach that enforces monotonicity constraints within the feed-forward components of Transformer-based sequence-to-sequence models. Monotonicity introduces a principled inductive bias that yields more predictable behavior under adversarial perturbations and simplifies reasoning about model responses. Primarily, our approach is complementary to existing safety and alignment methods and can be implemented alongside them without modifying training objectives or inference pipelines.
+Empirically, we demonstrate that monotone Transformers exhibit improved robustness to a range of adversarial and jailbreak attacks while preserving performance on standard summarization benchmarks. We further show that pretrained language models can be distilled into monotone counterparts with no noticeable degradation in task accuracy. Our results suggest that monotonicity is a practical and scalable architectural bias for improving the reliability of large language models, offering a complementary path toward more robust and trustworthy systems.
+\end{abstract}
+
+\section{Introduction}
+Large language models (LLMs) have rapidly transitioned from research artifacts to widely deployed systems that influence real-world decisions. They are now used to summarize documents, assist in legal and medical workflows, and act as intermediaries between users and critical information systems. This rapid adoption has brought renewed attention to a fundamental challenge: despite their impressive capabilities, LLMs remain highly vulnerable to adversarial manipulation. Carefully crafted prompts, jailbreak strategies, or maliciously structured inputs can induce unsafe or unintended behavior, often with minimal effort.
+
+In response, a growing body of work has proposed defenses aimed at improving the safety and robustness of language models. These include prompt-based safeguards, supervised fine-tuning, reinforcement learning from human feedback, adversarial training, and post-hoc filtering mechanisms. While effective in many cases, such approaches are inherently reactive: they aim to mitigate known failure modes rather than constrain model behavior by design. As a result, they provide limited guarantees when models are exposed to novel or adaptive adversaries.
+
+This limitation is particularly pronounced in large, high-dimensional models, where exhaustive testing or verification of behavior is infeasible. As LLMs are increasingly embedded in high-stakes applications, there is a growing need for complementary approaches that impose structural regularities on model behavior, enabling more predictable and analyzable responses under perturbation.
+
+We explore \emph{monotonicity} as such a structural inductive bias. Monotonicity is a classical property in machine learning and optimization, referring to functions whose outputs vary in a predictable direction with respect to their inputs. When incorporated into neural networks, monotonicity enables simpler reasoning about model behavior and has been shown to facilitate verification and robustness in lower-dimensional settings. However, prior attempts to impose monotonic constraints on neural models have often resulted in reduced expressive power or degraded performance, limiting their applicability to large-scale language models.
+
+Our key insight is that monotonicity can be enforced selectively within modern Transformer architectures without sacrificing performance. Rather than constraining the entire model, we apply monotonicity constraints to the feed-forward sublayers that dominate the model's nonlinear transformations, while leaving attention mechanisms, residual connections, and normalization layers unconstrained. To enable effective optimization under these constraints, we adopt a smooth reparameterization strategy that avoids the degeneracies associated with projection-based methods.
+
+Building on this design, we show that pretrained sequence-to-sequence models can be distilled into monotone counterparts that closely match their original performance on standard benchmarks. Despite their constrained structure, these monotone models exhibit increased robustness to adversarial and jailbreak attacks, suggesting that monotonicity acts as a stabilizing inductive bias rather than a limitation.
+
+Importantly, our approach is not intended to replace existing safety or alignment techniques. Instead, it is fully complementary: monotonicity operates at the architectural level and can be combined with current training procedures, alignment strategies, and inference-time defenses. By providing an additional layer of structural regularization, monotone language models offer a lightweight and scalable path toward improving robustness and reliability in large language models.
+
+Taken together, our results demonstrate that architectural constraints and empirical performance need not be at odds. Monotonicity emerges as a practical design principle for modern language models—one that enhances robustness while remaining compatible with the broader ecosystem of safety methods developed to date.
+
+
+\noindent\textbf{Contributions.}
+Our contributions are summarized as follows:
+\begin{itemize}
+\item \textbf{Monotone building blocks for LLMs.} We introduce a framework for constructing language models using monotone Transformer components, enforcing structural monotonicity within feed-forward sublayers while leaving attention mechanisms unconstrained.
+\item \textbf{Distillation without loss of capability.} We show that pretrained, non-monotone language models can be distilled into monotone counterparts with no noticeable degradation in standard benchmark performance.
+\item \textbf{Empirical robustness improvements.} We demonstrate through adversarial evaluation that monotone language models exhibit substantially improved robustness to jailbreak and adversarial attacks, providing evidence that monotonicity serves as an effective inductive bias for improving model stability.
+\end{itemize}
+
+Together, these results suggest that safety and performance need not be competing objectives. By enforcing monotonicity at the level of model building blocks, we obtain language models that are empirically more robust and predictable, while retaining the capabilities of their unconstrained counterparts. Monotonicity thus emerges as a practical and scalable design principle for improving the trustworthiness of modern LLMs.
+
+\section{Related Work}
+
+% Our work situates itself at the intersection of robustness in language models, architectural constraints in neural networks, and structural approaches to improving model predictability and safety. We review relevant lines of research on adversarial vulnerabilities of LLMs, structural and monotonic network design, model verification and certification, and related defenses.
+
+\paragraph{Vulnerabilities of Language Models.}
+Large language models have been shown to be highly susceptible to diverse adversarial manipulations that can bypass safety filters and elicit harmful or unintended outputs. Research in this area has documented both jailbreaks—crafted prompts that circumvent alignment measures—and transferable suffix attacks that generalize across models. For example, universal adversarial suffixes have been demonstrated to induce objectionable content in widely used models including GPT, Bard, and Claude, even when aligned, and can transfer from one model to another using greedy or gradient-based optimization techniques~\citep{Zou2023UniversalTransferableAttacksOnAlignedLLMs}. Studies have further explored the position sensitivity of jailbreak attacks and shown that simple adversarial snippets positioned at specific output locations can dramatically increase attack success rates, revealing nuanced vulnerabilities in model safety mechanisms~\citep{wang2025vulnerability}.
+
+In parallel, interpretable adversarial attack methods such as AutoDAN have been proposed, which generate prompts that evade perplexity-based defenses and achieve high attack success while remaining human-interpretable, underscoring the fragility of current safety filters~\citep{Zhu2023AutoDAN}. Posters at major venues have also highlighted structural vulnerabilities, showing that larger context windows and many-shot jailbreaking strategies can exacerbate susceptibility to adversarial injections, even when models are nominally safety-trained (e.g., "Many-shot jailbreaks")~\citep{anil2024many}.
+
+Benchmarks have been developed to systematically quantify LLM robustness. For instance, Adversarial GLUE showed that existing models and robust training methods perform poorly under a suite of adversarial text attacks, reinforcing the need for broader robustness evaluation beyond standard test sets~\citep{Wang2021AdvGLUE}. Additional work has examined multilingual jailbreak challenges, revealing that safety mechanisms calibrated for English can fail dramatically in low-resource languages or when malicious instructions are combined with multilingual prompts~\citep{deng2024multilingual}.
+
+Prompt injection attacks, a class of adversarial exploitations wherein innocuous-looking inputs manipulate model behavior by merging instructions and data, have been recognized as a fundamental vulnerability of modern LLMs due to the lack of separation between instruction and context. Comprehensive surveys of LLM security concerns further categorize threats ranging from inference-time attacks to training-time manipulations and model misuse, pointing to broad systemic risks in current LLM deployments~\citep{li2025security}.
+
+\paragraph{Defenses and Robustness Enhancements.}
+Efforts to defend against LLM vulnerabilities include techniques such as smoothing defenses designed to mitigate jailbreak attacks with provable performance bounds, as well as detection mechanisms that distinguish adversarial prompts from benign ones by analyzing output distribution differences~\citep{Robey2023SmoothLLM}; alternative methods achieve jailbreak detection with minimal computational overhead~\citep{sayeedi2025jailbreaktracer}.
+
+Scaling behavior in language model robustness has been examined, with recent work showing that larger models are not uniformly more robust without explicit adversarial training, and that offense and defense capabilities scale differently across tasks and threat models~\citep{howe2024effects}. Other defense directions explore improving transferability of jailbreak attacks or adapting prompt sequences to evaluate and harden models against distributional dependencies in adversarial sequences~\citep{wang2025understanding}.
+
+\paragraph{Monotonic Neural Networks and Structural Constraints.}
+Monotonicity has long been studied as a structural property in neural networks, motivated by applications requiring interpretability, robustness, or domain-consistent behavior. Early work showed that feed-forward networks with non-negative weights and monotone activation functions are universal approximators of monotone functions, establishing monotonicity as a theoretically sound inductive bias rather than a restrictive limitation~\citep{Sill1998MonotonicNetworks,Daniels2010Monotone}. Subsequent research developed practical constructions of deep monotonic networks, including lattice-based models and partially monotone architectures, enabling scalable learning under monotonicity constraints in tabular and structured domains~\citep{Gupta2016MonotonicLattices,You2017DeepLattice}.
+
+More recent work has explored monotonicity as a means of improving model reliability and certifiability. For example, monotone neural networks have been shown to simplify verification by enabling reasoning over boundary inputs rather than the full input space, particularly for piecewise linear architectures~\citep{Weber2021CertifyingMonotonicNetworks}. However, existing monotonic architectures have primarily been evaluated on low-dimensional or structured prediction tasks, and their applicability to large-scale sequence models and pretrained language models remains largely unexplored.
+
+Beyond monotonicity, architectural constraints more broadly have been investigated as inductive biases for improving robustness and stability in neural networks. Constrained optimization layers and structured network designs have demonstrated that carefully imposed constraints can guide model behavior under perturbations without severely compromising expressive power~\citep{Amos2017OptNet}. These results support the premise that structural constraints, when selectively applied, can improve desirable properties of neural networks while retaining practical performance.
+
+
+% \paragraph{Verification and Certification.}
+% Formal verification aims to provide mathematical assurances about model behavior under specified perturbations. Techniques based on abstract interpretation, convex relaxations, and over-approximation have been applied to neural networks to certify robustness within normed perturbation balls, though these methods often struggle to scale to large models common in LLMs~\citep{Turn0Search1}:contentReference[oaicite:15]{index=15}. Monotonicity, in principle, simplifies some verification tasks by enabling boundary evaluation rather than exhaustive search, but the application of such reasoning to large-scale language models remains an open challenge.
+
+% \paragraph{Distillation and Constrained Training.}
+% Model distillation has been used to transfer knowledge and robustness properties between models, but naive distillation alone can be vulnerable to adversarial attacks that exploit weaknesses in the reference model or training procedure~\citep{Carlini2016DefensiveDistillationBreaks}. More recent work explores structured distillation objectives to improve performance under constraints, aligning closely with our use of distillation to preserve performance under architectural constraints.
+
+
+
+\section{Preliminaries}
+\label{Prelim}
+\paragraph{Notations.} We denote the set of real, non-negative real, and positive real numbers by \( \R \), \( \R_{\geq 0} \), and \( \R_{>0} \), respectively. For sets \( A \) and \( B \), we use \( A \setminus B \) for set difference and \( A \times B \) for Cartesian product, and write \( |A| \) for the cardinality of \( A \). 
+Given a vector \( v = (v_1,\ldots,v_n)^\top \in \R^n \), its Euclidean norm is \( \|v\| = \sqrt{\sum_{i=1}^n v_i^2} \). The rectified linear unit is defined by \( \Relu(x) := \max(x,0) \), and for vectors \( x, y \in \R^n \), the mean squared error is \( \MSE(x, y) := \frac{1}{n} \sum_{i=1}^n (x_i - y_i)^2 \). We denote the \( i \)th component of a vector \( x \) by \( x_i \), and write \( x \le y \) to indicate element-wise inequality.
+A set \( \mathcal{S} \subseteq \R^n \) is \emph{lower closed} if \( x \in \mathcal{S} \) and \( y \le x \) imply \( y \in \mathcal{S} \); it is \emph{upper closed} if \( x \in \mathcal{S} \) and \( y \ge x \) imply \( y \in \mathcal{S} \). A hyper-rectangle is denoted by \( [\underline{x}, \overline{x}] := \{ x \in \R^n \mid \underline{x} \le x \le \overline{x} \} \). Given a set $A\subseteq \R^n$, $x\in \R^n$ is a maximal (resp. minimal) point of $A$, if there does not exists any $y\in A$ such that $x\le y$ (resp. $y\le x$). 
+
+\subsection{Monotonicity-Constrained Sequence-to-Sequence Models}
+
+We study the role of monotonicity constraints in improving the adversarial robustness of sequence-to-sequence language models.
+
+\begin{definition}[Sequence-to-Sequence Model]
+A sequence-to-sequence model is a parameterized mapping
+\[
+\mathcal{M}_\theta : \mathcal{X} \to \mathcal{Y},
+\]
+where $\mathcal{X}$ denotes the space of input token sequences and $\mathcal{Y}$ denotes the space of output token sequences. The model $\mathcal{M}_\theta$ is typically instantiated as a Transformer architecture composed of attention layers, feed-forward network (FFN) sublayers, residual connections, and normalization operators.
+\end{definition}
+
+\begin{definition}[Monotonicity]
+A function $f : \mathbb{R}^n \to \mathbb{R}^m$ is said to be \emph{monotone} if for any $x, x' \in \mathbb{R}^n$,
+\[
+x \le x' \;\; \Rightarrow \;\; f(x) \le f(x').
+\]
+
+\end{definition}
+
+\begin{lemma}[Closure of Monotonicity Under Composition]
+\label{Lemma1}
+Let $f : \mathbb{R}^n \to \mathbb{R}^m$ and $g : \mathbb{R}^m \to \mathbb{R}^k$ be monotone functions. Then the composition
+\[
+h = g \circ f : \mathbb{R}^n \to \mathbb{R}^k
+\]
+is also monotone.
+\end{lemma}
+
+\begin{proof}
+For any $x, x' \in \mathbb{R}^n$ such that $x \le x'$, monotonicity of $f$ implies $f(x) \le f(x')$. Applying monotonicity of $g$ yields
+\[
+g(f(x)) \le g(f(x')),
+\]
+which establishes the claim.
+\end{proof}
+
+
+\paragraph{Feed-Forward Neural Networks.}
+We consider a feed-forward neural network $N : \mathbb{R}^{n_0} \to \mathbb{R}^{n_k}$ with $k$ hidden layers. For an input $u \in \mathbb{R}^{n_0}$, the network computes its output recursively as
+\begin{align*}
+y_0 &= u, \\
+y_{i+1} &= \sigma(W_i y_i + b_i), \quad \text{for } i = 0, 1, \ldots, k-1, \\
+N(u) &= W_k y_k + b_k,
+\end{align*}
+where $W_i \in \mathbb{R}^{n_{i+1} \times n_i}$ and $b_i \in \mathbb{R}^{n_{i+1}}$ denote the weight matrix and bias vector of layer $i$, respectively, and $\sigma:\mathbb{R} \to \mathbb{R}$ is an activation function applied elementwise.
+
+\begin{proposition}[Sufficient Condition for Monotonicity of FFNs] Consider a FFN $N$.
+\label{Prop1}
+if the activation function $\sigma$ is elementwise non-decreasing and that all weight matrices satisfy
+\[
+W_i \succeq 0 \quad \text{for all } i = 0, 1, \ldots, k,
+\]
+where $\succeq 0$ denotes elementwise non-negativity. Then the network $N$ is a monotone function.
+\end{proposition}
+
+\paragraph{Proof.} The statement follows by applying Lemma~\ref{Lemma1} to each layer and invoking closure of monotonicity under composition.
+
+
+
+\begin{remark}
+Neural networks satisfying the conditions of Proposition~\ref{Prop1} are commonly referred to as \emph{monotone neural networks}. Such networks are universal approximators of continuous monotone functions on compact domains~\cite{Daniels2010Monotone}.
+\end{remark}
+
+
+% \begin{definition}[Monotone Feed-Forward Network]
+% Let $f : \mathbb{R}^{d_{\mathrm{in}}} \to \mathbb{R}^{d_{\mathrm{out}}}$ be a feed-forward network with $n$ layers of the form
+% \[
+% f(x_0) = \sum_{i=i}^n W_i \, \sigma(x_{i-1}) + b_i,
+% \]
+% where $\sigma(\cdot)$ is a monotone activation function, and $x_{i-1}$ is the input to the current layer. The FFN $f$ is monotone if
+% \[
+% W_i \succeq 0 \quad i\in\{1,\ldots,n\}.
+% \]
+% where $\succeq 0$ denotes elementwise non-negativity.
+% \end{definition}
+
+\paragraph{Monotone Transformers.}
+We study Transformer models in which monotonicity is selectively enforced within feed-forward sublayers. We begin by formalizing the notion of a monotone Transformer and then describe how the monotonicity constraints are implemented in practice.
+
+\begin{definition}[Monotone Transformer]
+A Transformer model $\mathcal{M}_\theta$ is said to be \emph{monotone with respect to its feed-forward networks (FFNs)} if every feed-forward network within each Transformer block satisfies the monotonicity conditions of Definition~3. All other components of the architecture, including attention mechanisms, residual connections, and normalization layers, are left unconstrained.
+\end{definition}
+
+To enforce monotonicity within FFN sublayers, we adopt a differentiable reparameterization of the corresponding weight matrices. Let $W \in \mathbb{R}^{d_{\mathrm{out}} \times d_{\mathrm{in}}}$ denote a weight matrix subject to an elementwise non-negativity constraint.
+
+\begin{definition}[Monotone Parameterization]
+We define a monotone parameterization of $W$ by
+\[
+W = \phi(V), \qquad \phi(v) := \log\bigl(1 + \exp(v)\bigr),
+\]
+where $V \in \mathbb{R}^{d_{\mathrm{out}} \times d_{\mathrm{in}}}$ is an unconstrained parameter matrix and $\phi(\cdot)$ is applied elementwise. This parameterization guarantees $W \succeq 0$ for all $V$ without requiring explicit projection or constrained optimization.
+\end{definition}
+
+\paragraph{Enforcing Non-Negativity Constraints.}
+A naive approach to enforcing non-negativity, such as projecting weights onto the positive orthant after each gradient update, leads to degenerate training behavior in modern deep learning frameworks and effectively prevents meaningful learning. Instead, we adopt a smooth reparameterization in which constrained weights are expressed as elementwise softplus transformations of unconstrained parameters. This approach ensures that monotonicity constraints are satisfied throughout training while remaining compatible with standard gradient-based optimization.
+
+
+When applying monotonicity constraints to pretrained models, it is important to preserve the information encoded in the original parameters.
+
+\begin{definition}[Pretrained Weight Initialization]
+Let $W_{\mathrm{pre}}$ denote a pretrained weight matrix. The corresponding unconstrained parameters $V$ are initialized as
+\[
+V_{\mathrm{init}} = \phi^{-1}\bigl(|W_{\mathrm{pre}}| + \epsilon\bigr),
+\]
+where $\epsilon > 0$ is a small constant introduced for numerical stability. This initialization preserves the scale of the pretrained weights while ensuring compatibility with the imposed monotonicity constraints.
+\end{definition}
+
+
+
+
+\section{Methods}
+We investigate whether enforcing monotonicity constraints in sequence-to-sequence models can improve adversarial robustness while preserving standard task performance. Our approach builds on the theoretical framework introduced in Section~\ref{Prelim} and instantiates it in modern Transformer-based summarization models.
+
+
+\subsection{Monotone Sequence-to-Sequence Models}
+Let $\mathcal{M}$ denote a sequence-to-sequence model mapping an input text to an output summary. We enforce monotonicity by constraining the feed-forward network (FFN) sublayers within each Transformer block to have non-negative weights, while leaving all other architectural components unconstrained. This selective enforcement induces monotone behavior in the model's nonlinear transformations without restricting attention mechanisms or global information flow.
+
+% To implement the non-negativity constraint in a differentiable manner, we reparameterize each constrained weight matrix $W$ using a softplus transformation,
+% \[
+% W = \log\bigl(1 + \exp(V)\bigr),
+% \]
+% where $V$ is an unconstrained parameter matrix. This parameterization guarantees $W \succeq 0$ throughout training without requiring projection or constrained optimization.
+
+% When initializing from pretrained models, it is essential to preserve the information encoded in the original parameters. Let $W_{\mathrm{pre}}$ denote a pretrained weight matrix. We initialize the unconstrained parameters as
+% \[
+% V_{\mathrm{init}} = \mathrm{softplus}^{-1}\bigl(|W_{\mathrm{pre}}| + \epsilon\bigr),
+% \]
+% where $\epsilon > 0$ is a small constant introduced for numerical stability. This initialization maintains the scale of the pretrained weights while ensuring compatibility with the monotonicity constraint.
+
+\paragraph{Implementation Scope.}
+In all experiments, monotonicity constraints are applied exclusively to the FFN projection matrices (\texttt{wi}, \texttt{wo}) in the T5 architecture~\cite{raffel2020exploring}. Attention layers, residual connections, and layer normalization components remain unconstrained. This design preserves the expressive capacity and optimization stability of the original Transformer while introducing sufficient structure for robustness and verification.
+
+\subsection{Training and Evaluation Protocol}
+Both baseline and monotone models are fine-tuned from the same pretrained T5-small checkpoint under identical optimization settings. We use the AdamW optimizer with learning rate $5 \times 10^{-5}$ and weight decay $0.01$, a batch size of 4, and gradient clipping with norm 1.0. The baseline model is trained for 5 epochs, while the monotone model is trained for 7 epochs with an extended warmup phase (15\% of training steps, compared to 10\% for the baseline) to accommodate the constrained parameter space.
+
+At inference time, decoding is performed using beam search with 4 beams and a length penalty of 1.2. Models are trained on DialogSum, HighlightSum, and arXiv abstract datasets (approximately 50K examples each), and evaluated on CNN/DailyMail using ROUGE-1, ROUGE-2, and ROUGE-L. We report bootstrap-based 95\% confidence intervals for all metrics.
+
+All reported results are obtained using T5-small and evaluation subsets of 200 examples. We view scaling to larger model variants (e.g., T5-base and T5-large) and full test sets as an important direction for future work.
+
+\subsection{Adversarial Robustness Evaluation}
+We evaluate robustness under two complementary classes of adversarial attacks designed to stress different failure modes of sequence-to-sequence models.
+
+\paragraph{Universal Adversarial Triggers.}
+Universal adversarial triggers (UATs) consist of short, input-agnostic token sequences that, when prepended to an input, maximize the model's loss. We optimize triggers using coordinate-wise search with three random restarts and 50 iterations, drawing candidate tokens from a vocabulary biased toward disruptive symbols. Triggers are optimized on a held-out validation set and evaluated on a disjoint test set. To assess transferability, we additionally construct a transfer matrix measuring cross-model vulnerability to learned triggers.
+
+\paragraph{HotFlip Attacks.}
+HotFlip attacks identify vulnerable input positions by computing gradients with respect to token embeddings and replacing selected tokens to maximize loss increase. We allow up to five token replacements per example, selecting replacements based on the dot product between gradient directions and candidate embeddings.
+
+\paragraph{Robustness Metrics.}
+Robustness is quantified using ROUGE score degradation under attack, attack success rate (defined as a degradation exceeding 10\%), and statistical significance assessed via independent $t$-tests.
+
+\section{Results}
+\paragraph{HotFlip Attacks.}
+We evaluate gradient-based robustness using HotFlip attacks, which identify vulnerable token positions via embedding gradients and perform targeted replacements to maximize loss. Table~\ref{tab:hotflip} reports average ROUGE-L degradation, attack success rate (defined as degradation exceeding 10\%), and mean loss increase across 200 test examples. The monotonic model exhibits substantially improved robustness compared to both baselines. Under HotFlip perturbations, the monotonic model incurs an average ROUGE-L degradation of 9.35\%, compared to 14.60\% for the fine-tuned baseline and 21.44\% for the standard pretrained model. Attack success rates follow a similar pattern: 39.0\% for the monotonic model versus 54.0\% for the baseline and 70.0\% for the standard model. These results suggest that the non-negative weight constraints in feed-forward sublayers reduce the model's susceptibility to gradient-based input manipulations, providing a meaningful robustness benefit without requiring adversarial training.
+
+\begin{table}[t]
+\caption{HotFlip attack results on CNN/DailyMail.}
+\label{tab:hotflip}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lccc}
+\toprule
+Model & Deg. & Succ. & $\Delta$Loss \\
+\midrule
+Standard  & 21.4\% & 70\% & +0.41 \\
+Baseline  & 14.6\% & 54\% & +0.31 \\
+Monotonic &  9.4\% & 39\% & +0.24 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+% \subsection{Monotone Sequence-to-Sequence Models}
+
+% We study whether monotonicity constraints improve adversarial robustness in sequence-to-sequence models. Given a model $\mathcal{M}$ mapping input texts to summaries, we enforce non-negative weight constraints on feed-forward network sublayers. For pre-trained weights $W$, we reparametrize via softplus: $W = \log(1 + \exp(V)) \ge 0$, where $V$ is unconstrained. This ensures $W \ge 0$ throughout training without projection. To preserve pre-trained knowledge, we initialize $V_{\text{init}} = \text{softplus}^{-1}(|W_{\text{pretrained}}| + \epsilon)$. Constraints apply to FFN projections (\texttt{wi}, \texttt{wo}) in T5; LayerNorm, residuals, and attention remain unconstrained.
+
+
+
+
+
+% \paragraph{Implementation Scope.}
+% In our experiments, monotonicity constraints are applied exclusively to the FFN projection matrices (\texttt{wi}, \texttt{wo}) in the T5 architecture. All attention layers, residual connections, and layer normalization components remain unconstrained. This selective enforcement induces monotonic behavior in the model's nonlinear transformations while preserving the expressive capacity and optimization stability of the full Transformer.
+
+% \subsection{Training and Evaluation}
+
+% Both baseline and monotonic models are fine-tuned from T5-small under identical conditions: AdamW optimizer ($\text{lr}=5\times10^{-5}$, weight decay 0.01), batch size 4, gradient clipping at 1.0. The baseline trains for 5 epochs; the monotonic model trains for 7 epochs with extended warmup (15\% vs 10\%) to accommodate the constrained parameter space. Decoding uses beam search with 4 beams and length penalty 1.2.
+
+% We train on DialogSum, HighlightSum, and arXiv abstracts (~50K examples) and evaluate on CNN/DailyMail using ROUGE-1, ROUGE-2, and ROUGE-L with bootstrap 95\% confidence intervals.
+
+% \textbf{TODO:} \textit{Validate on larger scales (T5-base/large) and full test sets. Current results use T5-small and 200-sample evaluation subsets.}
+
+% \subsection{Adversarial Attacks}
+
+% We evaluate robustness via two attack types. Universal Adversarial Triggers (UAT) learn input-agnostic token sequences that maximize loss when prepended to inputs. We optimize triggers via coordinate search with 3 restarts and 50 iterations, using a vocabulary biased toward disruptive tokens. Triggers are optimized on a held-out validation split and evaluated on a disjoint test set. We also construct a transfer matrix measuring cross-model vulnerability.
+
+% HotFlip attacks identify vulnerable positions via embedding gradients and replace tokens to maximize loss increase. We flip up to 5 tokens per example, selecting replacements by the dot product between gradients and candidate embeddings.
+
+% Robustness is measured by ROUGE degradation, attack success rate (>10\% degradation), and statistical significance via independent $t$-tests.
+
+
+
+
+% \subsubsection{Paragraphs and Footnotes}
+
+% Within each section or subsection, you should further partition the
+% paper into paragraphs. Do not indent the first line of a given
+% paragraph, but insert a blank line between succeeding ones.
+
+% You can use footnotes\footnote{Footnotes
+% should be complete sentences.} to provide readers with additional
+% information about a topic without interrupting the flow of the paper.
+% Indicate footnotes with a number in the text where the point is most
+% relevant. Place the footnote in 9~point type at the bottom of the
+% column in which it appears. Precede the first footnote in a column
+% with a horizontal rule of 0.8~inches.\footnote{Multiple footnotes can
+% appear in each column, in the same order as they appear in the text,
+% but spread them across columns and pages if possible.}
+
+% \begin{figure}[ht]
+% \vskip 0.2in
+% \begin{center}
+% \centerline{\includegraphics[width=\columnwidth]{icml_numpapers}}
+% \caption{Historical locations and number of accepted papers for International
+% Machine Learning Conferences (ICML 1993 -- ICML 2008) and International
+% Workshops on Machine Learning (ML 1988 -- ML 1992). At the time this figure was
+% produced, the number of accepted papers for ICML 2008 was unknown and instead
+% estimated.}
+% \label{icml-historical}
+% \end{center}
+% \vskip -0.2in
+% \end{figure}
+
+% \subsection{Figures}
+
+% You may want to include figures in the paper to illustrate
+% your approach and results. Such artwork should be centered,
+% legible, and separated from the text. Lines should be dark and at
+% least 0.5~points thick for purposes of reproduction, and text should
+% not appear on a gray background.
+
+% Label all distinct components of each figure. If the figure takes the
+% form of a graph, then give a name for each axis and include a legend
+% that briefly describes each curve. Do not include a title inside the
+% figure; instead, the caption should serve this function.
+
+% Number figures sequentially, placing the figure number and caption
+% \emph{after} the graphics, with at least 0.1~inches of space before
+% the caption and 0.1~inches after it, as in
+% \cref{icml-historical}. The figure caption should be set in
+% 9~point type and centered unless it runs two or more lines, in which
+% case it should be flush left. You may float figures to the top or
+% bottom of a column, and you may set wide figures across both columns
+% (use the environment \texttt{figure*} in \LaTeX). Always place
+% two-column figures at the top or bottom of the page.
+
+% \subsection{Algorithms}
+
+% If you are using \LaTeX, please use the ``algorithm'' and ``algorithmic''
+% environments to format pseudocode. These require
+% the corresponding stylefiles, algorithm.sty and
+% algorithmic.sty, which are supplied with this package.
+% \cref{alg:example} shows an example.
+
+% \begin{algorithm}[tb]
+%    \caption{Bubble Sort}
+%    \label{alg:example}
+% \begin{algorithmic}
+%    \STATE {\bfseries Input:} data $x_i$, size $m$
+%    \REPEAT
+%    \STATE Initialize $noChange = true$.
+%    \FOR{$i=1$ {\bfseries to} $m-1$}
+%    \IF{$x_i > x_{i+1}$}
+%    \STATE Swap $x_i$ and $x_{i+1}$
+%    \STATE $noChange = false$
+%    \ENDIF
+%    \ENDFOR
+%    \UNTIL{$noChange$ is $true$}
+% \end{algorithmic}
+% \end{algorithm}
+
+% \subsection{Tables}
+
+% You may also want to include tables that summarize material. Like
+% figures, these should be centered, legible, and numbered consecutively.
+% However, place the title \emph{above} the table with at least
+% 0.1~inches of space before the title and the same after it, as in
+% \cref{sample-table}. The table title should be set in 9~point
+% type and centered unless it runs two or more lines, in which case it
+% should be flush left.
+
+% % Note use of \abovespace and \belowspace to get reasonable spacing
+% % above and below tabular lines.
+
+% \begin{table}[t]
+% \caption{Classification accuracies for naive Bayes and flexible
+% Bayes on various data sets.}
+% \label{sample-table}
+% \vskip 0.15in
+% \begin{center}
+% \begin{small}
+% \begin{sc}
+% \begin{tabular}{lcccr}
+% \toprule
+% Data set & Naive & Flexible & Better? \\
+% \midrule
+% Breast    & 95.9$\pm$ 0.2& 96.7$\pm$ 0.2& $\surd$ \\
+% Cleveland & 83.3$\pm$ 0.6& 80.0$\pm$ 0.6& $\times$\\
+% Glass2    & 61.9$\pm$ 1.4& 83.8$\pm$ 0.7& $\surd$ \\
+% Credit    & 74.8$\pm$ 0.5& 78.3$\pm$ 0.6&         \\
+% Horse     & 73.3$\pm$ 0.9& 69.7$\pm$ 1.0& $\times$\\
+% Meta      & 67.1$\pm$ 0.6& 76.5$\pm$ 0.5& $\surd$ \\
+% Pima      & 75.1$\pm$ 0.6& 73.9$\pm$ 0.5&         \\
+% Vehicle   & 44.9$\pm$ 0.6& 61.5$\pm$ 0.4& $\surd$ \\
+% \bottomrule
+% \end{tabular}
+% \end{sc}
+% \end{small}
+% \end{center}
+% \vskip -0.1in
+% \end{table}
+
+% Tables contain textual material, whereas figures contain graphical material.
+% Specify the contents of each row and column in the table's topmost
+% row. Again, you may float tables to a column's top or bottom, and set
+% wide tables across both columns. Place two-column tables at the
+% top or bottom of the page.
+
+% \subsection{Theorems and such}
+% The preferred way is to number definitions, propositions, lemmas, etc. consecutively, within sections, as shown below.
+% \begin{definition}
+% \label{def:inj}
+% A function $f:X \to Y$ is injective if for any $x,y\in X$ different, $f(x)\ne f(y)$.
+% \end{definition}
+% Using \cref{def:inj} we immediate get the following result:
+% \begin{proposition}
+% If $f$ is injective mapping a set $X$ to another set $Y$, 
+% the cardinality of $Y$ is at least as large as that of $X$
+% \end{proposition}
+% \begin{proof} 
+% Left as an exercise to the reader. 
+% \end{proof}
+% \cref{lem:usefullemma} stated next will prove to be useful.
+% \begin{lemma}
+% \label{lem:usefullemma}
+% For any $f:X \to Y$ and $g:Y\to Z$ injective functions, $f \circ g$ is injective.
+% \end{lemma}
+% \begin{theorem}
+% \label{thm:bigtheorem}
+% If $f:X\to Y$ is bijective, the cardinality of $X$ and $Y$ are the same.
+% \end{theorem}
+% An easy corollary of \cref{thm:bigtheorem} is the following:
+% \begin{corollary}
+% If $f:X\to Y$ is bijective, 
+% the cardinality of $X$ is at least as large as that of $Y$.
+% \end{corollary}
+% \begin{assumption}
+% The set $X$ is finite.
+% \label{ass:xfinite}
+% \end{assumption}
+% \begin{remark}
+% According to some, it is only the finite case (cf. \cref{ass:xfinite}) that is interesting.
+% \end{remark}
+% %restatable
+
+% \subsection{Citations and References}
+
+% Please use APA reference format regardless of your formatter
+% or word processor. If you rely on the \LaTeX\/ bibliographic
+% facility, use \texttt{natbib.sty} and \texttt{icml2025.bst}
+% included in the style-file package to obtain this format.
+
+% Citations within the text should include the authors' last names and
+% year. If the authors' names are included in the sentence, place only
+% the year in parentheses, for example when referencing Arthur Samuel's
+% pioneering work \yrcite{Samuel59}. Otherwise place the entire
+% reference in parentheses with the authors and year separated by a
+% comma \cite{Samuel59}. List multiple references separated by
+% semicolons \cite{kearns89,Samuel59,mitchell80}. Use the `et~al.'
+% construct only for citations with three or more authors or after
+% listing all authors to a publication in an earlier reference \cite{MachineLearningI}.
+
+% Authors should cite their own work in the third person
+% in the initial version of their paper submitted for blind review.
+% Please refer to \cref{author info} for detailed instructions on how to
+% cite your own papers.
+
+% Use an unnumbered first-level section heading for the references, and use a
+% hanging indent style, with the first line of the reference flush against the
+% left margin and subsequent lines indented by 10 points. The references at the
+% end of this document give examples for journal articles \cite{Samuel59},
+% conference publications \cite{langley00}, book chapters \cite{Newell81}, books
+% \cite{DudaHart2nd}, edited volumes \cite{MachineLearningI}, technical reports
+% \cite{mitchell80}, and dissertations \cite{kearns89}.
+
+% Alphabetize references by the surnames of the first authors, with
+% single author entries preceding multiple author entries. Order
+% references for the same authors by year of publication, with the
+% earliest first. Make sure that each reference includes all relevant
+% information (e.g., page numbers).
+
+% Please put some effort into making references complete, presentable, and
+% consistent, e.g. use the actual current name of authors.
+% If using bibtex, please protect capital letters of names and
+% abbreviations in titles, for example, use \{B\}ayesian or \{L\}ipschitz
+% in your .bib file.
+
+% \section*{Accessibility}
+% Authors are kindly asked to make their submissions as accessible as possible for everyone including people with disabilities and sensory or neurological differences.
+% Tips of how to achieve this and what to pay attention to will be provided on the conference website \url{http://icml.cc/}.
+
+% \section*{Software and Data}
+
+% If a paper is accepted, we strongly encourage the publication of software and data with the
+% camera-ready version of the paper whenever appropriate. This can be
+% done by including a URL in the camera-ready copy. However, \textbf{do not}
+% include URLs that reveal your institution or identity in your
+% submission for review. Instead, provide an anonymous URL or upload
+% the material as ``Supplementary Material'' into the OpenReview reviewing
+% system. Note that reviewers are not required to look at this material
+% when writing their review.
+
+% % Acknowledgements should only appear in the accepted version.
+% \section*{Acknowledgements}
+
+% \textbf{Do not} include acknowledgements in the initial version of
+% the paper submitted for blind review.
+
+% If a paper is accepted, the final camera-ready version can (and
+% usually should) include acknowledgements.  Such acknowledgements
+% should be placed at the end of the section, in an unnumbered section
+% that does not count towards the paper page limit. Typically, this will 
+% include thanks to reviewers who gave useful comments, to colleagues 
+% who contributed to the ideas, and to funding agencies and corporate 
+% sponsors that provided financial support.
+
+\section*{Impact Statement}
+
+Authors are \textbf{required} to include a statement of the potential 
+broader impact of their work, including its ethical aspects and future 
+societal consequences. This statement should be in an unnumbered 
+section at the end of the paper (co-located with Acknowledgements -- 
+the two may appear in either order, but both must be before References), 
+and does not count toward the paper page limit. In many cases, where 
+the ethical impacts and expected societal implications are those that 
+are well established when advancing the field of Machine Learning, 
+substantial discussion is not required, and a simple statement such 
+as the following will suffice:
+
+``This paper presents work whose goal is to advance the field of 
+Machine Learning. There are many potential societal consequences 
+of our work, none which we feel must be specifically highlighted here.''
+
+The above statement can be used verbatim in such cases, but we 
+encourage authors to think about whether there is content which does 
+warrant further discussion, as this statement will be apparent if the 
+paper is later flagged for ethics review.
+
+
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+\nocite{langley00}
+
+\bibliography{example_paper}
+\bibliographystyle{icml2025}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage
+\appendix
+\onecolumn
+\section{You \emph{can} have an appendix here.}
+
+You can have as much text here as you want. The main body must be at most $8$ pages long.
+For the final version, one more page can be added.
+If you want, you can use an appendix like this one.  
+
+The $\mathtt{\backslash onecolumn}$ command above can be kept in place if you prefer a one-column appendix, or can be removed if you prefer a two-column appendix.  Apart from this possible change, the style (font size, spacing, margins, page numbering, etc.) should be kept the same as the main body.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2021 and by Csaba Szepesvari, Gang Niu and Sivan Sabato in 2022.
+% Modified again in 2023 and 2024 by Sivan Sabato and Jonathan Scarlett.
+% Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
