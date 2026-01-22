@@ -57,20 +57,22 @@ class ExperimentConfig:
     
     LEARNING_RATE = 5e-5  # Increased from 3e-5 for better convergence
     WEIGHT_DECAY = 0.01
-    NUM_EPOCHS = 5  # Baseline training epochs
+    NUM_EPOCHS = 7  # FAIR COMPARISON: Both models train for same epochs
     BATCH_SIZE = 4
     GRADIENT_ACCUMULATION_STEPS = 1
     MAX_GRAD_NORM = 1.0
     WARMUP_RATIO = 0.1  # Baseline warmup
     
     # ======================================================================
-    # MONOTONIC-SPECIFIC HYPERPARAMETERS (to reduce clean performance gap)
+    # MONOTONIC-SPECIFIC HYPERPARAMETERS
     # ======================================================================
     
-    # Monotonic model benefits from longer training due to constrained parameter space
-    MONOTONIC_NUM_EPOCHS = 7  # Extra epochs for convergence
-    MONOTONIC_WARMUP_RATIO = 0.15  # More warmup for softplus stability
-    MONOTONIC_LEARNING_RATE = 5e-5  # Same LR, but with more warmup
+    # CRITICAL: For fair comparison, monotonic uses SAME epochs as baseline
+    # Previous unfair comparison: baseline=5, monotonic=7 (confounds results)
+    # FIX: Both models now train for 7 epochs for fair comparison
+    MONOTONIC_NUM_EPOCHS = 7  # SAME as baseline for fair comparison
+    MONOTONIC_WARMUP_RATIO = 0.15  # Extended warmup for softplus stability
+    MONOTONIC_LEARNING_RATE = 5e-5  # Same LR as baseline
     
     # ======================================================================
     # TOKENIZATION PARAMETERS (IDENTICAL for all)
@@ -118,17 +120,24 @@ class ExperimentConfig:
     # EVALUATION CONFIGURATION
     # ======================================================================
     
-    USE_FULL_TEST_SETS = False  # Set to False for quick testing (200 samples)
+    # CRITICAL FIX: Use full test sets for publication-quality results
+    # Previous: USE_FULL_TEST_SETS = False (only 200 samples - TOO SMALL)
+    # Issue: n=200 insufficient for reliable ROUGE, bootstrap CIs, significance tests
+    # FIX: Use full test sets (CNN/DM has 11,490 test examples)
+    USE_FULL_TEST_SETS = True  # CHANGED: Now use full test sets for proper evaluation
     EVAL_BATCH_SIZE = 8
     
-    # Quick testing sizes (when USE_FULL_TEST_SETS=False)
+    # Quick testing sizes (when USE_FULL_TEST_SETS=False) - FOR DEBUGGING ONLY
     QUICK_TEST_SIZE = 200
     TRIGGER_OPT_SIZE_QUICK = 80
     TRIGGER_EVAL_SIZE_QUICK = 120
     
-    # Full evaluation sizes (when USE_FULL_TEST_SETS=True)
+    # Full evaluation sizes (when USE_FULL_TEST_SETS=True) - FOR PUBLICATION
+    # CNN/DM test set: 11,490 examples (use all)
+    # Trigger optimization: 500 samples from validation (disjoint from test)
+    # Trigger evaluation: 1,500 samples from test (sufficient for statistical power)
     TRIGGER_OPT_SIZE_FULL = 500
-    TRIGGER_EVAL_SIZE_FULL = 1000
+    TRIGGER_EVAL_SIZE_FULL = 1500  # Increased from 1000 for better statistical power
     
     # ======================================================================
     # DATASET CONFIGURATION
