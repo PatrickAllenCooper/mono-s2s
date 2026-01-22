@@ -197,6 +197,24 @@ class ExperimentConfig:
     VERBOSE_LOGGING = True
     
     # ======================================================================
+    # ANALYSIS & REPRODUCIBILITY (For ICML Paper)
+    # ======================================================================
+    
+    # Computational cost tracking (for paper methods section)
+    TRACK_TRAINING_TIME = True  # Record wall-clock training time
+    TRACK_INFERENCE_TIME = True  # Record per-example inference time
+    TRACK_MEMORY_USAGE = True  # Record peak GPU memory usage
+    
+    # Mechanistic analysis (for paper analysis section)
+    COMPUTE_GRADIENT_NORMS = True  # Measure input gradient magnitudes
+    SAVE_WEIGHT_DISTRIBUTIONS = True  # Save weight histograms for analysis
+    SAVE_ATTENTION_PATTERNS = False  # Expensive - only enable if needed
+    
+    # Multi-seed experiments (for robustness of results)
+    RUN_MULTI_SEED = False  # Set True to run with all RANDOM_SEEDS automatically
+    AGGREGATE_SEEDS = True  # Report mean ± std across seeds when True
+    
+    # ======================================================================
     # HELPER METHODS
     # ======================================================================
     
