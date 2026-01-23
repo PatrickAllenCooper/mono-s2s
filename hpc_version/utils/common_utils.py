@@ -444,9 +444,29 @@ def compute_avg_loss(model, data_loader, device):  # pragma: no cover - Requires
 # FILE & LOGGING HELPERS
 # ======================================================================
 
-def save_json(data, filepath, indent=2):
-    """Save data to JSON file"""
+def save_json(data, filepath, indent=2, add_timestamp=True):
+    """
+    Save data to JSON file with automatic timestamp labeling.
+    
+    Args:
+        data: Data to save (dict, list, etc.)
+        filepath: Path to save file
+        indent: JSON indentation (default 2)
+        add_timestamp: If True, add timestamp metadata to data (default True)
+    """
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    
+    # Add timestamp and run metadata if data is a dict
+    if add_timestamp and isinstance(data, dict):
+        data['_metadata'] = {
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'date': time.strftime('%Y-%m-%d'),
+            'time': time.strftime('%H:%M:%S'),
+            'seed': ExperimentConfig.CURRENT_SEED,
+            'unix_timestamp': int(time.time()),
+            'run_id': f"{time.strftime('%Y%m%d_%H%M%S')}_seed{ExperimentConfig.CURRENT_SEED}"
+        }
+    
     with open(filepath, 'w') as f:
         json.dump(data, f, indent=indent)
     print(f"✓ Saved to: {filepath}")

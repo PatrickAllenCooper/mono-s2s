@@ -1,12 +1,19 @@
 # Mono-S2S (Monotonic Seq2Seq): HPC Fair-Comparison Pipeline
 
+**Status:** Active research project for ICML 2025 submission  
+**Latest Update:** 2026-01-21  
+**Test Coverage:** 98.01% ✅  
+**Current Configuration:** Fair comparison (7 epochs both models), full test sets
+
 This repo contains a **fully automated SLURM/HPC pipeline** to test whether **local monotonic constraints in T5 feed-forward sublayers (FFNs)** improve adversarial robustness in seq2seq summarization, under a **methodologically fair three-way comparison**:
 
 | Model | Description | Purpose |
 |------|-------------|---------|
 | **Standard T5** | Pre-trained `t5-small`, not fine-tuned | Reference baseline |
-| **Baseline T5** | Fine-tuned with identical hyperparameters, no constraints | Fair control |
-| **Monotonic T5** | Fine-tuned with identical hyperparameters, FFN weights constrained \(W \ge 0\) | Treatment |
+| **Baseline T5** | Fine-tuned for 7 epochs, unconstrained | Fair control |
+| **Monotonic T5** | Fine-tuned for 7 epochs, FFN weights constrained \(W \ge 0\) | Treatment |
+
+**Critical:** Both fine-tuned models use **identical** epochs (7), learning rate (5e-5), batch size (4), and datasets for fair comparison.
 
 **Important scope limitation:** Constraints apply to **FFN sublayers only**. The full encoder/decoder is not globally monotonic due to attention, LayerNorm, residuals, etc.
 
@@ -159,9 +166,21 @@ Key files:
 
 ## Datasets & metrics
 
-- **Training**: 7 summarization datasets (~500K examples).
-- **Testing**: CNN/DailyMail v3.0.0, XSUM, SAMSum (held-out splits).
-- **Metrics**: ROUGE-1/2/L with **bootstrap 95% CIs**, plus adversarial robustness metrics (UAT + HotFlip) and transferability.
+### Training Data
+- DialogSum, HighlightSum, arXiv abstracts (~237K examples total)
+- Uses train splits only - validation splits for early stopping
+- **Critical:** CNN/DailyMail held-out entirely (NOT in training data)
+
+### Evaluation Data
+- **CNN/DailyMail v3.0.0** test split (11,490 examples) - primary evaluation
+- **XSUM** test split (11,334 examples) - generalization check
+- **SAMSum** test split (819 examples) - dialogue domain
+
+### Metrics
+- **ROUGE-1/2/L** with bootstrap 95% CIs (1,000 resamples)
+- **Adversarial robustness:** UAT + HotFlip attacks with degradation metrics
+- **Transfer attacks:** Cross-model attack evaluation matrix
+- **All results timestamped** with date, time, and seed for tracking
 
 ---
 
@@ -177,21 +196,31 @@ This is applied to the FFN linear layers (e.g., `wi`, `wo`, and gated variants) 
 
 ---
 
-## Retraining / improved hyperparameters (when needed)
+## Current Configuration (ICML 2025)
 
-If you see dataset-loading issues or unexpectedly weak fine-tuning:
+**Fair Comparison Settings** (both models identical):
+- **Epochs:** 7 (both baseline and monotonic)
+- **Learning Rate:** 5e-5
+- **Batch Size:** 4
+- **Gradient Clip:** 1.0
+- **Optimizer:** AdamW with weight decay 0.01
 
-- Run the dataset diagnostic first:
+**Evaluation Settings:**
+- **USE_FULL_TEST_SETS:** True (11,490 examples for CNN/DM)
+- **Bootstrap Samples:** 1,000 resamples for CIs
+- **Attack Budget:** 5 tokens for triggers/flips
 
+**Only Difference:**
+- Warmup: Baseline 10% vs Monotonic 15% (for softplus stability)
+
+### Diagnostic Tools
+
+If you see dataset-loading issues:
 ```bash
 cd hpc_version
-python test_dataset_loading.py
+python test_dataset_loading.py  # Test dataset access
+python test_improvements.py     # Test improvements before full run
 ```
-
-- Consider these commonly-improving settings in `configs/experiment_config.py`:
-  - `LEARNING_RATE = 5e-5`
-  - `NUM_EPOCHS = 5`
-  - `DECODE_LENGTH_PENALTY = 2.0` (to reduce over-generation)
 
 ---
 
@@ -213,8 +242,37 @@ If you use CURC Alpine resources, acknowledge:
 
 ---
 
-## Single-document policy
+## Documentation
 
-This repository is intentionally documented in **this single `README.md`**. Any prior standalone markdown guides have been consolidated here to keep the project easy to navigate and reduce drift.
+### Core Documentation
+- **README.md** (this file) - Setup and pipeline overview
+- **TESTING.md** - Test suite guide (98% coverage achieved)
+- **PAPER_STATUS.md** - ICML submission status and roadmap
+
+### Paper Development
+- **documentation/monotone_llms_paper.tex** - ICML paper draft
+- **documentation/QUICK_ICML_RECOMMENDATIONS.md** - Priority fixes
+- **documentation/paper_methods_critique.md** - Detailed methods review
+
+### Testing Documentation  
+- **TEST_COVERAGE_FINAL.md** - Coverage achievement report (98.01%)
+- **tests/README.md** - Test suite reference
+
+### HPC Documentation
+- **hpc_version/IMPROVEMENTS_SUMMARY.md** - Pipeline improvements
+- **hpc_version/CHANGES_AT_A_GLANCE.md** - Quick reference
+
+### Configuration
+All experimental settings in `hpc_version/configs/experiment_config.py`
+
+---
+
+## Recent Updates (2026-01-21)
+
+1. **Fair Comparison:** Both models now train 7 epochs (was 5 vs 7)
+2. **Full Evaluation:** USE_FULL_TEST_SETS=True (11,490 examples vs 200)
+3. **Test Coverage:** Achieved 98.01% coverage (target 90%)
+4. **Timestamped Results:** All outputs include run metadata
+5. **Analysis Tracking:** Added flags for gradient norms, computational cost
 
 
