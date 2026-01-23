@@ -1,9 +1,14 @@
 # Documentation Index
 
+**Last Updated:** 2026-01-21  
+**Documentation Files:** 18 markdown files + 1 notebook + 1 paper
+
+---
+
 ## Quick Links by Purpose
 
 ### 🚀 Getting Started
-- **README.md** - Start here: setup, pipeline overview, quick start
+- **README.md** - **START HERE:** Setup, pipeline overview, quick start
 - **documentation/getting_started.ipynb** - Interactive tutorial for collaborators
 
 ### 📊 Running Experiments
@@ -12,23 +17,27 @@
 - **hpc_version/IMPROVEMENTS_SUMMARY.md** - Detailed improvement documentation
 
 ### 📝 Paper Development (ICML 2025)
-- **documentation/monotone_llms_paper.tex** - Paper draft
-- **documentation/QUICK_ICML_RECOMMENDATIONS.md** - Priority fixes (START HERE)
-- **documentation/paper_methods_critique.md** - Detailed methods review
-- **documentation/paper_methods_fixes_brief.md** - Bullet-point fixes
-- **documentation/ICML_PRIORITY_CHECKLIST.md** - Prioritized action items
-- **documentation/ICML_STRENGTHENING_SUGGESTIONS.md** - Comprehensive suggestions
-- **PAPER_STATUS.md** - Current paper status and roadmap
-- **PAPER_METHODS_FIXES_IMPLEMENTED.md** - What's been fixed
+**Location:** `documentation/paper_development/`
 
-### 🧪 Testing
+- **monotone_llms_paper.tex** - Paper draft (in documentation/)
+- **QUICK_ICML_RECOMMENDATIONS.md** - **START HERE** for paper fixes
+- **PAPER_STATUS.md** - Current status and acceptance roadmap
+- **PAPER_METHODS_FIXES_IMPLEMENTED.md** - What's been fixed
+- **paper_methods_critique.md** - Detailed methods review
+- **paper_methods_fixes_brief.md** - Bullet-point fixes
+- **ICML_PRIORITY_CHECKLIST.md** - Prioritized action items
+- **ICML_STRENGTHENING_SUGGESTIONS.md** - Comprehensive suggestions
+
+### 🧪 Testing Infrastructure
+**Location:** `documentation/testing/`
+
 - **TESTING.md** - Complete testing guide
-- **tests/README.md** - Test suite reference
-- **TEST_COVERAGE_FINAL.md** - Coverage achievement report (98.01%)
-- **TEST_COVERAGE_SUMMARY.md** - Implementation summary
-- **COVERAGE_JOURNEY.md** - How we got to 98% coverage
-- **COVERAGE_STATUS.md** - Coverage analysis
-- **README_TESTING.md** - Testing quick reference
+- **tests/README.md** - Test suite reference (in tests/)
+- **TEST_COVERAGE_FINAL.md** - Achievement report (98.01%)
+- **TEST_COVERAGE_SUMMARY.md** - Implementation details
+- **COVERAGE_JOURNEY.md** - Implementation story
+- **COVERAGE_STATUS.md** - Technical analysis
+- **README_TESTING.md** - Quick reference
 
 ### 📈 Results Tracking
 All results saved with timestamp metadata:
