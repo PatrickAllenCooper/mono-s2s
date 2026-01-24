@@ -408,9 +408,9 @@ Table~\ref{tab:clean} reports ROUGE scores on non-adversarial test data. All thr
 \toprule
 Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
 \midrule
-Standard  & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} \\
-Baseline  & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} \\
-Monotonic & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO} \\
+Standard  & TODO $\pm$ TODO & TODO $\pm$ TODO & TODO $\pm$ TODO \\
+Baseline  & TODO $\pm$ TODO & TODO $\pm$ TODO & TODO $\pm$ TODO \\
+Monotonic & TODO $\pm$ TODO & TODO $\pm$ TODO & TODO $\pm$ TODO \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -422,7 +422,7 @@ Monotonic & \textbf{TODO} $\pm$ \textbf{TODO} & \textbf{TODO} $\pm$ \textbf{TODO
 \textcolor{blue}{\subsection{Adversarial Robustness}}
 
 \textcolor{blue}{\subsubsection{HotFlip Attacks}
-We evaluate gradient-based robustness using HotFlip attacks, which identify vulnerable token positions via embedding gradients and perform targeted replacements to maximize loss. Table~\ref{tab:hotflip} reports average ROUGE-L degradation, attack success rate (defined as degradation exceeding 10\%), and mean loss increase across 1,500 test examples.} \textcolor{blue}{The monotonic model exhibits substantially improved robustness compared to both baselines. Under HotFlip perturbations, the monotonic model incurs an average ROUGE-L degradation of \textbf{TODO}\%, compared to \textbf{TODO}\% for the fine-tuned baseline and \textbf{TODO}\% for the standard pretrained model. Attack success rates follow a similar pattern: \textbf{TODO}\% for the monotonic model versus \textbf{TODO}\% for the baseline and \textbf{TODO}\% for the standard model (p<0.01, Cohen's d=\textbf{TODO}). These results suggest that the non-negative weight constraints in feed-forward sublayers reduce the model's susceptibility to gradient-based input manipulations, providing a meaningful robustness benefit without requiring adversarial training.}
+We evaluate gradient-based robustness using HotFlip attacks, which identify vulnerable token positions via embedding gradients and perform targeted replacements to maximize loss. Table~\ref{tab:hotflip} reports average ROUGE-L degradation, attack success rate (defined as degradation exceeding 10\%), and mean loss increase across 1,500 test examples.} \textcolor{blue}{The monotonic model exhibits substantially improved robustness compared to both baselines. Under HotFlip perturbations, the monotonic model incurs an average ROUGE-L degradation of TODO\%, compared to TODO\% for the fine-tuned baseline and TODO\% for the standard pretrained model. Attack success rates follow a similar pattern: TODO\% for the monotonic model versus TODO\% for the baseline and TODO\% for the standard model (p<0.01, Cohen's d=TODO). These results suggest that the non-negative weight constraints in feed-forward sublayers reduce the model's susceptibility to gradient-based input manipulations, providing a meaningful robustness benefit without requiring adversarial training.}
 
 \begin{table}[t]
 \caption{HotFlip attack results on CNN/DailyMail \textcolor{blue}{test set (n=1,500)}.}
@@ -434,9 +434,9 @@ We evaluate gradient-based robustness using HotFlip attacks, which identify vuln
 \toprule
 Model & \textcolor{blue}{ROUGE-L Deg.} & Succ. Rate & $\Delta$Loss \\
 \midrule
-Standard  & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{+\textbf{TODO}} \\
-Baseline  & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{+\textbf{TODO}} \\
-Monotonic & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{+\textbf{TODO}} \\
+Standard  & \textcolor{blue}{TODO}\% & \textcolor{blue}{TODO}\% & \textcolor{blue}{+TODO} \\
+Baseline  & \textcolor{blue}{TODO}\% & \textcolor{blue}{TODO}\% & \textcolor{blue}{+TODO} \\
+Monotonic & \textcolor{blue}{TODO}\% & \textcolor{blue}{TODO}\% & \textcolor{blue}{+TODO} \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -458,9 +458,9 @@ Table~\ref{tab:uat} reports results under universal adversarial triggers. Consis
 \toprule
 Model & Clean R-L & Attack R-L & Degrad. & Success \\
 \midrule
-Standard  & \textbf{TODO} & \textbf{TODO} & -\textbf{TODO}\% & \textbf{TODO}\% \\
-Baseline  & \textbf{TODO} & \textbf{TODO} & -\textbf{TODO}\% & \textbf{TODO}\% \\
-Monotonic & \textbf{TODO} & \textbf{TODO} & -\textbf{TODO}\% & \textbf{TODO}\% \\
+Standard  & TODO & TODO & -TODO\% & TODO\% \\
+Baseline  & TODO & TODO & -TODO\% & TODO\% \\
+Monotonic & TODO & TODO & -TODO\% & TODO\% \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -484,9 +484,9 @@ To assess whether monotonic models are inherently more difficult to attack or si
 \toprule
 Opt. on $\backslash$ Eval. on & Standard & Baseline & Monotonic \\
 \midrule
-Standard  & \textbf{TODO}\% & \textbf{TODO}\% & \textbf{TODO}\% \\
-Baseline  & \textbf{TODO}\% & \textbf{TODO}\% & \textbf{TODO}\% \\
-Monotonic & \textbf{TODO}\% & \textbf{TODO}\% & \textbf{TODO}\% \\
+Standard  & TODO\% & TODO\% & TODO\% \\
+Baseline  & TODO\% & TODO\% & TODO\% \\
+Monotonic & TODO\% & TODO\% & TODO\% \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -508,9 +508,9 @@ Figure~\ref{fig:tradeoff} visualizes the performance-robustness tradeoff across 
 \begin{tabular}{lcc}
 \textit{Model} & \textit{Clean R-L} & \textit{Attack Success} \\
 \hline
-Standard  & \textbf{TODO} & 70\% \\
-Baseline  & \textbf{TODO} & 54\% \\
-Monotonic & \textbf{TODO} & 39\% \\
+Standard  & TODO & 70\% \\
+Baseline  & TODO & 54\% \\
+Monotonic & TODO & 39\% \\
 \end{tabular}\\[0.2cm]
 \textbf{TODO: Create scatter plot with Clean ROUGE-L on x-axis and Attack Success Rate on y-axis. Points for all 3 models with error bars (95\% CI). Monotonic should be in top-right quadrant (high clean, low attack).}
 }}
@@ -533,11 +533,11 @@ To assess whether robustness improvements generalize beyond CNN/DailyMail, we ev
 \toprule
 Dataset & Baseline & Monotonic & Reduction \\
 \midrule
-CNN/DM   & \textbf{TODO}\% & \textbf{TODO}\% & -\textbf{TODO}\% \\
-XSUM     & \textbf{TODO}\% & \textbf{TODO}\% & -\textbf{TODO}\% \\
-SAMSum   & \textbf{TODO}\% & \textbf{TODO}\% & -\textbf{TODO}\% \\
+CNN/DM   & TODO\% & TODO\% & -TODO\% \\
+XSUM     & TODO\% & TODO\% & -TODO\% \\
+SAMSum   & TODO\% & TODO\% & -TODO\% \\
 \midrule
-Average  & \textbf{TODO}\% & \textbf{TODO}\% & -\textbf{TODO}\% \\
+Average  & TODO\% & TODO\% & -TODO\% \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -560,10 +560,10 @@ Table~\ref{tab:cost} reports computational requirements for training and inferen
 \toprule
 Model & Train Time & Infer. (ms/ex) & Peak Mem. \\
 \midrule
-Baseline  & \textbf{TODO} hrs & \textbf{TODO} & \textbf{TODO} GB \\
-Monotonic & \textbf{TODO} hrs & \textbf{TODO} & \textbf{TODO} GB \\
+Baseline  & TODO hrs & TODO & TODO GB \\
+Monotonic & TODO hrs & TODO & TODO GB \\
 \midrule
-Overhead  & +\textbf{TODO}\%  & +\textbf{TODO}\% & +\textbf{TODO}\% \\
+Overhead  & +TODO\%  & +TODO\% & +TODO\% \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -839,7 +839,7 @@ Overhead  & +\textbf{TODO}\%  & +\textbf{TODO}\% & +\textbf{TODO}\% \\
 
 \subsection{Performance-Robustness Tradeoffs}
 
-Our results demonstrate that monotonicity constraints substantially improve adversarial robustness while preserving task performance on clean data. The monotonic model achieves \textbf{TODO}\% of baseline clean performance (Table~\ref{tab:clean}) while reducing attack success rates by \textbf{TODO} percentage points on average across attack types (Tables~\ref{tab:hotflip} and~\ref{tab:uat}).
+Our results demonstrate that monotonicity constraints substantially improve adversarial robustness while preserving task performance on clean data. The monotonic model achieves TODO\% of baseline clean performance (Table~\ref{tab:clean}) while reducing attack success rates by TODO percentage points on average across attack types (Tables~\ref{tab:hotflip} and~\ref{tab:uat}).
 
 This challenges the traditional assumption that strong architectural constraints necessarily degrade model capacity. We hypothesize that monotonicity acts primarily as a robustness regularizer, constraining the model's ability to amplify adversarial perturbations without significantly limiting its capacity to capture legitimate patterns in text summarization.
 
@@ -849,7 +849,7 @@ This challenges the traditional assumption that strong architectural constraints
 Recent work has identified high Lipschitz constants as a key factor in adversarial vulnerability of language models~\cite{newhouse2025training}. Our approach can be viewed as imposing a structured form of Lipschitz constraint: by restricting FFN weights to be non-negative, we bound the local Lipschitz constant of these layers. For a monotone FFN layer with weights $W_i \succeq 0$, the Lipschitz constant is bounded by $\max_i \|W_i\|_2$, which is determined by the pretrained weight initialization and cannot grow arbitrarily during fine-tuning.
 
 \paragraph{Gradient Dampening Hypothesis.}
-\textbf{TODO: [After running gradient analysis]} We hypothesize that non-negative weights reduce the magnitude of input gradients $\|\nabla_x \ell\|$, making gradient-based attacks inherently less effective. Preliminary analysis suggests monotonic models exhibit \textbf{TODO}\% lower average gradient norms compared to baseline, though comprehensive evaluation is needed to confirm this mechanism.
+\textbf{TODO: [After running gradient analysis]} We hypothesize that non-negative weights reduce the magnitude of input gradients $\|\nabla_x \ell\|$, making gradient-based attacks inherently less effective. Preliminary analysis suggests monotonic models exhibit TODO\% lower average gradient norms compared to baseline, though comprehensive evaluation is needed to confirm this mechanism.
 
 \paragraph{Feature Space Structure.}
 \textbf{TODO: [After weight distribution analysis]} Weight distribution analysis may reveal that monotonic and baseline models learn qualitatively different feature representations, potentially occupying different regions of function space with varying susceptibility to adversarial perturbations.
@@ -880,7 +880,7 @@ Monotonicity is enforced only on FFN sublayers (40\% of parameters). The full Tr
 Our evaluation uses standard attacks (HotFlip, UAT) that are not specifically designed to exploit monotonicity constraints. An adaptive attacker aware of the architectural constraints may develop more effective attack strategies. Evaluating robustness against adaptive, constraint-aware attacks is critical future work and would provide a more conservative assessment of monotonic model robustness.
 
 \paragraph{Computational Overhead.}
-While our measurements show minimal overhead (\textbf{TODO}\% training time, \textbf{TODO}\% inference latency), these costs may become more significant for very large models, real-time applications, or resource-constrained deployments. Further optimization of the softplus parameterization or alternative monotonic parameterizations may reduce this overhead.
+While our measurements show minimal overhead (TODO\% training time, TODO\% inference latency), these costs may become more significant for very large models, real-time applications, or resource-constrained deployments. Further optimization of the softplus parameterization or alternative monotonic parameterizations may reduce this overhead.
 
 \subsection{Broader Context and Future Directions}
 
