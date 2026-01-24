@@ -346,29 +346,15 @@ Let $\mathcal{M}$ denote a sequence-to-sequence model mapping an input text to a
 In all experiments, monotonicity constraints are applied exclusively to the FFN projection matrices (\texttt{wi}, \texttt{wo}) in the T5 architecture~\cite{raffel2020exploring}. Attention layers, residual connections, and layer normalization components remain unconstrained. This design preserves the expressive capacity and optimization stability of the original Transformer while introducing sufficient structure for robustness and verification.}
 
 \textcolor{blue}{\paragraph{Model Architecture.}
-We use T5-small~\citep{raffel2020exploring}, which consists of 6 encoder layers and 6 decoder layers with 512-dimensional hidden states, 8 attention heads per layer, and 2048-dimensional FFN intermediate activations. The model contains approximately 60M parameters total, of which 24M reside in the FFN projection matrices (\texttt{wi}, \texttt{wo}) that we subject to monotonicity constraints. This represents 40\% of model parameters.
-
-Monotonicity constraints are applied to the FFN projections in all 12 Transformer blocks (6 encoder + 6 decoder), yielding 24 constrained weight matrices. All other components remain unconstrained: attention Q/K/V projections (36M parameters), layer normalization, embedding layers, and the output projection layer.}
+We use T5-small~\citep{raffel2020exploring}, which consists of 6 encoder layers and 6 decoder layers with 512-dimensional hidden states, 8 attention heads per layer, and 2048-dimensional FFN intermediate activations. The model contains approximately 60M parameters total, of which 24M reside in the FFN projection matrices (\texttt{wi}, \texttt{wo}) that we subject to monotonicity constraints. This represents 40 percent of model parameters. Monotonicity constraints are applied to the FFN projections in all 12 Transformer blocks (6 encoder and 6 decoder), yielding 24 constrained weight matrices. All other components remain unconstrained, including attention Q/K/V projections (36M parameters), layer normalization, embedding layers, and the output projection layer.}
 
 \textcolor{blue}{\subsection{Training and Evaluation Protocol}}
 
 \textcolor{blue}{\paragraph{Training Data.}
-We train on three publicly available summarization datasets:
-\begin{itemize}
-\item \textbf{DialogSum}~\citep{TODO}: dialogue summarization (train: \textbf{TODO} examples, validation: \textbf{TODO} examples)
-\item \textbf{HighlightSum}~\citep{TODO}: highlight extraction (train: \textbf{TODO} examples, validation: \textbf{TODO} examples)
-\item \textbf{arXiv}~\citep{TODO}: scientific paper abstracts (train: \textbf{TODO} examples, validation: \textbf{TODO} examples)
-\end{itemize}
-Total training corpus: \textbf{TODO} examples. All datasets use standard train/validation splits. Texts are tokenized using T5Tokenizer with maximum input length 512 tokens and maximum target length 128 tokens. We combine datasets by simple concatenation without sampling or weighting.}
+We train on three publicly available summarization datasets. DialogSum~\citep{TODO} provides dialogue summarization with TODO train examples and TODO validation examples. HighlightSum~\citep{TODO} provides highlight extraction with TODO train examples and TODO validation examples. arXiv~\citep{TODO} provides scientific paper abstracts with TODO train examples and TODO validation examples. The total training corpus contains TODO examples. All datasets use standard train and validation splits. Texts are tokenized using T5Tokenizer with maximum input length 512 tokens and maximum target length 128 tokens. We combine datasets by simple concatenation without sampling or weighting.}
 
 \textcolor{blue}{\paragraph{Evaluation Data.}
-We evaluate on three held-out summarization benchmarks:
-\begin{itemize}
-\item \textbf{CNN/DailyMail v3.0.0}~\citep{TODO}: news article summarization, test split (11,490 examples)
-\item \textbf{XSUM}~\citep{TODO}: extreme summarization, test split (11,334 examples)
-\item \textbf{SAMSum}~\citep{TODO}: dialogue summarization, test split (819 examples)
-\end{itemize}
-Critically, CNN/DailyMail is held out entirely from training to ensure evaluation measures out-of-distribution generalization. XSUM and SAMSum appear in training (train splits) and evaluation (test splits), but splits are strictly disjoint.}
+We evaluate on three held-out summarization benchmarks. CNN/DailyMail v3.0.0~\citep{TODO} provides news article summarization with 11,490 test examples. XSUM~\citep{TODO} provides extreme summarization with 11,334 test examples. SAMSum~\citep{TODO} provides dialogue summarization with 819 test examples. Critically, CNN/DailyMail is held out entirely from training to ensure evaluation measures out-of-distribution generalization. XSUM and SAMSum appear in training using train splits and in evaluation using test splits, but these splits are strictly disjoint.}
 
 \textcolor{blue}{\paragraph{Optimization Settings.}
 Both baseline and monotone models are fine-tuned from the same pretrained T5-small checkpoint under identical optimization settings. We use the AdamW optimizer with learning rate $5 \times 10^{-5}$ and weight decay $0.01$, a batch size of 4, and gradient clipping with norm 1.0. Both models train for 7 epochs to ensure fair comparison. The monotone model uses an extended warmup phase (15\% of training steps, compared to 10\% for the baseline) to accommodate the softplus parameterization, but both models receive identical total training budgets.}
@@ -380,7 +366,7 @@ At inference time, decoding is performed using beam search with 4 beams, length 
 ROUGE scores are computed using the rouge-score Python library (v0.1.2) with Porter stemming enabled. We report bootstrap 95\% confidence intervals using the percentile method with 1,000 resamples. Statistical significance is assessed using paired t-tests (same examples evaluated across models) with Bonferroni correction for multiple comparisons ($\alpha=0.05/3=0.0167$ for three pairwise model comparisons). We additionally report Cohen's d effect sizes for all comparisons.}
 
 \textcolor{blue}{\paragraph{Reproducibility.}
-All experiments use fixed random seeds (Python=42, NumPy=42, PyTorch=42) with deterministic algorithms enabled where available. We disable TF32 operations on Ampere GPUs and use CUDA deterministic mode for numerical reproducibility. Training is conducted on a single NVIDIA A100 GPU (40GB memory). We use PyTorch 2.0.1, Transformers 4.30.2, and Python 3.10. Training requires approximately \textbf{TODO} hours per model (7 epochs). Code and model checkpoints will be made available upon acceptance.}
+All experiments use fixed random seeds with Python set to 42, NumPy set to 42, and PyTorch set to 42, with deterministic algorithms enabled where available. We disable TF32 operations on Ampere GPUs and use CUDA deterministic mode for numerical reproducibility. Training is conducted on a single NVIDIA A100 GPU with 40GB memory. We use PyTorch version 2.0.1, Transformers version 4.30.2, and Python version 3.10. Training requires approximately TODO hours per model for 7 epochs. Code and model checkpoints will be made available upon acceptance.}
 
 \subsection{Adversarial Robustness Evaluation}
 We evaluate robustness under two complementary classes of adversarial attacks designed to stress different failure modes of sequence-to-sequence models.
@@ -410,9 +396,7 @@ Figure~\ref{fig:training} shows training and validation loss curves for both mod
 
 \textcolor{blue}{\subsection{Task Performance on Clean Data}
 
-Table~\ref{tab:clean} reports ROUGE scores on non-adversarial test data. All three models achieve strong summarization performance, with the fine-tuned models (Baseline and Monotonic) substantially outperforming the standard pretrained model. Critically, the monotonic model achieves \textbf{TODO} ROUGE-L, matching \textbf{TODO}\% of the baseline's performance (\textbf{TODO} ROUGE-L) despite the architectural constraints imposed on 40\% of model parameters.
-
-Statistical testing reveals \textbf{TODO: [no significant difference / small significant difference]} between Baseline and Monotonic on clean performance (p=\textbf{TODO}, Cohen's d=\textbf{TODO}), demonstrating that monotonicity constraints preserve task capability while providing robustness benefits.
+Table~\ref{tab:clean} reports ROUGE scores on non-adversarial test data. All three models achieve strong summarization performance, with the fine-tuned models substantially outperforming the standard pretrained model. Critically, the monotonic model achieves TODO ROUGE-L, matching TODO percent of the baseline's performance (TODO ROUGE-L) despite the architectural constraints imposed on 40 percent of model parameters. Statistical testing reveals TODO between Baseline and Monotonic on clean performance with p equal to TODO and Cohen's d equal to TODO, demonstrating that monotonicity constraints preserve task capability while providing robustness benefits.
 
 \begin{table}[t]
 \caption{Clean task performance on CNN/DailyMail test set (n=11,490).}
@@ -462,7 +446,7 @@ Monotonic & \textcolor{blue}{\textbf{TODO}}\% & \textcolor{blue}{\textbf{TODO}}\
 
 \textcolor{blue}{\subsubsection{Universal Adversarial Trigger Attacks}
 
-Table~\ref{tab:uat} reports results under universal adversarial triggers. Consistent with HotFlip findings, the monotonic model demonstrates substantially improved robustness to input-agnostic adversarial prefixes. The monotonic model exhibits \textbf{TODO}\% lower attack success rate compared to baseline (p\textbf{<TODO}, Cohen's d=\textbf{TODO}), demonstrating robustness to both gradient-based (HotFlip) and gradient-free (UAT) attack strategies.
+Table~\ref{tab:uat} reports results under universal adversarial triggers. Consistent with HotFlip findings, the monotonic model demonstrates substantially improved robustness to input-agnostic adversarial prefixes. The monotonic model exhibits TODO percent lower attack success rate compared to baseline with p less than TODO and Cohen's d equal to TODO, demonstrating robustness to both gradient-based HotFlip and gradient-free UAT attack strategies.
 
 \begin{table}[t]
 \caption{Universal adversarial trigger attack results on CNN/DailyMail test set (n=1,500).}
@@ -537,9 +521,7 @@ Monotonic & \textbf{TODO} & 39\% \\
 
 \textcolor{blue}{\subsection{Generalization Across Domains}
 
-To assess whether robustness improvements generalize beyond CNN/DailyMail, we evaluate on two additional summarization benchmarks: XSUM (extreme summarization of news) and SAMSum (dialogue summarization). Table~\ref{tab:multidataset} shows attack success rates across all three datasets under HotFlip attacks with 5 token replacements.
-
-The monotonic model demonstrates consistent robustness advantages across all domains, with attack success rate reductions of \textbf{TODO}\% (CNN/DM), \textbf{TODO}\% (XSUM), and \textbf{TODO}\% (SAMSum) relative to baseline. This consistency indicates that monotonicity provides domain-general robustness improvements rather than overfitting to the specific characteristics of CNN/DailyMail.
+To assess whether robustness improvements generalize beyond CNN/DailyMail, we evaluate on two additional summarization benchmarks, specifically XSUM for extreme summarization of news and SAMSum for dialogue summarization. Table~\ref{tab:multidataset} shows attack success rates across all three datasets under HotFlip attacks with 5 token replacements. The monotonic model demonstrates consistent robustness advantages across all domains, with attack success rate reductions of TODO percent for CNN/DM, TODO percent for XSUM, and TODO percent for SAMSum relative to baseline. This consistency indicates that monotonicity provides domain-general robustness improvements rather than overfitting to the specific characteristics of CNN/DailyMail.}
 
 \begin{table}[t]
 \caption{HotFlip attack success rates across three evaluation datasets (5 token flips).}
@@ -566,7 +548,7 @@ Average  & \textbf{TODO}\% & \textbf{TODO}\% & -\textbf{TODO}\% \\
 
 \textcolor{blue}{\subsection{Computational Overhead}
 
-Table~\ref{tab:cost} reports computational requirements for training and inference. The softplus parameterization introduces minimal overhead: training time increases by \textbf{TODO}\%, inference latency by \textbf{TODO}\%, while peak memory usage remains comparable. This demonstrates that monotonicity constraints are practical for production deployment and do not impose prohibitive computational costs.
+Table~\ref{tab:cost} reports computational requirements for training and inference. The softplus parameterization introduces minimal overhead with training time increasing by TODO percent and inference latency increasing by TODO percent, while peak memory usage remains comparable. This demonstrates that monotonicity constraints are practical for production deployment and do not impose prohibitive computational costs.}
 
 \begin{table}[t]
 \caption{Computational cost comparison on NVIDIA A100 GPU.}
