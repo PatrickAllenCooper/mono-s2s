@@ -14,6 +14,26 @@
 
 set -e  # Exit on error
 
+# CRITICAL: Set SCRATCH and PROJECT environment variables
+# On CURC Alpine, these are set automatically on compute nodes but NOT on login nodes
+# We need them on the login node for checking completion flags
+if [ -z "$SCRATCH" ]; then
+    export SCRATCH="/scratch/alpine/$USER"
+    echo "[INFO] SCRATCH not set, using default: $SCRATCH"
+fi
+
+if [ -z "$PROJECT" ]; then
+    export PROJECT="/projects/$USER"
+    echo "[INFO] PROJECT not set, using default: $PROJECT"
+fi
+
+# Verify directories exist
+if [ ! -d "$SCRATCH" ]; then
+    echo "[ERROR] SCRATCH directory does not exist: $SCRATCH"
+    echo "        Please check your Alpine filesystem access"
+    exit 1
+fi
+
 # Configuration
 ALL_SEEDS=(42 1337 2024 8888 12345)
 NUM_SEEDS=${1:-${#ALL_SEEDS[@]}}  # Default: all seeds
@@ -80,9 +100,7 @@ if [ ${#SUCCESSFUL_SEEDS[@]} -ge 2 ]; then
     echo "Aggregating results across seeds..."
     echo ""
     
-    # Create aggregation directory
-    export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
-    export PROJECT=${PROJECT:-/projects/$USER}
+    # Create aggregation directory (SCRATCH and PROJECT already set above)
     AGGREGATE_DIR="${PROJECT}/mono_s2s_multi_seed_results"
     mkdir -p "$AGGREGATE_DIR"
     

@@ -15,13 +15,29 @@
 
 set -e  # Exit on error
 
+# CRITICAL: Set SCRATCH and PROJECT environment variables
+# On CURC Alpine, these are set automatically on compute nodes but NOT on login nodes
+# We need them on the login node for checking completion flags
+if [ -z "$SCRATCH" ]; then
+    export SCRATCH="/scratch/alpine/$USER"
+    echo "[INFO] SCRATCH not set, using default: $SCRATCH"
+fi
+
+if [ -z "$PROJECT" ]; then
+    export PROJECT="/projects/$USER"
+    echo "[INFO] PROJECT not set, using default: $PROJECT"
+fi
+
+# Verify directories exist
+if [ ! -d "$SCRATCH" ]; then
+    echo "[ERROR] SCRATCH directory does not exist: $SCRATCH"
+    echo "        Please check your Alpine filesystem access"
+    exit 1
+fi
+
 # Configuration
 SEED=${1:-42}
 export EXPERIMENT_SEED=$SEED
-
-# Set SCRATCH and PROJECT for Alpine (needed for flag file checking)
-export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
-export PROJECT=${PROJECT:-/projects/$USER}
 
 # Seed-specific directories (must match experiment_config.py)
 WORK_DIR="${SCRATCH}/mono_s2s_work"
