@@ -1,0 +1,4 @@
+model_name,trigger_text,trigger_ids
+standard_t5,”. shown » informed beach,"[1141, 2008, 1168, 4862, 2608]"
+baseline_t5,2018.2. investigation identified valuable,"[3070, 4416, 4962, 4313, 3435]"
+monotonic_t5,Thanks» electric conduct deux,"[1333, 3704, 2806, 3498, 1763]"

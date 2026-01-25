@@ -118,8 +118,11 @@ class ExperimentConfig:
     ATTACK_TRIGGER_LENGTH = 5
     ATTACK_NUM_CANDIDATES = 100
     ATTACK_NUM_GRAD_STEPS = 50
-    ATTACK_NUM_RESTARTS = 3
-    ATTACK_NUM_ITERATIONS = 50
+    # IMPROVED: Increased restarts and iterations for more effective UAT attacks
+    # Previous: 3 restarts, 50 iterations - triggers were ineffective (<1% ROUGE change)
+    # Fix: More optimization to find better adversarial triggers
+    ATTACK_NUM_RESTARTS = 5  # Increased from 3 for better coverage of trigger space
+    ATTACK_NUM_ITERATIONS = 100  # Increased from 50 for stronger trigger optimization
     # Micro-batch size used inside attack loss computations (stage 5/6).
     # Larger is faster but may OOM depending on GPU + sequence lengths.
     ATTACK_LOSS_BATCH_SIZE = 8
@@ -142,10 +145,11 @@ class ExperimentConfig:
     
     # Full evaluation sizes (when USE_FULL_TEST_SETS=True) - FOR PUBLICATION
     # CNN/DM test set: 11,490 examples (use all)
-    # Trigger optimization: 500 samples from validation (disjoint from test)
+    # Trigger optimization: 1000 samples from validation (disjoint from test)
     # Trigger evaluation: 1,500 samples from test (sufficient for statistical power)
-    TRIGGER_OPT_SIZE_FULL = 500
-    TRIGGER_EVAL_SIZE_FULL = 1500  # Increased from 1000 for better statistical power
+    # IMPROVED: Increased optimization set from 500 to 1000 for better trigger learning
+    TRIGGER_OPT_SIZE_FULL = 1000  # Increased from 500 for more effective UAT optimization
+    TRIGGER_EVAL_SIZE_FULL = 1500  # Sufficient for statistical power
     
     # ======================================================================
     # DATASET CONFIGURATION

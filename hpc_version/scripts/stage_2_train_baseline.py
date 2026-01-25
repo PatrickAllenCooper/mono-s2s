@@ -390,9 +390,23 @@ def main():
         logger.log(f"  Warmup ratio: {ExperimentConfig.WARMUP_RATIO}")
         logger.log(f"  Max grad norm: {ExperimentConfig.MAX_GRAD_NORM}")
         
+        # Load previous cumulative training time if resuming
+        history_path = os.path.join(ExperimentConfig.RESULTS_DIR, 'baseline_training_history.json')
+        cumulative_time = 0.0
+        if os.path.exists(history_path):
+            try:
+                import json
+                with open(history_path, 'r') as f:
+                    prev_history = json.load(f)
+                cumulative_time = prev_history.get('training_time_seconds', 0.0)
+                logger.log(f"  Resuming with {cumulative_time/60:.1f} minutes of previous training time")
+            except Exception:
+                pass
+        
         start_time = time.time()
         train_losses, val_losses = trainer.train()
-        training_time = time.time() - start_time
+        this_run_time = time.time() - start_time
+        total_training_time = cumulative_time + this_run_time
         
         # Save results
         logger.log("Saving training results...")
@@ -400,8 +414,9 @@ def main():
             'train_losses': train_losses,
             'val_losses': val_losses,
             'best_val_loss': trainer.best_val_loss,
-            'training_time_seconds': training_time,
-            'training_time_minutes': training_time / 60,
+            'training_time_seconds': total_training_time,
+            'training_time_minutes': total_training_time / 60,
+            'this_run_seconds': this_run_time,
             'num_epochs': ExperimentConfig.NUM_EPOCHS,
             'hyperparameters': {
                 'learning_rate': ExperimentConfig.LEARNING_RATE,
@@ -419,7 +434,8 @@ def main():
         )
         
         logger.log(f"\n✓ Baseline training complete!")
-        logger.log(f"  Training time: {training_time/60:.1f} minutes")
+        logger.log(f"  This run time: {this_run_time/60:.1f} minutes")
+        logger.log(f"  Total training time: {total_training_time/60:.1f} minutes")
         logger.log(f"  Best validation loss: {trainer.best_val_loss:.4f}")
         logger.log(f"  Final train loss: {train_losses[-1]:.4f}")
         logger.log(f"  Final val loss: {val_losses[-1]:.4f}")
