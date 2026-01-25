@@ -236,6 +236,8 @@ if [ "$JOB2" != "completed" ]; then
         echo "[FAILED] Baseline training failed. Aborting."
         exit 1
     }
+    # Mark as completed so Stage 4 doesn't use stale job ID
+    JOB2="completed"
 fi
 
 if [ "$JOB3" != "completed" ]; then
@@ -243,6 +245,8 @@ if [ "$JOB3" != "completed" ]; then
         echo "[FAILED] Monotonic training failed. Aborting."
         exit 1
     }
+    # Mark as completed so Stage 4 doesn't use stale job ID
+    JOB3="completed"
 fi
 
 # Stage 4: Comprehensive Evaluation (depends on both models)
@@ -300,6 +304,8 @@ else
         echo "[FAILED] Evaluation failed. Aborting."
         exit 1
     }
+    # Mark as completed so Stages 5/6 don't use stale job ID
+    JOB4="completed"
 fi
 
 # Stage 5: UAT Attacks (depends on evaluation)
@@ -362,15 +368,22 @@ else
 fi
 
 # Wait for attack jobs (only if they were submitted)
-if [ "$JOB5" != "completed" ] && [ "$JOB6" != "completed" ]; then
+if [ "$JOB5" != "completed" ]; then
     check_job_status $JOB5 "stage_5_uat" || {
         echo "[FAILED] UAT attacks failed. Aborting."
         exit 1
     }
+    # Mark as completed so Stage 7 doesn't use stale job ID
+    JOB5="completed"
+fi
+
+if [ "$JOB6" != "completed" ]; then
     check_job_status $JOB6 "stage_6_hotflip" || {
         echo "[FAILED] HotFlip attacks failed. Aborting."
         exit 1
     }
+    # Mark as completed so Stage 7 doesn't use stale job ID
+    JOB6="completed"
 fi
 
 # Stage 7: Aggregate Results (depends on all attacks)
