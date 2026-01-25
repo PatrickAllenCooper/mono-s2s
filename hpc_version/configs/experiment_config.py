@@ -211,8 +211,11 @@ class ExperimentConfig:
     SAVE_ATTENTION_PATTERNS = False  # Expensive - only enable if needed
     
     # Multi-seed experiments (for robustness of results)
-    RUN_MULTI_SEED = False  # Set True to run with all RANDOM_SEEDS automatically
-    AGGREGATE_SEEDS = True  # Report mean ± std across seeds when True
+    # CRITICAL FOR ICML: Single-seed results are considered preliminary
+    # Running 3-5 seeds captures training variance and strengthens claims
+    RUN_MULTI_SEED = True  # Run with all RANDOM_SEEDS for publication-quality results
+    AGGREGATE_SEEDS = True  # Report mean +/- std across seeds
+    MIN_SEEDS_FOR_SIGNIFICANCE = 3  # Minimum seeds needed for cross-seed statistical tests
     
     # ======================================================================
     # HELPER METHODS
