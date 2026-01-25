@@ -23,6 +23,11 @@ export EXPERIMENT_SEED=$SEED
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
+# Seed-specific directories (must match experiment_config.py)
+WORK_DIR="${SCRATCH}/mono_s2s_work"
+SEED_WORK_DIR="${WORK_DIR}/seed_${SEED}"
+SEED_CHECKPOINT_DIR="${WORK_DIR}/checkpoints/seed_${SEED}"
+
 echo "=========================================="
 echo "Mono-S2S HPC Experiment Orchestrator"
 echo "=========================================="
@@ -49,7 +54,12 @@ check_job_status() {
     sleep 5
     
     # Check if completion flag exists
-    local flag_file="${SCRATCH}/mono_s2s_work/${job_name}_complete.flag"
+    # Stages 0-1 are shared (setup/data), stages 2-7 are seed-specific
+    if [[ "$job_name" =~ ^stage_[01]_ ]]; then
+        local flag_file="${SCRATCH}/mono_s2s_work/${job_name}_complete.flag"
+    else
+        local flag_file="${SCRATCH}/mono_s2s_work/seed_${EXPERIMENT_SEED}/${job_name}_complete.flag"
+    fi
     if [ -f "$flag_file" ]; then
         echo "[SUCCESS] $job_name completed successfully"
         cat "$flag_file"
@@ -60,7 +70,7 @@ check_job_status() {
     # This handles the case where training finished but flag wasn't created
     
     if [[ "$job_name" == "stage_3_train_monotonic" ]]; then
-        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/monotonic_checkpoints"
+        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/seed_${EXPERIMENT_SEED}/monotonic_checkpoints"
         local expected_epochs=7
         
         if [ -d "$checkpoint_dir" ]; then
@@ -85,7 +95,7 @@ EOF
     fi
     
     if [[ "$job_name" == "stage_2_train_baseline" ]]; then
-        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/baseline_checkpoints"
+        local checkpoint_dir="${SCRATCH}/mono_s2s_work/checkpoints/seed_${EXPERIMENT_SEED}/baseline_checkpoints"
         local expected_epochs=5
         
         if [ -d "$checkpoint_dir" ]; then
@@ -164,10 +174,11 @@ else
     }
 fi
 
-# Stage 2: Train Baseline (depends on data)
+# Stage 2: Train Baseline (depends on data) - SEED SPECIFIC
 echo ""
 echo "Stage 2: Train baseline model (unconstrained)..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_2_train_baseline_complete.flag" ]; then
+mkdir -p "${SCRATCH}/mono_s2s_work/seed_${SEED}"
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_2_train_baseline_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB2="completed"
 else
@@ -181,10 +192,10 @@ else
     echo "  [TIME] Expected time: 4-12 hours"
 fi
 
-# Stage 3: Train Monotonic (depends on data, can run parallel with baseline)
+# Stage 3: Train Monotonic (depends on data, can run parallel with baseline) - SEED SPECIFIC
 echo ""
 echo "Stage 3: Train monotonic model (W≥0 constraints)..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ]; then
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_3_train_monotonic_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB3="completed"
 else
@@ -249,10 +260,10 @@ if [ "$JOB3" != "completed" ]; then
     JOB3="completed"
 fi
 
-# Stage 4: Comprehensive Evaluation (depends on both models)
+# Stage 4: Comprehensive Evaluation (depends on both models) - SEED SPECIFIC
 echo ""
 echo "Stage 4: Comprehensive evaluation (all 3 models, all 3 test sets)..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_4_evaluate_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB4="completed"
 else
@@ -274,8 +285,8 @@ else
             echo "  [INFO] Checking if training stages completed via flags..."
             
             PREREQ_MET=true
-            [ ! -f "${SCRATCH}/mono_s2s_work/stage_2_train_baseline_complete.flag" ] && PREREQ_MET=false
-            [ ! -f "${SCRATCH}/mono_s2s_work/stage_3_train_monotonic_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_2_train_baseline_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_3_train_monotonic_complete.flag" ] && PREREQ_MET=false
             
             if [ "$PREREQ_MET" = true ]; then
                 echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."
@@ -308,10 +319,10 @@ else
     JOB4="completed"
 fi
 
-# Stage 5: UAT Attacks (depends on evaluation)
+# Stage 5: UAT Attacks (depends on evaluation) - SEED SPECIFIC
 echo ""
 echo "Stage 5: UAT attacks with transfer matrix..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ]; then
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_5_uat_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB5="completed"
 else
@@ -320,7 +331,7 @@ else
             JOB5=$(echo "$JOB5" | cut -d';' -f1)
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
-            if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+            if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_4_evaluate_complete.flag" ]; then
                 echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
                 JOB5=$(sbatch --parsable jobs/job_5_uat.sh 2>&1)
                 JOB5=$(echo "$JOB5" | cut -d';' -f1)
@@ -337,10 +348,10 @@ else
     echo "  [TIME] Expected time: 2-3 hours"
 fi
 
-# Stage 6: HotFlip Attacks (can run parallel with UAT)
+# Stage 6: HotFlip Attacks (can run parallel with UAT) - SEED SPECIFIC
 echo ""
 echo "Stage 6: HotFlip attacks..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ]; then
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_6_hotflip_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB6="completed"
 else
@@ -349,7 +360,7 @@ else
             JOB6=$(echo "$JOB6" | cut -d';' -f1)
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
-            if [ -f "${SCRATCH}/mono_s2s_work/stage_4_evaluate_complete.flag" ]; then
+            if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_4_evaluate_complete.flag" ]; then
                 echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
                 JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh 2>&1)
                 JOB6=$(echo "$JOB6" | cut -d';' -f1)
@@ -386,10 +397,10 @@ if [ "$JOB6" != "completed" ]; then
     JOB6="completed"
 fi
 
-# Stage 7: Aggregate Results (depends on all attacks)
+# Stage 7: Aggregate Results (depends on all attacks) - SEED SPECIFIC
 echo ""
 echo "Stage 7: Aggregate results and final analysis..."
-if [ -f "${SCRATCH}/mono_s2s_work/stage_7_aggregate_complete.flag" ]; then
+if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_7_aggregate_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB7="completed"
 else
@@ -406,8 +417,8 @@ else
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
             PREREQ_MET=true
-            [ ! -f "${SCRATCH}/mono_s2s_work/stage_5_uat_complete.flag" ] && PREREQ_MET=false
-            [ ! -f "${SCRATCH}/mono_s2s_work/stage_6_hotflip_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_5_uat_complete.flag" ] && PREREQ_MET=false
+            [ ! -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_6_hotflip_complete.flag" ] && PREREQ_MET=false
             
             if [ "$PREREQ_MET" = true ]; then
                 echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."

@@ -480,11 +480,31 @@ def load_json(filepath):
         return json.load(f)
 
 
-def create_completion_flag(stage_name, work_dir=None):
-    """Create completion flag file for stage"""
+def _get_flag_dir(stage_name, work_dir=None):
+    """
+    Get the directory for flag files.
+    Stages 0-1 (setup, data) are shared across seeds.
+    Stages 2-7 (training, eval, attacks) are seed-specific.
+    """
     if work_dir is None:
         work_dir = ExperimentConfig.WORK_DIR
-    flag_file = os.path.join(work_dir, f"{stage_name}_complete.flag")
+    
+    # Check if this is a seed-specific stage (stages 2-7)
+    seed_specific_prefixes = ['stage_2', 'stage_3', 'stage_4', 'stage_5', 'stage_6', 'stage_7']
+    is_seed_specific = any(stage_name.startswith(prefix) for prefix in seed_specific_prefixes)
+    
+    if is_seed_specific:
+        seed_dir = os.path.join(work_dir, f"seed_{ExperimentConfig.CURRENT_SEED}")
+        os.makedirs(seed_dir, exist_ok=True)
+        return seed_dir
+    else:
+        return work_dir
+
+
+def create_completion_flag(stage_name, work_dir=None):
+    """Create completion flag file for stage"""
+    flag_dir = _get_flag_dir(stage_name, work_dir)
+    flag_file = os.path.join(flag_dir, f"{stage_name}_complete.flag")
     with open(flag_file, 'w') as f:
         f.write(f"Completed at: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Seed: {ExperimentConfig.CURRENT_SEED}\n")
@@ -494,9 +514,8 @@ def create_completion_flag(stage_name, work_dir=None):
 
 def check_completion_flag(stage_name, work_dir=None):
     """Check if stage completed"""
-    if work_dir is None:
-        work_dir = ExperimentConfig.WORK_DIR
-    flag_file = os.path.join(work_dir, f"{stage_name}_complete.flag")
+    flag_dir = _get_flag_dir(stage_name, work_dir)
+    flag_file = os.path.join(flag_dir, f"{stage_name}_complete.flag")
     return os.path.exists(flag_file)
 
 

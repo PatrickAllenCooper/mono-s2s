@@ -30,10 +30,18 @@ class ExperimentConfig:
     # Blanca:  SCRATCH=/rc_scratch/$USER, PROJECT=/projects/your_group
     
     # Experiment directories (created automatically)
+    # For multi-seed experiments, results and checkpoints are stored in seed-specific subdirectories
     WORK_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_work")
-    RESULTS_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_results")
-    CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
-    DATA_CACHE_DIR = os.path.join(WORK_DIR, "data_cache")
+    
+    # Results directory: seed-specific to avoid overwriting across runs
+    _BASE_RESULTS_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_results")
+    RESULTS_DIR = os.path.join(_BASE_RESULTS_DIR, f"seed_{CURRENT_SEED}")
+    
+    # Checkpoint directory: seed-specific to allow parallel training of different seeds
+    _BASE_CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
+    CHECKPOINT_DIR = os.path.join(_BASE_CHECKPOINT_DIR, f"seed_{CURRENT_SEED}")
+    
+    DATA_CACHE_DIR = os.path.join(WORK_DIR, "data_cache")  # Shared across seeds
     
     # Final results (copy to project for persistence)
     FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "mono_s2s_final_results")
@@ -234,7 +242,9 @@ class ExperimentConfig:
         """Create all necessary directories"""
         dirs = [
             cls.WORK_DIR,
+            cls._BASE_RESULTS_DIR,
             cls.RESULTS_DIR,
+            cls._BASE_CHECKPOINT_DIR,
             cls.CHECKPOINT_DIR,
             cls.DATA_CACHE_DIR,
             cls.FINAL_RESULTS_DIR,
@@ -244,6 +254,8 @@ class ExperimentConfig:
         for d in dirs:
             os.makedirs(d, exist_ok=True)
         print(f"✓ Created all directories under {cls.WORK_DIR}")
+        print(f"  Seed-specific results: {cls.RESULTS_DIR}")
+        print(f"  Seed-specific checkpoints: {cls.CHECKPOINT_DIR}")
     
     @classmethod
     def get_device(cls):
@@ -297,11 +309,14 @@ def get_paths():
     return {
         'work_dir': config.WORK_DIR,
         'results_dir': config.RESULTS_DIR,
+        'base_results_dir': config._BASE_RESULTS_DIR,
         'checkpoint_dir': config.CHECKPOINT_DIR,
+        'base_checkpoint_dir': config._BASE_CHECKPOINT_DIR,
         'data_cache_dir': config.DATA_CACHE_DIR,
         'final_results_dir': config.FINAL_RESULTS_DIR,
         'baseline_checkpoint_dir': os.path.join(config.CHECKPOINT_DIR, 'baseline_checkpoints'),
         'monotonic_checkpoint_dir': os.path.join(config.CHECKPOINT_DIR, 'monotonic_checkpoints'),
+        'current_seed': config.CURRENT_SEED,
     }
 
 
