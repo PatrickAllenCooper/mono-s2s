@@ -14,6 +14,14 @@ class ExperimentConfig:
     """Centralized configuration for reproducibility"""
     
     # ======================================================================
+    # RANDOM SEEDS (Multi-seed Experiments)
+    # NOTE: Must be defined BEFORE paths that use CURRENT_SEED
+    # ======================================================================
+    
+    RANDOM_SEEDS = [42, 1337, 2024, 8888, 12345]
+    CURRENT_SEED = int(os.environ.get("EXPERIMENT_SEED", "42"))  # Can set via SLURM
+    
+    # ======================================================================
     # PATHS (CUSTOMIZE FOR YOUR HPC ENVIRONMENT)
     # ======================================================================
     
@@ -45,13 +53,6 @@ class ExperimentConfig:
     
     # Final results (copy to project for persistence)
     FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "mono_s2s_final_results")
-    
-    # ======================================================================
-    # RANDOM SEEDS (Multi-seed Experiments)
-    # ======================================================================
-    
-    RANDOM_SEEDS = [42, 1337, 2024, 8888, 12345]
-    CURRENT_SEED = int(os.environ.get("EXPERIMENT_SEED", "42"))  # Can set via SLURM
     
     # ======================================================================
     # MODEL CONFIGURATION
