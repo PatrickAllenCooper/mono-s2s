@@ -376,6 +376,57 @@ Robustness is quantified using ROUGE score degradation under attack, attack succ
 
 \section{Results}
 
+\subsection{Training Dynamics and Summarization Quality}
+
+\textcolor{blue}{The monotonicity constraints impose a distinct optimization trajectory compared to unconstrained fine-tuning. Table~\ref{tab:training} summarizes the training dynamics for both models. The monotonic model begins training with substantially higher initial loss (4.97 vs 2.90 for baseline), reflecting the immediate impact of the softplus reparametrization on the pretrained weight distribution. Taking absolute values and applying the inverse softplus transformation distorts the original weight geometry, requiring the model to recover effective representations during fine-tuning.}
+
+\textcolor{blue}{Despite this initialization gap, the monotonic model demonstrates consistent convergence across 7 epochs, with validation loss decreasing from 2.92 to 2.54. However, a persistent optimization gap remains: the monotonic model converges to a validation loss approximately 0.29 higher than the baseline (2.54 vs 2.25). This gap reflects the reduced expressivity of the constrained parameter space, where all FFN weights are restricted to non-negative values.}
+
+\begin{table}[t]
+\caption{\textcolor{blue}{Training dynamics comparison (seed=42).}}
+\label{tab:training}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lcccc}
+\toprule
+Model & Initial Loss & Final Loss & $\Delta$ Loss & Epochs \\
+\midrule
+Baseline  & 2.90 & 2.47 & $-$0.43 & 5 \\
+Monotonic & 4.97 & 2.69 & $-$2.28 & 7 \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\textcolor{blue}{Table~\ref{tab:rouge} reports summarization quality on CNN/DailyMail. The monotonic model achieves ROUGE-L of 24.2 compared to 25.0 for baseline, a relative decrease of 3.2 percent. ROUGE-1 shows a similar pattern (29.6 vs 30.9, a 4.2 percent decrease). These results indicate that the monotonicity constraints impose a modest but measurable cost to task performance. Importantly, the monotonic model remains competitive: it achieves ROUGE scores within the 95 percent confidence intervals of the baseline for ROUGE-2 and ROUGE-L, suggesting the quality degradation may not be statistically significant in all metrics.}
+
+\begin{table}[t]
+\caption{\textcolor{blue}{Summarization quality on CNN/DailyMail (n=200, seed=42). Values are mean with 95\% bootstrap CI.}}
+\label{tab:rouge}
+\vskip 0.1in
+\begin{center}
+\begin{small}
+\begin{tabular}{lccc}
+\toprule
+Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
+\midrule
+Standard  & 32.6 [30.9, 34.2] & 11.9 [10.5, 13.4] & 26.6 [25.0, 28.1] \\
+Baseline  & 30.9 [29.4, 32.4] & 11.5 [10.1, 12.8] & 25.0 [23.6, 26.4] \\
+Monotonic & 29.6 [28.0, 31.1] & 10.6 [9.2, 11.9] & 24.2 [22.7, 25.6] \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table}
+
+\textcolor{blue}{The training dynamics reveal a characteristic pattern of monotonically-constrained optimization: rapid initial recovery followed by slower asymptotic convergence. During the first two epochs, the monotonic model reduces training loss by 1.92 points (4.97 to 3.05), recovering most of the performance gap introduced by the constraint initialization. Subsequent epochs yield diminishing returns, with only 0.36 points of improvement across epochs 3 through 7. This pattern suggests that the extended warmup ratio (15 percent vs 10 percent for baseline) is essential for stable optimization, allowing gradient estimates to stabilize before aggressive weight updates.}
+
+\textcolor{blue}{Notably, the monotonic model exhibits lower variance in prediction lengths compared to the standard pretrained model (std 11.3 tokens vs 12.1 tokens), suggesting that the non-negative weight constraints may induce more consistent generation behavior. Both fine-tuned models produce longer outputs than the standard T5 (mean 74-76 tokens vs 57 tokens), indicating that task-specific fine-tuning adjusts the models length prior toward the training distribution.}
+
 \subsection{Adversarial Robustness}
 
 \paragraph{HotFlip Attacks.}
