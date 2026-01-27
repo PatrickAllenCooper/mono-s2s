@@ -196,7 +196,7 @@ class ExperimentConfig:
     TIME_SETUP = "00:30:00"      # 30 minutes
     TIME_DATA = "02:00:00"       # 2 hours
     TIME_TRAIN = "12:00:00"      # 12 hours (per model)
-    TIME_EVALUATE = "04:00:00"   # 4 hours
+    TIME_EVALUATE = "20:00:00"   # 20 hours (full test set needs more time)
     TIME_UAT = "03:00:00"        # 3 hours
     TIME_HOTFLIP = "02:00:00"    # 2 hours
     TIME_AGGREGATE = "00:15:00"  # 15 minutes
