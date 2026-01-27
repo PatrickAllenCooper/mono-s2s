@@ -18,9 +18,10 @@
     2.535327680315553
   ],
   "best_val_loss": 2.535327680315553,
-  "training_time_seconds": 2.3603439331054688e-05,
-  "training_time_minutes": 3.933906555175781e-07,
-  "num_epochs": 5,
+  "training_time_seconds": 77962.75087714195,
+  "training_time_minutes": 1299.3791812856991,
+  "this_run_seconds": 11163.079898834229,
+  "num_epochs": 7,
   "hyperparameters": {
     "learning_rate": 5e-05,
     "weight_decay": 0.01,
@@ -35,5 +36,13 @@
     "scope": "FFN sublayers only (wi, wi_0, wi_1, wo)",
     "globally_monotonic": false,
     "reason": "LayerNorm, residuals, and attention unconstrained"
+  },
+  "_metadata": {
+    "timestamp": "2026-01-26 09:13:04",
+    "date": "2026-01-26",
+    "time": "09:13:04",
+    "seed": 42,
+    "unix_timestamp": 1769443984,
+    "run_id": "20260126_091304_seed42"
   }
 }

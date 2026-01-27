@@ -1,10 +1,10 @@
 {
   "stage": "setup",
   "status": "success",
-  "timestamp": "2026-01-20 10:22:34",
+  "timestamp": "2026-01-24 17:45:15",
   "seed": 42,
   "environment": {
-    "hostname": "c3cpu-c11-u5-1",
+    "hostname": "c3cpu-c15-u1-2",
     "python_version": "3.10.19 (main, Oct 21 2025, 16:43:05) [GCC 11.2.0]",
     "pytorch_version": "2.7.1+cu118",
     "cuda_available": false
@@ -16,13 +16,6 @@
     "vocab_size": 32000
   },
   "configuration": {
-    "SCRATCH_DIR": "/scratch/alpine/paco0228",
-    "PROJECT_DIR": "/projects/paco0228",
-    "WORK_DIR": "/scratch/alpine/paco0228/mono_s2s_work",
-    "RESULTS_DIR": "/scratch/alpine/paco0228/mono_s2s_results",
-    "CHECKPOINT_DIR": "/scratch/alpine/paco0228/mono_s2s_work/checkpoints",
-    "DATA_CACHE_DIR": "/scratch/alpine/paco0228/mono_s2s_work/data_cache",
-    "FINAL_RESULTS_DIR": "/projects/paco0228/mono_s2s_final_results",
     "RANDOM_SEEDS": [
       42,
       1337,
@@ -31,10 +24,17 @@
       12345
     ],
     "CURRENT_SEED": 42,
+    "SCRATCH_DIR": "/scratch/alpine/paco0228",
+    "PROJECT_DIR": "/projects/paco0228",
+    "WORK_DIR": "/scratch/alpine/paco0228/mono_s2s_work",
+    "RESULTS_DIR": "/scratch/alpine/paco0228/mono_s2s_results/seed_42",
+    "CHECKPOINT_DIR": "/scratch/alpine/paco0228/mono_s2s_work/checkpoints/seed_42",
+    "DATA_CACHE_DIR": "/scratch/alpine/paco0228/mono_s2s_work/data_cache",
+    "FINAL_RESULTS_DIR": "/projects/paco0228/mono_s2s_final_results",
     "MODEL_NAME": "t5-small",
     "LEARNING_RATE": 5e-05,
     "WEIGHT_DECAY": 0.01,
-    "NUM_EPOCHS": 5,
+    "NUM_EPOCHS": 7,
     "BATCH_SIZE": 4,
     "GRADIENT_ACCUMULATION_STEPS": 1,
     "MAX_GRAD_NORM": 1.0,
@@ -60,16 +60,16 @@
     "ATTACK_TRIGGER_LENGTH": 5,
     "ATTACK_NUM_CANDIDATES": 100,
     "ATTACK_NUM_GRAD_STEPS": 50,
-    "ATTACK_NUM_RESTARTS": 3,
-    "ATTACK_NUM_ITERATIONS": 50,
+    "ATTACK_NUM_RESTARTS": 5,
+    "ATTACK_NUM_ITERATIONS": 100,
     "ATTACK_LOSS_BATCH_SIZE": 8,
-    "USE_FULL_TEST_SETS": false,
+    "USE_FULL_TEST_SETS": true,
     "EVAL_BATCH_SIZE": 8,
     "QUICK_TEST_SIZE": 200,
     "TRIGGER_OPT_SIZE_QUICK": 80,
     "TRIGGER_EVAL_SIZE_QUICK": 120,
-    "TRIGGER_OPT_SIZE_FULL": 500,
-    "TRIGGER_EVAL_SIZE_FULL": 1000,
+    "TRIGGER_OPT_SIZE_FULL": 1000,
+    "TRIGGER_EVAL_SIZE_FULL": 1500,
     "TRAIN_DATASETS": [
       [
         "knkarthick/dialogsum",
@@ -131,6 +131,23 @@
     "TIME_AGGREGATE": "00:15:00",
     "SAVE_CHECKPOINT_EVERY_N_EPOCHS": 1,
     "LOG_EVERY_N_STEPS": 100,
-    "VERBOSE_LOGGING": true
+    "VERBOSE_LOGGING": true,
+    "TRACK_TRAINING_TIME": true,
+    "TRACK_INFERENCE_TIME": true,
+    "TRACK_MEMORY_USAGE": true,
+    "COMPUTE_GRADIENT_NORMS": true,
+    "SAVE_WEIGHT_DISTRIBUTIONS": true,
+    "SAVE_ATTENTION_PATTERNS": false,
+    "RUN_MULTI_SEED": true,
+    "AGGREGATE_SEEDS": true,
+    "MIN_SEEDS_FOR_SIGNIFICANCE": 3
+  },
+  "_metadata": {
+    "timestamp": "2026-01-24 17:45:15",
+    "date": "2026-01-24",
+    "time": "17:45:15",
+    "seed": 42,
+    "unix_timestamp": 1769301915,
+    "run_id": "20260124_174515_seed42"
   }
 }
