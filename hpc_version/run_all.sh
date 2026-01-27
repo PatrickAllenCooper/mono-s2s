@@ -293,7 +293,7 @@ else
     if [ -n "$DEPS" ]; then
         echo "  [INFO] Attempting to submit with dependencies: $DEPS"
         if JOB4=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_4_evaluate.sh 2>&1); then
-            JOB4=$(echo "$JOB4" | cut -d';' -f1)
+            JOB4=$(echo "$JOB4" | grep -oE '[0-9]{7,}' | tail -1)
             echo "  Job ID: $JOB4"
         else
             # Dependency failed - check if prerequisites are actually complete
@@ -307,7 +307,7 @@ else
             if [ "$PREREQ_MET" = true ]; then
                 echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."
                 JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh 2>&1)
-                JOB4=$(echo "$JOB4" | cut -d';' -f1)
+                JOB4=$(echo "$JOB4" | grep -oE '[0-9]{7,}' | tail -1)
                 echo "  Job ID: $JOB4"
             else
                 echo "  [FAILED] Prerequisites not met. Cannot continue."
@@ -316,7 +316,7 @@ else
         fi
     else
         JOB4=$(sbatch --parsable jobs/job_4_evaluate.sh 2>&1)
-        JOB4=$(echo "$JOB4" | cut -d';' -f1)
+        JOB4=$(echo "$JOB4" | grep -oE '[0-9]{7,}' | tail -1)
         echo "  Job ID: $JOB4"
     fi
     
@@ -344,13 +344,13 @@ if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_5_uat_complete.flag" ]; the
 else
     if [ "$JOB4" != "completed" ]; then
         if JOB5=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_5_uat.sh 2>&1); then
-            JOB5=$(echo "$JOB5" | cut -d';' -f1)
+            JOB5=$(echo "$JOB5" | grep -oE '[0-9]{7,}' | tail -1)
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
             if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_4_evaluate_complete.flag" ]; then
                 echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
                 JOB5=$(sbatch --parsable jobs/job_5_uat.sh 2>&1)
-                JOB5=$(echo "$JOB5" | cut -d';' -f1)
+                JOB5=$(echo "$JOB5" | grep -oE '[0-9]{7,}' | tail -1)
             else
                 echo "  [FAILED] Stage 4 not complete. Cannot continue."
                 exit 1
@@ -373,13 +373,13 @@ if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_6_hotflip_complete.flag" ];
 else
     if [ "$JOB4" != "completed" ]; then
         if JOB6=$(sbatch --parsable --dependency=afterok:$JOB4 jobs/job_6_hotflip.sh 2>&1); then
-            JOB6=$(echo "$JOB6" | cut -d';' -f1)
+            JOB6=$(echo "$JOB6" | grep -oE '[0-9]{7,}' | tail -1)
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
             if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_4_evaluate_complete.flag" ]; then
                 echo "  [AUTO-RECOVER] Stage 4 complete, submitting without dependency..."
                 JOB6=$(sbatch --parsable jobs/job_6_hotflip.sh 2>&1)
-                JOB6=$(echo "$JOB6" | cut -d';' -f1)
+                JOB6=$(echo "$JOB6" | grep -oE '[0-9]{7,}' | tail -1)
             else
                 echo "  [FAILED] Stage 4 not complete. Cannot continue."
                 exit 1
@@ -429,7 +429,7 @@ else
     if [ -n "$DEPS" ]; then
         echo "  [INFO] Attempting to submit with dependencies: $DEPS"
         if JOB7=$(sbatch --parsable --dependency=afterok:$DEPS jobs/job_7_aggregate.sh 2>&1); then
-            JOB7=$(echo "$JOB7" | cut -d';' -f1)
+            JOB7=$(echo "$JOB7" | grep -oE '[0-9]{7,}' | tail -1)
         else
             echo "  [WARNING] Dependency submission failed, checking prerequisites..."
             PREREQ_MET=true
@@ -439,7 +439,7 @@ else
             if [ "$PREREQ_MET" = true ]; then
                 echo "  [AUTO-RECOVER] Prerequisites complete, submitting without dependencies..."
                 JOB7=$(sbatch --parsable jobs/job_7_aggregate.sh 2>&1)
-                JOB7=$(echo "$JOB7" | cut -d';' -f1)
+                JOB7=$(echo "$JOB7" | grep -oE '[0-9]{7,}' | tail -1)
             else
                 echo "  [FAILED] Prerequisites not met. Cannot continue."
                 exit 1
