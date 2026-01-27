@@ -516,10 +516,10 @@ Monotonic & 4.97 & 2.54 & $-$2.43 & 7 \\
 
 \textbf{Verified}: Training dynamics extracted from actual experimental runs completed January 2026. Baseline converged to validation loss 2.25 (improved from preliminary estimate of 2.47), while monotonic converged to 2.54, maintaining the expected optimization gap of approximately 0.29 points.
 
-Table~\ref{tab:rouge} reports summarization performance on the full CNN/DailyMail test set (11,490 examples). Notably, both the standard pretrained model and our fine-tuned baseline achieve substantially higher ROUGE scores than typical T5-small baselines reported in the literature, with baseline ROUGE-L of 33.0 [32.8, 33.2] and ROUGE-1 of 39.7 [39.5, 40.0]. This indicates strong model quality and effective fine-tuning. The monotonic model evaluation is currently in progress; preliminary monitoring suggests performance will remain competitive with the baseline. Final monotonic results will be updated upon completion (expected within 24 hours of submission).
+Table~\ref{tab:rouge} reports summarization performance on CNN/DailyMail (200 test examples, seed 42). The monotonic model achieves ROUGE-L of 24.2 [22.7, 25.6], compared to 25.0 [23.6, 26.4] for the baseline, corresponding to a relative decrease of 3.2 percent. ROUGE-1 shows a similar pattern (29.6 vs 30.9, a 4.2 percent relative decrease). While these results indicate a modest reduction in task performance, the monotonic model remains competitive, with confidence intervals overlapping for ROUGE-2 and ROUGE-L, suggesting the performance gap may not be statistically significant for all metrics.
 
 \begin{table}[t]
-\caption{Summarization quality on CNN/DailyMail (n = 11,490 full test set, seed = 42). Values are means with 95\% bootstrap confidence intervals.}
+\caption{Summarization quality on CNN/DailyMail (n = 200, seed = 42). Values are means with 95\% bootstrap confidence intervals.}
 \label{tab:rouge}
 \vskip 0.1in
 \centering
@@ -528,9 +528,9 @@ Table~\ref{tab:rouge} reports summarization performance on the full CNN/DailyMai
 \toprule
 Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
 \midrule
-Standard  & 38.6 [38.4, 38.8] & 17.1 [16.9, 17.4] & 33.2 [32.9, 33.4] \\
-Baseline  & 39.7 [39.5, 40.0] & 16.7 [16.5, 16.9] & 33.0 [32.8, 33.2] \\
-Monotonic & \textit{Running} & \textit{Running} & \textit{Running} \\
+Standard  & 32.6 [30.9, 34.2] & 11.9 [10.5, 13.4] & 26.6 [25.0, 28.1] \\
+Baseline  & 30.9 [29.4, 32.4] & 11.5 [10.1, 12.8] & 25.0 [23.6, 26.4] \\
+Monotonic & 29.6 [28.0, 31.1] & 10.6 [9.2, 11.9] & 24.2 [22.7, 25.6] \\
 \bottomrule
 \end{tabular}
 }

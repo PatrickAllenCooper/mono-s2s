@@ -1,0 +1,39 @@
+{
+  "train_losses": [
+    4.970243097730424,
+    3.047008652282389,
+    2.881259159552433,
+    2.7935567450980225,
+    2.7414673022349145,
+    2.707686017064336,
+    2.686777834866229
+  ],
+  "val_losses": [
+    2.9154940351570815,
+    2.7011318918364258,
+    2.616502333170193,
+    2.572981247561647,
+    2.5517930530421182,
+    2.5397793205172943,
+    2.535327680315553
+  ],
+  "best_val_loss": 2.535327680315553,
+  "training_time_seconds": 2.3603439331054688e-05,
+  "training_time_minutes": 3.933906555175781e-07,
+  "num_epochs": 5,
+  "hyperparameters": {
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "batch_size": 4,
+    "warmup_ratio": 0.1,
+    "max_grad_norm": 1.0
+  },
+  "seed": 42,
+  "constraint_info": {
+    "type": "softplus_parametrization",
+    "formula": "W = softplus(V) >= 0",
+    "scope": "FFN sublayers only (wi, wi_0, wi_1, wo)",
+    "globally_monotonic": false,
+    "reason": "LayerNorm, residuals, and attention unconstrained"
+  }
+}

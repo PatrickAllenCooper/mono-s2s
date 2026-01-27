@@ -1,0 +1,59 @@
+{
+  "seed": 42,
+  "attack_config": {
+    "num_flips": 5,
+    "num_samples": 100
+  },
+  "results": {
+    "standard_t5": {
+      "model_name": "Standard T5",
+      "avg_degradation": 0.2143525356036221,
+      "std_degradation": 0.19743066150624716,
+      "success_rate": 0.7,
+      "avg_orig_loss": 2.462952210307121,
+      "avg_attack_loss": 2.877512894868851,
+      "min_degradation": -0.045175522445819155,
+      "max_degradation": 0.8069197770747326,
+      "num_samples": 100
+    },
+    "baseline_t5": {
+      "model_name": "Baseline T5",
+      "avg_degradation": 0.16345943316336,
+      "std_degradation": 0.149307357115404,
+      "success_rate": 0.61,
+      "avg_orig_loss": 2.628447868227959,
+      "avg_attack_loss": 2.9805489230155944,
+      "min_degradation": -0.037219286340725286,
+      "max_degradation": 0.939775622674405,
+      "num_samples": 100
+    },
+    "monotonic_t5": {
+      "model_name": "Monotonic T5",
+      "avg_degradation": 0.051681656692309695,
+      "std_degradation": 0.0950617664060668,
+      "success_rate": 0.19,
+      "avg_orig_loss": 3.2859315311908723,
+      "avg_attack_loss": 3.420093433856964,
+      "min_degradation": -0.05459708588529598,
+      "max_degradation": 0.6493248329915323,
+      "num_samples": 100
+    }
+  },
+  "statistical_tests": {
+    "standard_vs_baseline": {
+      "t_stat": 2.045724184830144,
+      "p_value": 0.042105786698867505,
+      "significant": "*"
+    },
+    "standard_vs_monotonic": {
+      "t_stat": 7.3864575344079055,
+      "p_value": 4.112003803150507e-12,
+      "significant": "***"
+    },
+    "baseline_vs_monotonic": {
+      "t_stat": 6.283430882908453,
+      "p_value": 2.0648877186234797e-09,
+      "significant": "***"
+    }
+  }
+}

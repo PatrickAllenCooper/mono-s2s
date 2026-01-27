@@ -1,0 +1,112 @@
+{
+  "seed": 42,
+  "attack_config": {
+    "trigger_length": 5,
+    "num_iterations": 50,
+    "num_restarts": 3,
+    "trigger_opt_samples": 80,
+    "trigger_eval_samples": 120
+  },
+  "learned_triggers": {
+    "standard_t5": "\u201d. shown \u00bb informed beach",
+    "baseline_t5": "2018.2. investigation identified valuable",
+    "monotonic_t5": "Thanks\u00bb electric conduct deux"
+  },
+  "results": {
+    "standard_t5": {
+      "trigger_text": "\u201d. shown \u00bb informed beach",
+      "trigger_ids": [
+        1141,
+        2008,
+        1168,
+        4862,
+        2608
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.00496323505548707,
+        "rouge2": -0.0054182767791116915,
+        "rougeLsum": -0.003916231736128373
+      },
+      "nll_increase": 0.00965727548846835,
+      "clean_rouge": {
+        "rouge1": 0.28139481069745476,
+        "rouge2": 0.0895368923516302,
+        "rougeLsum": 0.22934689126430907
+      },
+      "attack_rouge": {
+        "rouge1": 0.2764315756419677,
+        "rouge2": 0.08411861557251851,
+        "rougeLsum": 0.2254306595281807
+      }
+    },
+    "baseline_t5": {
+      "trigger_text": "2018.2. investigation identified valuable",
+      "trigger_ids": [
+        3070,
+        4416,
+        4962,
+        4313,
+        3435
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.0018090788553042358,
+        "rouge2": -0.0010821159447368528,
+        "rougeLsum": 0.0004193168845187112
+      },
+      "nll_increase": 0.008908758783115766,
+      "clean_rouge": {
+        "rouge1": 0.2774945005694567,
+        "rouge2": 0.09146722480506403,
+        "rougeLsum": 0.2274529504926662
+      },
+      "attack_rouge": {
+        "rouge1": 0.27568542171415245,
+        "rouge2": 0.09038510886032718,
+        "rougeLsum": 0.2278722673771849
+      }
+    },
+    "monotonic_t5": {
+      "trigger_text": "Thanks\u00bb electric conduct deux",
+      "trigger_ids": [
+        1333,
+        3704,
+        2806,
+        3498,
+        1763
+      ],
+      "rouge_deltas": {
+        "rouge1": 0.001072426922335612,
+        "rouge2": 0.00012735737627705968,
+        "rougeLsum": -0.0016403484891619746
+      },
+      "nll_increase": 0.007291523201759598,
+      "clean_rouge": {
+        "rouge1": 0.2566603192730191,
+        "rouge2": 0.07547684343937523,
+        "rougeLsum": 0.2130315301784024
+      },
+      "attack_rouge": {
+        "rouge1": 0.2577327461953547,
+        "rouge2": 0.07560420081565229,
+        "rougeLsum": 0.21139118168924043
+      }
+    }
+  },
+  "transfer_matrix": {
+    "standard_t5": {
+      "standard_t5": -0.003952445236425323,
+      "baseline_t5": -0.004466606333994899,
+      "monotonic_t5": -0.006238511308821804
+    },
+    "baseline_t5": {
+      "standard_t5": -0.003609846173020681,
+      "baseline_t5": 0.0005877002151447597,
+      "monotonic_t5": 0.002582262299953786
+    },
+    "monotonic_t5": {
+      "standard_t5": 0.004152030847749455,
+      "baseline_t5": 0.0014643768075472963,
+      "monotonic_t5": -0.005274748214399633
+    }
+  }
+}
