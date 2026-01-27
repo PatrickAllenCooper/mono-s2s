@@ -11,8 +11,9 @@ cd C:\Users\patri\code\mono-s2s
 # Create local results directory
 mkdir -p downloaded_results
 
-# Copy all result JSON files
-scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/*.json downloaded_results/
+# IMPORTANT: Results are in seed-specific subdirectory!
+# Copy all result JSON files for seed 42
+scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/seed_42/*.json downloaded_results/seed_42/
 
 # Copy all CSV files
 scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/*.csv downloaded_results/
@@ -26,13 +27,16 @@ scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/ex
 
 ## Method 2: SCP Specific Files
 
+**IMPORTANT**: Results are saved in seed-specific subdirectories!
+For seed 42: `/scratch/alpine/paco0228/mono_s2s_results/seed_42/`
+
 If you only want specific files:
 
 ```bash
 cd C:\Users\patri\code\mono-s2s
 
 # Evaluation results (has monotonic ROUGE scores)
-scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/evaluation_results.json downloaded_results/
+scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/seed_42/evaluation_results.json downloaded_results/seed_42/
 
 # Final aggregated results
 scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/final_results.json downloaded_results/
@@ -46,14 +50,21 @@ scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/ho
 scp paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/uat_results.json downloaded_results/
 ```
 
-## Method 3: Copy Entire Results Directory
+## Method 3: Copy Entire Seed Directory (RECOMMENDED)
+
+**This is the easiest and most reliable method**:
 
 ```bash
 cd C:\Users\patri\code\mono-s2s
 
-# Copy entire results directory
-scp -r paco0228@alpine.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results downloaded_results/
+# Copy entire seed_42 directory
+scp -r paco0228@login.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/seed_42 downloaded_results/
+
+# For other seeds:
+# scp -r paco0228@login.rc.colorado.edu:/scratch/alpine/paco0228/mono_s2s_results/seed_1337 downloaded_results/
 ```
+
+**Note**: Results are organized by seed in subdirectories (seed_42, seed_1337, etc.)
 
 ## Method 4: Using rsync (If Available)
 
