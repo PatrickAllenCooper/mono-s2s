@@ -1,34 +1,126 @@
+# Experiment Tracking System for Mono-S2S
+# 
+# Strategy:
+#   - TRACK: Small result files (JSON, CSV, TXT) - these are experimental evidence
+#   - IGNORE: Large files (checkpoints, logs) - archive to PROJECT, reference in metadata
+#   - TRACK: Metadata and provenance - critical for reproducibility
+
+# ============================================================================
+# Python
+# ============================================================================
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
+*$py.class
+*.so
 .Python
 build/
 dist/
 *.egg-info/
+.eggs/
 .pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.ipynb_checkpoints/
-
-# Testing coverage
 .coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# ============================================================================
+# Large Model Files - DO NOT TRACK (reference in metadata instead)
+# ============================================================================
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+
+# Checkpoint directories (too large, archive separately)
+**/checkpoints/**/*.pt
+**/checkpoints/**/*.pth
+**/checkpoints/**/*.ckpt
+
+# ============================================================================
+# SLURM Logs - DO NOT TRACK (too large, summarize in metadata)
+# ============================================================================
+logs/*.out
+logs/*.err
+slurm-*.out
+core.*
+
+# But DO track log summaries
+!logs/README.md
+!logs/summary.txt
+
+# ============================================================================
+# HuggingFace Cache - DO NOT TRACK (downloaded data)
+# ============================================================================
+huggingface_cache/
+hf_cache/
+.cache/
+
+# ============================================================================
+# Temporary and OS Files
+# ============================================================================
+tmp/
+temp/
+*.tmp
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# ============================================================================
+# EXPERIMENTAL RESULTS - SELECTIVE TRACKING
+# ============================================================================
+
+# TRACK: Result files (small, critical experimental evidence)
+# These are explicitly NOT ignored:
+# experiment_results/**/*.json
+# experiment_results/**/*.csv  
+# experiment_results/**/*.txt
+# paper_evidence/**/*.json
+
+# IGNORE: Very large result archives
+experiment_results/**/*.tar.gz
+experiment_results/**/*.zip
+experiment_results/**/raw_outputs/
+
+# TRACK: Metadata and provenance (always version control these)
+!experiment_results/**/metadata.json
+!experiment_results/**/provenance.json
+!experiment_results/**/experiment_log.txt
+!paper_evidence/provenance.json
+
+# ============================================================================
+# Work Directories - DO NOT TRACK (temporary)
+# ============================================================================
+mono_s2s_work/
+foundation_llm_work/
+
+# ============================================================================
+# TRACK: Documentation and Configuration
+# ============================================================================
+# All .md files are tracked
+# All config files are tracked
+# All scripts are tracked
+
+# ============================================================================
+# Special Cases
+# ============================================================================
+
+# TRACK: Small example outputs for testing
+!tests/fixtures/*.json
+!tests/fixtures/*.txt
+
+# IGNORE: Test coverage artifacts
 .coverage.*
 coverage.xml
-htmlcov/
-coverage_html_report/
-.tox/
 
-# OS
-.DS_Store
-
-# HPC/Project specific
-scratch/
-results/
-checkpoints/
-data_cache/
-*.flag
-logs/
-*.out
-*.err
-
+# TRACK: Final aggregated results (even if large, these are important)
+!experiment_results/t5_experiments/aggregated/*.json
+!experiment_results/foundation_llm_experiments/aggregated/*.json
+!paper_evidence/*.json

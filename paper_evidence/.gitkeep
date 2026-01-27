@@ -1,0 +1,12 @@
+# Paper Evidence Directory
+#
+# This directory contains results that are directly used in the paper.
+# Each file corresponds to a specific table or figure in the paper.
+#
+# Files in this directory should be:
+# - Small (JSON, CSV format)
+# - Directly extracted from experiment_results/
+# - Clearly named (table_1_*.json, figure_2_*.json)
+# - Include provenance (which experiment produced this)
+#
+# All files here SHOULD be tracked in git.

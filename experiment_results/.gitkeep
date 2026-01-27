@@ -1,0 +1,17 @@
+# Experiment Results Directory
+# 
+# This directory contains organized experimental results.
+# Results are organized by experiment type and seed.
+#
+# Structure:
+#   experiment_results/
+#   ├── t5_experiments/
+#   │   ├── seed_42/
+#   │   ├── seed_1337/
+#   │   └── aggregated/
+#   ├── foundation_llm_experiments/
+#   │   └── (similar structure)
+#   └── experiment_index.json
+#
+# DO track: JSON, CSV, TXT files (small results)
+# DO NOT track: .pt, .pth files (large checkpoints)
