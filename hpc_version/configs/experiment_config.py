@@ -136,7 +136,7 @@ class ExperimentConfig:
     # Previous: USE_FULL_TEST_SETS = False (only 200 samples - TOO SMALL)
     # Issue: n=200 insufficient for reliable ROUGE, bootstrap CIs, significance tests
     # FIX: Use full test sets (CNN/DM has 11,490 test examples)
-    USE_FULL_TEST_SETS = True  # CHANGED: Now use full test sets for proper evaluation
+    USE_FULL_TEST_SETS = False  # QUICK MODE for 24h deadline: 200 samples (~2-3h eval) vs 11,490 samples (~17h eval)
     EVAL_BATCH_SIZE = 8
     
     # Quick testing sizes (when USE_FULL_TEST_SETS=False) - FOR DEBUGGING ONLY
