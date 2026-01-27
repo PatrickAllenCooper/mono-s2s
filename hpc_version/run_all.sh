@@ -161,8 +161,8 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_0_setup_complete.flag" ]; then
     echo "  [SKIP] Already complete, skipping..."
     JOB0="completed"
 else
-    JOB0=$(sbatch --parsable jobs/job_0_setup.sh)
-    JOB0=$(echo "$JOB0" | cut -d';' -f1)
+    JOB0=$(sbatch --parsable jobs/job_0_setup.sh 2>&1)
+    JOB0=$(echo "$JOB0" | grep -oE '[0-9]{7,}' | tail -1)
     echo "  Job ID: $JOB0"
     check_job_status $JOB0 "stage_0_setup" || {
         echo "[FAILED] Setup failed. Aborting."
@@ -178,11 +178,11 @@ if [ -f "${SCRATCH}/mono_s2s_work/stage_1_data_prep_complete.flag" ]; then
     JOB1="completed"
 else
     if [ "$JOB0" = "completed" ]; then
-        JOB1=$(sbatch --parsable jobs/job_1_data.sh)
+        JOB1=$(sbatch --parsable jobs/job_1_data.sh 2>&1)
     else
-        JOB1=$(sbatch --parsable --dependency=afterok:$JOB0 jobs/job_1_data.sh)
+        JOB1=$(sbatch --parsable --dependency=afterok:$JOB0 jobs/job_1_data.sh 2>&1)
     fi
-    JOB1=$(echo "$JOB1" | cut -d';' -f1)
+    JOB1=$(echo "$JOB1" | grep -oE '[0-9]{7,}' | tail -1)
     echo "  Job ID: $JOB1"
     check_job_status $JOB1 "stage_1_data_prep" || {
         echo "[FAILED] Data preparation failed. Aborting."
@@ -199,11 +199,11 @@ if [ -f "${SCRATCH}/mono_s2s_work/seed_${SEED}/stage_2_train_baseline_complete.f
     JOB2="completed"
 else
     if [ "$JOB1" = "completed" ]; then
-        JOB2=$(sbatch --parsable jobs/job_2_baseline.sh)
+        JOB2=$(sbatch --parsable jobs/job_2_baseline.sh 2>&1)
     else
-        JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh)
+        JOB2=$(sbatch --parsable --dependency=afterok:$JOB1 jobs/job_2_baseline.sh 2>&1)
     fi
-    JOB2=$(echo "$JOB2" | cut -d';' -f1)
+    JOB2=$(echo "$JOB2" | grep -oE '[0-9]{7,}' | tail -1)
     echo "  Job ID: $JOB2"
     echo "  [TIME] Expected time: 4-12 hours"
 fi
