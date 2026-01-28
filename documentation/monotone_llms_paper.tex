@@ -601,27 +601,6 @@ Monotonic &  5.2\% & 19\% & +0.14 \\
 \vskip -0.1in
 \end{table}
 
-\begin{table}[t]
-\caption{Attack consistency across evaluation seeds. HotFlip results using seed 42 trained checkpoints, evaluated with three different random seeds for attack sampling. All three seeds show identical robustness patterns.}
-\label{tab:multiseed-hotflip}
-\vskip 0.1in
-\centering
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-Seed & Baseline Success & Monotonic Success & Reduction \\
-\midrule
-42   & 63\% & 19\% & 69.8\% \\
-1337 & 63\% & 19\% & 69.8\% \\
-2024 & 63\% & 19\% & 69.8\% \\
-\midrule
-\textbf{Consistency} & \textbf{0\% var} & \textbf{0\% var} & \textbf{Stable} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\vskip -0.1in
-\end{table}
-
 Overall, enforcing monotonicity in the FFN sublayers yields a 69.8 percent relative reduction in attack success rate (from 63 percent to 19 percent) and a 67.8 percent reduction in average degradation (from 16.1 percent to 5.2 percent), without requiring adversarial training, modified training objectives, or architectural changes beyond the FFN constraints. The effect size is large (Cohen's d > 0.8) and the statistical significance is robust ($p < 10^{-9}$). These results demonstrate that structural constraints alone—applied selectively to feed-forward sublayers—can substantially improve robustness to gradient-based adversarial manipulation, providing evidence for monotonicity as a practical architectural inductive bias for building more robust language models.
 
 \paragraph{Universal Adversarial Trigger Attacks.}
