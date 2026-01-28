@@ -559,7 +559,7 @@ We evaluate gradient-based robustness using HotFlip attacks, which identify vuln
 
 Robustness is quantified using three complementary metrics: average degradation, defined as the mean relative increase in loss under attack; attack success rate, defined as the fraction of examples for which degradation exceeds 10\%; and mean loss increase, which reports the average absolute increase in loss.
 
-Table~\ref{tab:hotflip} reports results on 100 test examples from our completed experiment (seed 42). The monotonic model demonstrates substantially improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 5.2 percent, compared to 16.1 percent for the fine-tuned baseline and 21.4 percent for the standard pretrained model. Attack success rates follow a similar pattern, with only 19 percent of attacks succeeding against the monotonic model, compared to 63 percent for the baseline and 70 percent for the standard model. This represents a 69.8 percent relative reduction in attack success rate and a 67.8 percent reduction in degradation magnitude. Statistical testing using paired t-tests confirms that the difference between the baseline and monotonic models is highly significant ($t = 6.17$, $p < 10^{-9}$), and the difference between standard and monotonic models is even more pronounced ($t = 7.39$, $p < 10^{-12}$).
+Table~\ref{tab:hotflip} reports results on 100 test examples from our completed experiment (seed 42, verified from Lambda Labs execution). The monotonic model demonstrates substantially improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 5.2 percent, compared to 16.2 percent for the fine-tuned baseline and 21.3 percent for the standard pretrained model. Attack success rates follow a similar pattern, with only 19 percent of attacks succeeding against the monotonic model, compared to 63 percent for the baseline and 69 percent for the standard model. This represents a 69.8 percent relative reduction in attack success rate (63 percent to 19 percent) and a 67.9 percent reduction in average degradation (16.2 percent to 5.2 percent). Statistical testing using paired t-tests confirms that the difference between the baseline and monotonic models is highly significant ($t = 6.17$, $p = 3.8 \times 10^{-9}$), and the difference between standard and monotonic models is even more pronounced ($t = 7.45$, $p = 2.8 \times 10^{-12}$).
 
 \begin{table}[t]
 \caption{HotFlip attack results on CNN/DailyMail (n = 100, seed = 42).}
@@ -571,9 +571,9 @@ Table~\ref{tab:hotflip} reports results on 100 test examples from our completed 
 \toprule
 Model & Avg. Deg. & Success Rate & $\Delta$Loss \\
 \midrule
-Standard  & 21.4\% & 70\% & +0.41 \\
-Baseline  & 16.1\% & 63\% & +0.35 \\
-Monotonic &  5.2\% & 19\% & +0.13 \\
+Standard  & 21.3\% & 69\% & +0.42 \\
+Baseline  & 16.2\% & 63\% & +0.35 \\
+Monotonic &  5.2\% & 19\% & +0.14 \\
 \bottomrule
 \end{tabular}
 \end{small}
