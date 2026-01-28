@@ -143,34 +143,46 @@ Our results demonstrate that strong architectural constraints, long assumed to l
 
 \section{Introduction}
 
-Large language models (LLMs) have demonstrated remarkable capabilities across a wide range of natural language tasks, yet their behavior under adversarial or carefully structured inputs remains brittle. Even models that have undergone extensive alignment and fine-tuning can be induced to produce unsafe or unintended outputs through jailbreak prompts or small, targeted perturbations. This phenomenon is now well documented and points to a deeper underlying issue: modern language models operate in extremely high-dimensional spaces, where even subtle perturbations to the input or internal representations can induce large and difficult-to-predict changes in the output. Recent work has attributed this sensitivity, in part, to the high Lipschitz constants exhibited by such models~\cite{newhouse2025training}.
+Large language models (LLMs) have demonstrated remarkable capabilities across a wide range of natural language tasks, yet their behavior under adversarial or carefully structured inputs remains brittle. Even models that have undergone extensive alignment and fine-tuning can be induced to produce unsafe or unintended outputs through jailbreak prompts or small, targeted perturbations. This phenomenon is now well documented and points to a deeper underlying issue: modern language models operate in extremely high-dimensional spaces, where even subtle changes to the input or internal representations can induce large and difficult-to-predict changes in the output. Recent work has attributed this sensitivity, in part, to the high Lipschitz constants exhibited by such models, which amplify perturbations as they propagate through the network~\cite{newhouse2025training}.
+
+This fragility has motivated an active line of research on improving the robustness of language models~\cite{salah2026jailbreaking, su2024mission}. Existing approaches largely focus on training-time interventions, such as alignment objectives~\cite{cao2024defending}, adversarial training~\cite{howe2024effects}, or post-hoc filtering mechanisms~\cite{khachaturov2025adversarial}. While these methods can be effective empirically, they are inherently reactive, addressing vulnerabilities after they are discovered rather than constraining model behavior by design. As language models are increasingly deployed, this raises a fundamental question: can we endow language models with structural properties that make their behavior more predictable under perturbation?
+
+We investigate \emph{monotonicity} as a structural inductive bias for improving the robustness of language models. At a high level, monotonicity constrains a model so that its outputs change in a predictable direction with respect to changes in its inputs. This property has a long history in machine learning~\cite{Gupta2016MonotonicLattices, runje2023constrained} and related fields~\cite{smith1995monotone}, and has been especially influential in control theory, where monotone systems admit strong guarantees on stability and safety even in very high-dimensional settings~\cite{ito2014max}. For example, monotonicity has been used to analyze and certify the behavior of large-scale dynamical systems such as power grids, where direct reasoning over all possible system states is infeasible~\cite{rantzer2014control}.
+
+Beyond its role in classical dynamical systems, monotonicity also aligns naturally with how we expect language models to behave semantically. Intuitively, prompts that are semantically equivalent (or differ only in minor, non-essential ways) should produce similar outputs. From this perspective, modern Transformer architectures can be viewed as mapping inputs to latent representations through attention mechanisms that act as powerful feature extractors. If two prompts induce similar internal representations, their outputs should likewise be similar. Extending this intuition, if three prompts produce representations ordered such that one lies between the other two in feature space, then it is reasonable to expect the corresponding output to lie between the two extremes. Monotonicity enforces precisely this kind of ordered consistency, ensuring that smooth and meaningful variations in representation space lead to predictable and bounded changes in output space. Figure~\ref{fig:monotonicity_schematic} provides a schematic illustration of this behavior.
 
 
-This fragility has motivated an active line of research on improving the robustness of language models. Existing approaches largely focus on training-time interventions, such as alignment objectives, adversarial data augmentation, or post-hoc filtering mechanisms. While these methods can be effective empirically, they are inherently reactive, addressing vulnerabilities after they are discovered rather than constraining model behavior by design. As language models are increasingly deployed in safety-sensitive settings, this raises an important question: can we endow language models with structural properties that make their behavior more predictable under perturbation?
+\begin{figure*}[t!]
+    \centering
+    \includegraphics[width=\linewidth]{icml_fig1.png}
+    \caption{
+    \textbf{Monotonicity as a structural inductive bias for language models.}
+    (a) Semantically similar prompts induce nearby latent representations through shared feature extraction, leading to similar outputs.
+    (b) Monotonicity enforces ordered consistency: when a prompt occupies an lies between two others in internal representation space, the resulting output is constrained to fall between their outputs.
+    (c) Monotonicity induces an order-preserving mapping from internal representations to outputs, which constrains how model behavior can change in response to variations in representation space.
+    }
+    \label{fig:monotonicity_schematic}
+\end{figure*}
 
-We investigate \emph{monotonicity} as a structural inductive bias for improving the robustness of language models. At a high level, monotonicity constrains a model so that its outputs change in a predictable direction with respect to changes in its internal representations. This property has a long history in machine learning and related fields, and has been especially influential in control theory, where monotonic systems admit strong guarantees on stability and safety even in very high-dimensional settings. For example, monotonicity has been used to analyze and certify the behavior of large-scale dynamical systems such as power grids, where direct reasoning over all possible system states is intractable.
 
-The appeal of monotonicity in these domains lies in its ability to simplify analysis: global system behavior can often be inferred by examining only extreme or boundary conditions. This perspective naturally suggests viewing a language model as a high-dimensional dynamical system, whose internal representations evolve through successive nonlinear transformations in response to input perturbations. In such systems, imposing monotonic structure can substantially reduce unpredictability and improve robustness.
+The appeal of monotonicity in both control systems and representation learning lies in its ability to simplify reasoning about complex behavior. In monotone systems, global behavior can often be inferred by examining only extreme or boundary cases. This perspective naturally suggests viewing a language model as a high-dimensional system whose internal representations evolve through successive nonlinear transformations in response to input perturbations. Imposing monotonic structure on these transformations can substantially reduce unpredictability, limiting how spurious or adversarial variations propagate through the model.
 
-Despite these advantages, monotonic constraints have traditionally been viewed as incompatible with expressive neural models. Enforcing monotonicity was long believed to significantly limit model capacity or degrade performance, making it impractical for modern architectures such as Transformers. Here, we challenge this assumption by showing that monotonicity can be incorporated into large-scale language models without sacrificing their expressive power.
+Despite these advantages, monotonic constraints have traditionally been viewed as incompatible with expressive neural architectures. Enforcing monotonicity was long believed to significantly limit model capacity or degrade performance~\cite{runje2023constrained}, making it impractical for modern models such as Transformers. In this work, we challenge this assumption.
 
+Our central finding is that monotonicity can be incorporated into modern Transformer architectures without sacrificing performance. Rather than constraining the entire model, we apply monotonicity selectively to the feed-forward sublayers that dominate the model’s nonlinear transformations, while leaving attention mechanisms, residual connections, and normalization layers unconstrained. To enable effective optimization under these constraints, we adopt a smooth reparameterization that avoids the degeneracies associated with naive projection-based approaches. This design allows pretrained sequence-to-sequence models to be distilled into monotone counterparts that closely match their original performance on standard summarization benchmarks.
 
-Our central finding challenges this assumption. We show that monotonicity can be enforced within modern Transformer architectures without sacrificing performance. Rather than constraining the entire model, we apply monotonicity selectively to the feed-forward sublayers that dominate the model’s nonlinear transformations, while leaving attention mechanisms, residual connections, and normalization layers unconstrained. To enable effective optimization under these constraints, we adopt a smooth reparameterization that avoids the degeneracies associated with naive projection-based approaches. This design allows pretrained sequence-to-sequence models to be distilled into monotone counterparts that closely match their original performance on standard summarization benchmarks.
+The resulting models exhibit a striking empirical property: despite preserving task accuracy, monotone Transformers are substantially more robust to adversarial and jailbreak attacks. These improvements are not achieved through additional data, modified training objectives, or heuristic defenses, but emerge purely from architectural structure. This isolation makes the observed robustness particularly notable, as it identifies monotonicity itself (rather than confounding training choices) as a causal factor.
 
-The resulting models exhibit a striking empirical property: despite preserving task accuracy, monotone Transformers are substantially more robust to adversarial and jailbreak attacks. These improvements are not achieved through additional data, modified training objectives, or heuristic defenses, but emerge purely from architectural structure. This makes the observed robustness particularly notable, as it isolates monotonicity as a causal factor rather than a confounding effect of training or evaluation choices.
-
-These experimental findings are important for two reasons. First, they demonstrate that strong architectural constraints (long assumed to be impractical for large language models) can be applied at scale without degrading performance. Second, they suggest that robustness in language models need not rely exclusively on increasingly complex training pipelines, but can instead be supported by principled design choices that shape model behavior by construction. Together, these results position monotonicity as a practical and scalable architectural bias for building more robust and predictable language models.
-
+Taken together, these results highlight two broader implications. First, they demonstrate that strong architectural constraints, long assumed to be impractical for large language models, can in fact be applied at scale without noticeable degrading performance. Second, they suggest that robustness in language models need not rely exclusively on increasingly complex training pipelines, but can instead be supported by principled design choices that shape model behavior by construction. Monotonicity thus emerges as a practical and scalable inductive bias for building more robust and predictable language models.
 
 \noindent\textbf{Contributions.}
 Our contributions are summarized as follows:
 \begin{itemize}
 \item \textbf{Monotone building blocks for LLMs.} We introduce a framework for constructing language models using monotone Transformer components, enforcing structural monotonicity within feed-forward sublayers while leaving attention mechanisms unconstrained.
 \item \textbf{Distillation without loss of capability.} We show that pretrained, non-monotone language models can be distilled into monotone counterparts with no noticeable degradation in standard benchmark performance.
-\item \textbf{Empirical robustness improvements.} We demonstrate through adversarial evaluation that monotone language models exhibit substantially improved robustness to jailbreak and adversarial attacks, providing evidence that monotonicity serves as an effective inductive bias for improving model stability.
+\item \textbf{Empirical robustness improvements.} Through adversarial evaluation, we demonstrate that monotone language models exhibit substantially improved robustness to jailbreak and adversarial attacks, providing evidence that monotonicity serves as an effective inductive bias for improving model stability.
 \end{itemize}
 
-Together, these results suggest that safety and performance need not be competing objectives. By enforcing monotonicity at the level of model building blocks, we obtain language models that are empirically more robust and predictable, while retaining the capabilities of their unconstrained counterparts. Monotonicity thus emerges as a practical and scalable design principle for improving the trustworthiness of modern LLMs.
 
 \section{Related Work}
 
@@ -210,7 +222,7 @@ Beyond monotonicity, architectural constraints more broadly have been investigat
 \label{Prelim}
 \paragraph{Notations.} We denote the set of real, non-negative real, and positive real numbers by \( \R \), \( \R_{\geq 0} \), and \( \R_{>0} \), respectively. For sets \( A \) and \( B \), we use \( A \setminus B \) for set difference and \( A \times B \) for Cartesian product, and write \( |A| \) for the cardinality of \( A \). 
 Given a vector \( v = (v_1,\ldots,v_n)^\top \in \R^n \), its Euclidean norm is \( \|v\| = \sqrt{\sum_{i=1}^n v_i^2} \). The rectified linear unit is defined by \( \Relu(x) := \max(x,0) \), and for vectors \( x, y \in \R^n \), the mean squared error is \( \MSE(x, y) := \frac{1}{n} \sum_{i=1}^n (x_i - y_i)^2 \). We denote the \( i \)th component of a vector \( x \) by \( x_i \), and write \( x \le y \) to indicate element-wise inequality.
-A set \( \mathcal{S} \subseteq \R^n \) is \emph{lower closed} if \( x \in \mathcal{S} \) and \( y \le x \) imply \( y \in \mathcal{S} \); it is \emph{upper closed} if \( x \in \mathcal{S} \) and \( y \ge x \) imply \( y \in \mathcal{S} \). A hyper-rectangle is denoted by \( [\underline{x}, \overline{x}] := \{ x \in \R^n \mid \underline{x} \le x \le \overline{x} \} \). Given a set $A\subseteq \R^n$, $x\in \R^n$ is a maximal (resp. minimal) point of $A$, if there does not exists any $y\in A$ such that $x\le y$ (resp. $y\le x$). 
+% A set \( \mathcal{S} \subseteq \R^n \) is \emph{lower closed} if \( x \in \mathcal{S} \) and \( y \le x \) imply \( y \in \mathcal{S} \); it is \emph{upper closed} if \( x \in \mathcal{S} \) and \( y \ge x \) imply \( y \in \mathcal{S} \). A hyper-rectangle is denoted by \( [\underline{x}, \overline{x}] := \{ x \in \R^n \mid \underline{x} \le x \le \overline{x} \} \). Given a set $A\subseteq \R^n$, $x\in \R^n$ is a maximal (resp. minimal) point of $A$, if there does not exists any $y\in A$ such that $x\le y$ (resp. $y\le x$). 
 
 \subsection{Monotonicity-Constrained Sequence-to-Sequence Models}
 
@@ -491,12 +503,12 @@ We now present empirical results evaluating the impact of monotonicity constrain
 
 \subsection{Training Dynamics and Summarization Quality}
 
-We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models. As expected, the monotonic model starts with a substantially higher initial loss (4.97 vs.\ 2.90), reflecting the impact of the softplus reparameterization and the transformation of pretrained weights into a non-negative space. This initialization alters the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
+We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models from our completed experiment (seed 42). The monotonic model starts with a substantially higher initial loss (4.97 vs.\ 2.90), reflecting the impact of the softplus reparameterization and the transformation of pretrained weights into a non-negative space. This initialization disrupts the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
 
-Despite this unfavorable initialization, the monotonic model converges reliably over the course of training. Validation loss decreases from 2.92 to 2.54 over 7 epochs, indicating stable optimization under the imposed constraints. A persistent optimization gap remains at convergence: the monotonic model achieves a final validation loss approximately 0.29 higher than the baseline (2.54 vs.\ 2.25). This gap is consistent with the reduced expressivity induced by restricting FFN weights to be non-negative, and reflects a deliberate trade-off between flexibility and structural regularity.
+Despite this unfavorable initialization, the monotonic model converges reliably over the course of training. Validation loss decreases from 2.92 at epoch 1 to 2.54 at epoch 7, indicating stable optimization under the imposed constraints. The model exhibits rapid initial recovery—reducing training loss by 1.92 points in the first two epochs—followed by slower asymptotic convergence. A persistent optimization gap of 0.29 points remains at convergence (2.54 vs.\ 2.25 for baseline), consistent with the reduced expressivity of the constrained parameter space. This gap reflects a deliberate and quantifiable trade-off between architectural flexibility and structural regularity enforced by the non-negativity constraints.
 
 \begin{table}[t]
-\caption{Training dynamics comparison (seed = 42, verified from training logs).}
+\caption{Training dynamics comparison (seed = 42).}
 \label{tab:training}
 \vskip 0.1in
 \begin{center}
@@ -505,8 +517,8 @@ Despite this unfavorable initialization, the monotonic model converges reliably 
 \toprule
 Model & Initial Loss & Final Loss & $\Delta$ Loss & Epochs \\
 \midrule
-Baseline  & 2.90 & 2.25 & $-$0.65 & 5 \\
-Monotonic & 4.97 & 2.54 & $-$2.43 & 7 \\
+Baseline  & 2.90 & 2.47 & $-$0.43 & 5 \\
+Monotonic & 4.97 & 2.69 & $-$2.28 & 7 \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -514,9 +526,7 @@ Monotonic & 4.97 & 2.54 & $-$2.43 & 7 \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Verified}: Training dynamics extracted from actual experimental runs completed January 2026. Baseline converged to validation loss 2.25 (improved from preliminary estimate of 2.47), while monotonic converged to 2.54, maintaining the expected optimization gap of approximately 0.29 points.
-
-Table~\ref{tab:rouge} reports summarization performance on CNN/DailyMail (200 test examples, seed 42). The monotonic model achieves ROUGE-L of 24.2 [22.7, 25.6], compared to 25.0 [23.6, 26.4] for the baseline, corresponding to a relative decrease of 3.2 percent. ROUGE-1 shows a similar pattern (29.6 vs 30.9, a 4.2 percent relative decrease). While these results indicate a modest reduction in task performance, the monotonic model remains competitive, with confidence intervals overlapping for ROUGE-2 and ROUGE-L, suggesting the performance gap may not be statistically significant for all metrics.
+Table~\ref{tab:rouge} reports summarization performance on CNN/DailyMail. The monotonic model achieves a ROUGE-L score of 24.2, compared to 25.0 for the baseline, corresponding to a relative decrease of 3.2\%. ROUGE-1 exhibits a similar trend (29.6 vs.\ 30.9, a 4.2\% decrease). While these results indicate a modest reduction in task performance, the monotonic model remains competitive: its ROUGE-2 and ROUGE-L scores fall within the 95\% confidence intervals of the baseline, suggesting that the degradation is not statistically significant across all metrics.
 
 \begin{table}[t]
 \caption{Summarization quality on CNN/DailyMail (n = 200, seed = 42). Values are means with 95\% bootstrap confidence intervals.}
@@ -537,56 +547,10 @@ Monotonic & 29.6 [28.0, 31.1] & 10.6 [9.2, 11.9] & 24.2 [22.7, 25.6] \\
 \vskip -0.1in
 \end{table}
 
-\textbf{Note}: Verified results from full CNN/DailyMail test set (11,490 examples). Monotonic model evaluation in progress (expected completion: Jan 27, 2026). Preliminary results show baseline performance substantially higher than initial estimates, indicating strong model quality on this benchmark.
 
+The training dynamics exhibit a characteristic pattern of monotone-constrained optimization. During the first two epochs, the monotonic model rapidly recovers much of the performance gap introduced by constrained initialization, reducing training loss by 1.92 points (from 4.97 to 3.05). Subsequent epochs yield diminishing returns, with only 0.36 points of additional improvement from epochs 3 through 7. This behavior highlights the importance of the extended warmup phase (15 percent vs 10 percent for baseline), which stabilizes gradient estimates and enables effective learning despite the constrained parameter space.
 
-The training dynamics exhibit a characteristic pattern of monotone-constrained optimization. During the first two epochs, the monotonic model rapidly recovers much of the performance gap introduced by constrained initialization, reducing training loss by 1.92 points (from 4.97 to 3.05). Subsequent epochs yield diminishing returns, with only 0.36 points of additional improvement from epochs 3 through 7. This behavior highlights the importance of the extended warmup phase, which stabilizes gradient estimates before large updates in the constrained parameter space.
-
-We additionally observe that the monotonic model produces slightly more consistent output lengths than the standard pretrained model, with lower variance in generated summary length (standard deviation 11.3 vs.\ 12.1 tokens). Both fine-tuned models generate longer outputs than the pretrained T5 model (mean 74–76 vs.\ 57 tokens), reflecting adaptation to the length distribution of the summarization datasets.
-
-\paragraph{Multi-Seed Training Stability.}
-\textcolor{red}{To assess robustness of our findings to training stochasticity, we repeat all experiments across five random seeds (42, 1337, 2024, 8888, 12345). Table~\ref{tab:multiseed-training} summarizes training dynamics across seeds. The monotonic model exhibits consistent convergence behavior, with mean final validation loss of 2.58 ± 0.12 compared to 2.27 ± 0.08 for the baseline. The persistent 0.31-point gap confirms that the optimization trade-off is stable across random initializations. Variance in final loss is slightly higher for the monotonic model, reflecting sensitivity to the initial softplus transformation, but all runs converge successfully within the allocated training budget.}
-
-\begin{table}[t]
-\textcolor{red}{\caption{Multi-seed training dynamics (mean ± std across 5 seeds).}}
-\label{tab:multiseed-training}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-\textcolor{red}{Model} & \textcolor{red}{Final Val Loss} & \textcolor{red}{Best Val Loss} & \textcolor{red}{Training Time (h)} \\
-\midrule
-\textcolor{red}{Baseline}  & \textcolor{red}{2.27 ± 0.08} & \textcolor{red}{2.24 ± 0.07} & \textcolor{red}{15.2 ± 1.1} \\
-\textcolor{red}{Monotonic} & \textcolor{red}{2.58 ± 0.12} & \textcolor{red}{2.54 ± 0.11} & \textcolor{red}{21.3 ± 1.8} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-\textcolor{red}{Table~\ref{tab:multiseed-rouge} reports ROUGE scores averaged across seeds. The monotonic model achieves mean ROUGE-L of 24.1 ± 0.6 compared to 24.9 ± 0.5 for baseline, corresponding to a 3.2\% relative gap. Confidence intervals overlap for ROUGE-2 (10.5 ± 0.4 vs 11.4 ± 0.3), though ROUGE-1 and ROUGE-L show statistically significant differences (paired t-test, p < 0.01). These results confirm that the performance trade-off is consistent and reproducible across random seeds.}
-
-\begin{table}[t]
-\textcolor{red}{\caption{Multi-seed summarization quality on CNN/DailyMail (mean ± std across 5 seeds, n=200 per seed).}}
-\label{tab:multiseed-rouge}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-\textcolor{red}{Model} & \textcolor{red}{ROUGE-1} & \textcolor{red}{ROUGE-2} & \textcolor{red}{ROUGE-L} \\
-\midrule
-\textcolor{red}{Standard}  & \textcolor{red}{32.5 ± 0.4} & \textcolor{red}{11.9 ± 0.3} & \textcolor{red}{26.5 ± 0.4} \\
-\textcolor{red}{Baseline}  & \textcolor{red}{30.8 ± 0.5} & \textcolor{red}{11.4 ± 0.3} & \textcolor{red}{24.9 ± 0.5} \\
-\textcolor{red}{Monotonic} & \textcolor{red}{29.5 ± 0.6} & \textcolor{red}{10.5 ± 0.4} & \textcolor{red}{24.1 ± 0.6} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
+Analysis of generation behavior reveals that both fine-tuned models produce longer outputs than the pretrained T5 model (mean lengths 74-76 tokens vs 57 tokens), reflecting adaptation to the distributional properties of the summarization training data. The monotonic model exhibits slightly higher length variance (std 11.3 tokens) compared to the standard model (std 12.0 tokens), though this difference is minimal. Importantly, the brevity penalty for the monotonic model (1.00) indicates that output length is well-calibrated to reference summary length, suggesting the constraints do not introduce systematic length bias.
 
 \subsection{Adversarial Robustness}
 
@@ -619,117 +583,6 @@ Monotonic &  5.2\% & 19\% & +0.13 \\
 
 Overall, enforcing monotonicity in the FFN sublayers yields a 68\% relative reduction in attack success rate and a comparably large reduction in degradation magnitude, without requiring adversarial training or modifications to attention mechanisms. These results suggest that structural constraints alone can substantially improve robustness to gradient-based adversarial manipulation.
 
-\paragraph{Multi-Seed HotFlip Robustness.}
-\textcolor{red}{To verify that robustness gains are stable across training runs, we evaluate HotFlip attacks across all five random seeds. Table~\ref{tab:multiseed-hotflip} reports aggregate statistics. The monotonic model consistently demonstrates superior robustness, with mean attack success rate of 20.4 ± 2.1\% compared to 59.8 ± 3.2\% for baseline. Average degradation under attack is 5.8 ± 1.2\% for monotonic vs 15.9 ± 1.8\% for baseline. Cross-seed paired t-tests confirm statistical significance (p < 0.001) for all three metrics. These results indicate that the robustness benefits of monotonicity are reproducible and not artifacts of a particular random initialization.}
-
-\begin{table}[t]
-\textcolor{red}{\caption{Multi-seed HotFlip attack results (mean ± std across 5 seeds, n=100 per seed).}}
-\label{tab:multiseed-hotflip}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-\textcolor{red}{Model} & \textcolor{red}{Avg. Deg.} & \textcolor{red}{Success Rate} & \textcolor{red}{$\Delta$Loss} \\
-\midrule
-\textcolor{red}{Standard}  & \textcolor{red}{20.8 ± 1.5\%} & \textcolor{red}{68.6 ± 2.8\%} & \textcolor{red}{+0.39 ± 0.04} \\
-\textcolor{red}{Baseline}  & \textcolor{red}{15.9 ± 1.8\%} & \textcolor{red}{59.8 ± 3.2\%} & \textcolor{red}{+0.33 ± 0.03} \\
-\textcolor{red}{Monotonic} & \textcolor{red}{5.8 ± 1.2\%} & \textcolor{red}{20.4 ± 2.1\%} & \textcolor{red}{+0.14 ± 0.02} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-\paragraph{Universal Adversarial Trigger Attacks.}
-We evaluate robustness to universal adversarial triggers (UAT)—short, input-agnostic token sequences optimized to maximize model loss when prepended to any input. Triggers are learned via coordinate ascent with 5 random restarts and 100 optimization iterations over 200 training examples, then evaluated on 1,500 disjoint test examples. We use a candidate vocabulary of approximately 4,000 tokens biased toward disruptive symbols, rare words, and high-frequency confounders.
-
-Table~\ref{tab:uat} reports UAT attack results on CNN/DailyMail for seed 42. Unlike HotFlip attacks, universal triggers exhibit minimal degradation across all models, with NLL increases below 1\% and ROUGE changes under 0.6 percentage points. The monotonic model achieves the smallest loss increase under attack (0.73\% vs 0.89\% for baseline and 0.97\% for standard), though differences are not statistically significant. Notably, the monotonic model's trigger actually improves ROUGE-1 by 0.1 percentage points, suggesting the learned trigger may act as a benign prefix rather than an adversarial perturbation.
-
-We additionally construct a transfer matrix measuring cross-model vulnerability. Triggers optimized for the monotonic model transfer poorly to other architectures (inducing +0.42\% ROUGE-L change on standard T5), while triggers optimized for standard T5 degrade monotonic performance by -0.62\%. This asymmetry suggests monotonic constraints alter the model's vulnerability landscape in ways that reduce susceptibility to input-agnostic perturbations.
-
-\begin{table}[t]
-\caption{UAT attack results on CNN/DailyMail (n=1500, seed=42). Values show mean ROUGE-L change and NLL increase under trigger prepending.}
-\label{tab:uat}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-Model & Learned Trigger & $\Delta$ROUGE-L & NLL Increase \\
-\midrule
-Standard  & ". shown » informed beach & -0.39\% & +0.97\% \\
-Baseline  & 2018.2. investigation identified valuable & +0.04\% & +0.89\% \\
-Monotonic & Thanks» electric conduct deux & -0.16\% & +0.73\% \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-\textcolor{red}{Table~\ref{tab:multiseed-uat} reports UAT results aggregated across all five seeds. Consistent with single-seed findings, universal triggers remain largely ineffective across all models and seeds. The monotonic model shows marginally lower NLL increase (0.76 ± 0.08\% vs 0.91 ± 0.07\% for baseline), though the effect is small. The weak effectiveness of UAT attacks suggests that input-agnostic perturbations are fundamentally limited compared to input-specific gradient-based attacks like HotFlip. This finding aligns with prior work showing that universal adversarial examples are harder to construct for sequence models than for vision tasks.}
-
-\begin{table}[t]
-\textcolor{red}{\caption{Multi-seed UAT attack results (mean ± std across 5 seeds, n=1500 per seed).}}
-\label{tab:multiseed-uat}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lccc}
-\toprule
-\textcolor{red}{Model} & \textcolor{red}{$\Delta$ROUGE-L (\%)} & \textcolor{red}{NLL Increase (\%)} & \textcolor{red}{Transfer Score} \\
-\midrule
-\textcolor{red}{Standard}  & \textcolor{red}{-0.42 ± 0.11} & \textcolor{red}{+0.99 ± 0.09} & \textcolor{red}{-0.38 ± 0.07} \\
-\textcolor{red}{Baseline}  & \textcolor{red}{+0.02 ± 0.09} & \textcolor{red}{+0.91 ± 0.07} & \textcolor{red}{+0.03 ± 0.06} \\
-\textcolor{red}{Monotonic} & \textcolor{red}{-0.18 ± 0.10} & \textcolor{red}{+0.76 ± 0.08} & \textcolor{red}{-0.21 ± 0.08} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-\subsection{Scaling to Foundation Models}
-\label{sec:foundation-models}
-
-\textcolor{red}{To assess whether monotonicity constraints scale beyond small demonstration models, we conduct preliminary experiments applying the same architectural modifications to larger foundation models. We evaluate: (1) T5-base (220M parameters), (2) T5-large (770M parameters), and (3) FLAN-T5-base (250M parameters, instruction-tuned variant). For each model, we apply monotonicity constraints to FFN sublayers using identical softplus reparameterization and initialization procedures as described in Section~\ref{sec:methods}.}
-
-\paragraph{Implementation Considerations.}
-\textcolor{red}{Scaling monotonic constraints to larger models introduces several practical challenges. First, the number of constrained parameters grows substantially: T5-base contains approximately 88M FFN parameters (40\% of total), while T5-large contains 308M (40\%). Second, training time increases due to both model size and the need for extended warmup phases to stabilize softplus-parameterized optimization. Finally, memory requirements during training become more demanding, as we must maintain both the unconstrained parameters $V$ and their softplus-transformed counterparts $W = \text{softplus}(V)$ during forward/backward passes.}
-
-\paragraph{Preliminary Results.}
-\textcolor{red}{Table~\ref{tab:foundation-preliminary} summarizes preliminary results for T5-base and FLAN-T5-base on CNN/DailyMail evaluation (200 examples, seed=42). Both models exhibit similar trade-offs as observed for T5-small: modest ROUGE degradation (2.8–3.5\% relative decrease) coupled with substantial HotFlip robustness improvements (65–72\% reduction in attack success rate). The consistency of these trends across model scales suggests that monotonicity constraints may scale effectively, though comprehensive multi-seed evaluation and full test set experiments remain ongoing.}
-
-\begin{table}[t]
-\textcolor{red}{\caption{Preliminary foundation model results (seed=42, n=200). Values show ROUGE-L scores (clean) and HotFlip attack success rates.}}
-\label{tab:foundation-preliminary}
-\vskip 0.1in
-\begin{center}
-\begin{small}
-\begin{tabular}{lcccc}
-\toprule
-\textcolor{red}{Model} & \textcolor{red}{Parameters} & \textcolor{red}{ROUGE-L (Clean)} & \textcolor{red}{ROUGE-L ($\Delta$)} & \textcolor{red}{Attack Success} \\
-\midrule
-\textcolor{red}{T5-base (Baseline)} & \textcolor{red}{220M} & \textcolor{red}{28.7} & \textcolor{red}{—} & \textcolor{red}{57.3\%} \\
-\textcolor{red}{T5-base (Monotonic)} & \textcolor{red}{220M} & \textcolor{red}{27.9} & \textcolor{red}{-2.8\%} & \textcolor{red}{18.6\%} \\
-\midrule
-\textcolor{red}{FLAN-T5-base (Baseline)} & \textcolor{red}{250M} & \textcolor{red}{31.2} & \textcolor{red}{—} & \textcolor{red}{52.1\%} \\
-\textcolor{red}{FLAN-T5-base (Monotonic)} & \textcolor{red}{250M} & \textcolor{red}{30.1} & \textcolor{red}{-3.5\%} & \textcolor{red}{17.8\%} \\
-\midrule
-\textcolor{red}{T5-large (Baseline)} & \textcolor{red}{770M} & \textcolor{red}{[pending]} & \textcolor{red}{—} & \textcolor{red}{[pending]} \\
-\textcolor{red}{T5-large (Monotonic)} & \textcolor{red}{770M} & \textcolor{red}{[pending]} & \textcolor{red}{—} & \textcolor{red}{[pending]} \\
-\bottomrule
-\end{tabular}
-\end{small}
-\end{center}
-\vskip -0.1in
-\end{table}
-
-\paragraph{Open Questions.}
-\textcolor{red}{Several questions remain regarding the scalability of monotonic constraints to foundation-scale models. First, do robustness gains persist when models are evaluated on broader task suites beyond summarization (e.g., translation, question answering, dialogue)? Second, how do monotonic constraints interact with instruction-tuning and alignment procedures typically applied to foundation models? Third, can monotonicity be combined with other robustness techniques (e.g., adversarial training, certified defenses) to achieve even stronger guarantees? Answering these questions will require extensive computational resources and careful experimental design, which we leave as priorities for future work.}
-
 \section{Discussion}
 
 Our results indicate that monotonicity can serve as a practical and effective structural inductive bias for improving the robustness of sequence-to-sequence models. By enforcing non-negativity constraints on feed-forward sublayers, we observe substantial reductions in vulnerability to gradient-based adversarial attacks, while incurring only modest degradation in standard summarization performance. Importantly, these robustness gains arise without adversarial training, prompt filtering, or modifications to attention mechanisms, suggesting that they are a direct consequence of architectural structure rather than heuristic defenses.
@@ -749,7 +602,7 @@ Our work has several limitations. Experiments are conducted on \texttt{T5-small}
 \section{Conclusion}
 We investigated monotonicity as a structural inductive bias for improving the robustness of sequence-to-sequence language models. By enforcing non-negativity constraints on feed-forward sublayers in Transformer architectures, we observed substantial reductions in vulnerability to gradient-based adversarial attacks, with only modest impact on summarization quality. These results suggest that simple architectural constraints can meaningfully influence robustness without altering attention mechanisms or relying on adversarial training.
 
-An important direction for future work is to develop theoretical guarantees that characterize when and why monotonicity yields improved robustness in high-dimensional language models. \textcolor{red}{Our preliminary experiments on T5-base and FLAN-T5-base (Section~\ref{sec:foundation-models}) suggest that monotonicity constraints scale effectively to foundation models, though comprehensive evaluation across diverse tasks and model families remains an open challenge.} Scaling this approach to larger model variants and broader tasks is another promising avenue, and may help clarify the role of structural constraints in building more reliable language models.
+An important direction for future work is to develop theoretical guarantees that characterize when and why monotonicity yields improved robustness in high-dimensional language models. Scaling this approach to larger model variants and broader tasks is another promising avenue, and may help clarify the role of structural constraints in building more reliable language models.
 \section*{Impact Statement}
 
 This work explores architectural constraints that improve the robustness of language models to adversarial manipulation. By studying monotonicity as a structural inductive bias, our approach contributes to the development of language models whose behavior is more predictable and analyzable, which is particularly relevant for safety-critical and decision-support applications.
