@@ -1,0 +1,63 @@
+# Final Commands for Seeds 1337 and 2024 on Lambda
+
+## For Seed 1337 (run in tmux session 1):
+
+tmux new -s seed1337
+
+export EXPERIMENT_SEED=1337
+export SCRATCH=/tmp/scratch
+export PROJECT=$HOME/project
+
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_0_setup_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_1_data_prep_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_2_train_baseline_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_3_train_monotonic_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_4_evaluate_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_1337/stage_5_uat_complete.flag
+
+mkdir -p /tmp/scratch/mono_s2s_results/seed_1337
+
+cp /tmp/scratch/mono_s2s_results/seed_42/baseline_training_history.json /tmp/scratch/mono_s2s_results/seed_1337/
+cp /tmp/scratch/mono_s2s_results/seed_42/monotonic_training_history.json /tmp/scratch/mono_s2s_results/seed_1337/
+cp /tmp/scratch/mono_s2s_results/seed_42/setup_complete.json /tmp/scratch/mono_s2s_results/seed_1337/
+cp /tmp/scratch/mono_s2s_results/seed_42/data_statistics.json /tmp/scratch/mono_s2s_results/seed_1337/
+cp /tmp/scratch/mono_s2s_results/seed_42/uat_results.json /tmp/scratch/mono_s2s_results/seed_1337/
+cp /tmp/scratch/mono_s2s_results/seed_42/evaluation_results.json /tmp/scratch/mono_s2s_results/seed_1337/
+
+cd ~/mono-s2s/hpc_version
+python scripts/stage_6_hotflip_attacks.py && python scripts/stage_7_aggregate.py
+
+# Detach: Ctrl+B, then D
+
+## For Seed 2024 (run in tmux session 2):
+
+tmux new -s seed2024
+
+export EXPERIMENT_SEED=2024
+export SCRATCH=/tmp/scratch
+export PROJECT=$HOME/project
+
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_0_setup_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_1_data_prep_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_2_train_baseline_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_3_train_monotonic_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_4_evaluate_complete.flag
+touch /tmp/scratch/mono_s2s_work/seed_2024/stage_5_uat_complete.flag
+
+mkdir -p /tmp/scratch/mono_s2s_results/seed_2024
+
+cp /tmp/scratch/mono_s2s_results/seed_42/baseline_training_history.json /tmp/scratch/mono_s2s_results/seed_2024/
+cp /tmp/scratch/mono_s2s_results/seed_42/monotonic_training_history.json /tmp/scratch/mono_s2s_results/seed_2024/
+cp /tmp/scratch/mono_s2s_results/seed_42/setup_complete.json /tmp/scratch/mono_s2s_results/seed_2024/
+cp /tmp/scratch/mono_s2s_results/seed_42/data_statistics.json /tmp/scratch/mono_s2s_results/seed_2024/
+cp /tmp/scratch/mono_s2s_results/seed_42/uat_results.json /tmp/scratch/mono_s2s_results/seed_2024/
+cp /tmp/scratch/mono_s2s_results/seed_42/evaluation_results.json /tmp/scratch/mono_s2s_results/seed_2024/
+
+cd ~/mono-s2s/hpc_version
+python scripts/stage_6_hotflip_attacks.py && python scripts/stage_7_aggregate.py
+
+## Copy Results After Completion:
+
+# From local machine
+scp -r ubuntu@144.24.46.40:/tmp/scratch/mono_s2s_results/seed_1337 C:\Users\patri\code\mono-s2s\lambda_results\
+scp -r ubuntu@144.24.46.40:/tmp/scratch/mono_s2s_results/seed_2024 C:\Users\patri\code\mono-s2s\lambda_results\
