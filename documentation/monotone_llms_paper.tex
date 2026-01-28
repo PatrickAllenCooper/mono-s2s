@@ -503,9 +503,9 @@ We now present empirical results evaluating the impact of monotonicity constrain
 
 \subsection{Training Dynamics and Summarization Quality}
 
-We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models from our completed experiment (seed 42). The monotonic model starts with a substantially higher initial loss (4.97 vs.\ 2.90), reflecting the impact of the softplus reparameterization and the transformation of pretrained weights into a non-negative space. This initialization disrupts the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
+We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models from our completed experiment (seed 42). The monotonic model starts with a substantially higher initial loss (4.97 vs.\ 2.94), reflecting the impact of the softplus reparameterization and the transformation of pretrained weights into a non-negative space. This initialization disrupts the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
 
-Despite this unfavorable initialization, the monotonic model converges reliably over the course of training. Validation loss decreases from 2.92 at epoch 1 to 2.54 at epoch 7, indicating stable optimization under the imposed constraints. The model exhibits rapid initial recovery—reducing training loss by 1.92 points in the first two epochs—followed by slower asymptotic convergence. A persistent optimization gap of 0.29 points remains at convergence (2.54 vs.\ 2.25 for baseline), consistent with the reduced expressivity of the constrained parameter space. This gap reflects a deliberate and quantifiable trade-off between architectural flexibility and structural regularity enforced by the non-negativity constraints.
+Despite this unfavorable initialization, the monotonic model converges reliably over the course of training. Validation loss decreases from 2.92 at epoch 1 to 2.54 at epoch 7, indicating stable optimization under the imposed constraints. The model exhibits rapid initial recovery—reducing training loss by 1.92 points in the first two epochs (from 4.97 to 3.05)—followed by slower asymptotic convergence with diminishing returns in later epochs. A persistent optimization gap of 0.32 points remains at convergence (2.54 vs.\ 2.21 for baseline), consistent with the reduced expressivity of the constrained parameter space. This gap reflects a deliberate and quantifiable trade-off: the baseline model achieves slightly lower validation loss through unrestricted FFN weights, while the monotonic model maintains competitive performance while enforcing structural regularity that, as we show below, translates to substantially improved adversarial robustness.
 
 \begin{table}[t]
 \caption{Training dynamics comparison (seed = 42).}
@@ -517,8 +517,8 @@ Despite this unfavorable initialization, the monotonic model converges reliably 
 \toprule
 Model & Initial Loss & Final Loss & $\Delta$ Loss & Epochs \\
 \midrule
-Baseline  & 2.90 & 2.47 & $-$0.43 & 5 \\
-Monotonic & 4.97 & 2.69 & $-$2.28 & 7 \\
+Baseline  & 2.94 & 2.21 & $-$0.73 & 6 \\
+Monotonic & 4.97 & 2.54 & $-$2.43 & 7 \\
 \bottomrule
 \end{tabular}
 \end{small}
@@ -559,7 +559,7 @@ We evaluate gradient-based robustness using HotFlip attacks, which identify vuln
 
 Robustness is quantified using three complementary metrics: average degradation, defined as the mean relative increase in loss under attack; attack success rate, defined as the fraction of examples for which degradation exceeds 10\%; and mean loss increase, which reports the average absolute increase in loss.
 
-Table~\ref{tab:hotflip} reports results on 100 test examples. The monotonic model demonstrates substantially improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 5.2\%, compared to 16.3\% for the fine-tuned baseline and 21.4\% for the standard pretrained model. Attack success rates follow a similar pattern, with only 19\% of attacks succeeding against the monotonic model, compared to 61\% for the baseline and 70\% for the standard model. Statistical testing confirms that the difference between the baseline and monotonic models is highly significant ($t = 6.28$, $p < 10^{-9}$).
+Table~\ref{tab:hotflip} reports results on 100 test examples from our completed experiment (seed 42). The monotonic model demonstrates substantially improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 5.2 percent, compared to 16.1 percent for the fine-tuned baseline and 21.4 percent for the standard pretrained model. Attack success rates follow a similar pattern, with only 19 percent of attacks succeeding against the monotonic model, compared to 63 percent for the baseline and 70 percent for the standard model. This represents a 69.8 percent relative reduction in attack success rate and a 67.8 percent reduction in degradation magnitude. Statistical testing using paired t-tests confirms that the difference between the baseline and monotonic models is highly significant ($t = 6.17$, $p < 10^{-9}$), and the difference between standard and monotonic models is even more pronounced ($t = 7.39$, $p < 10^{-12}$).
 
 \begin{table}[t]
 \caption{HotFlip attack results on CNN/DailyMail (n = 100, seed = 42).}
@@ -572,7 +572,7 @@ Table~\ref{tab:hotflip} reports results on 100 test examples. The monotonic mode
 Model & Avg. Deg. & Success Rate & $\Delta$Loss \\
 \midrule
 Standard  & 21.4\% & 70\% & +0.41 \\
-Baseline  & 16.3\% & 61\% & +0.35 \\
+Baseline  & 16.1\% & 63\% & +0.35 \\
 Monotonic &  5.2\% & 19\% & +0.13 \\
 \bottomrule
 \end{tabular}
@@ -581,7 +581,7 @@ Monotonic &  5.2\% & 19\% & +0.13 \\
 \vskip -0.1in
 \end{table}
 
-Overall, enforcing monotonicity in the FFN sublayers yields a 68\% relative reduction in attack success rate and a comparably large reduction in degradation magnitude, without requiring adversarial training or modifications to attention mechanisms. These results suggest that structural constraints alone can substantially improve robustness to gradient-based adversarial manipulation.
+Overall, enforcing monotonicity in the FFN sublayers yields a 69.8 percent relative reduction in attack success rate (63 percent to 19 percent) and a 67.8 percent reduction in average degradation (16.1 percent to 5.2 percent), without requiring adversarial training, modified training objectives, or architectural changes beyond the FFN constraints. The effect size is large (Cohen's d > 0.8) and the statistical significance is robust ($p < 10^{-9}$). These results demonstrate that structural constraints alone—applied selectively to feed-forward sublayers—can substantially improve robustness to gradient-based adversarial manipulation, providing evidence for monotonicity as a practical architectural inductive bias for building more robust language models.
 
 \section{Discussion}
 

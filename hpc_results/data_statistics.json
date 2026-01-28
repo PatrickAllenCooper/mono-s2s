@@ -1,0 +1,36 @@
+{
+  "stage": "data_preparation",
+  "timestamp": "2026-01-27 15:20:09",
+  "seed": 42,
+  "training": {
+    "total_samples": 242774,
+    "sources": 3,
+    "splits": "train"
+  },
+  "validation": {
+    "total_samples": 8296,
+    "sources": 3,
+    "splits": "validation (NOT test - no leakage!)"
+  },
+  "test": {
+    "cnn_dm": 200,
+    "xsum": 200,
+    "samsum": 0,
+    "total": 400,
+    "splits": "test (held-out from training)"
+  },
+  "attack": {
+    "optimization_samples": 80,
+    "optimization_source": "CNN/DM validation",
+    "evaluation_samples": 120,
+    "evaluation_source": "CNN/DM test (disjoint from optimization)"
+  },
+  "_metadata": {
+    "timestamp": "2026-01-27 15:20:09",
+    "date": "2026-01-27",
+    "time": "15:20:09",
+    "seed": 42,
+    "unix_timestamp": 1769552409,
+    "run_id": "20260127_152009_seed42"
+  }
+}
