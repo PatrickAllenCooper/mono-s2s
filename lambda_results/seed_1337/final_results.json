@@ -1,0 +1,388 @@
+{
+  "experiment_info": {
+    "seed": 1337,
+    "model_name": "t5-small",
+    "use_full_test_sets": false,
+    "timestamp": "2026-01-28 16:08:08"
+  },
+  "training_summary": {
+    "baseline": {
+      "best_val_loss": 2.2492427551183085,
+      "training_time_minutes": 924.043068865935,
+      "num_epochs": 5,
+      "hyperparameters": {
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "batch_size": 4,
+        "warmup_ratio": 0.1,
+        "max_grad_norm": 1.0
+      }
+    },
+    "monotonic": {
+      "best_val_loss": 2.535327680315553,
+      "training_time_minutes": 3.933906555175781e-07,
+      "num_epochs": 5,
+      "hyperparameters": {
+        "learning_rate": 5e-05,
+        "weight_decay": 0.01,
+        "batch_size": 4,
+        "warmup_ratio": 0.1,
+        "max_grad_norm": 1.0
+      },
+      "constraint_info": {
+        "type": "softplus_parametrization",
+        "formula": "W = softplus(V) >= 0",
+        "scope": "FFN sublayers only (wi, wi_0, wi_1, wo)",
+        "globally_monotonic": false,
+        "reason": "LayerNorm, residuals, and attention unconstrained"
+      }
+    }
+  },
+  "evaluation_summary": {
+    "cnn_dm": {
+      "standard_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.32514700666354374,
+            "lower": 0.30856273533335843,
+            "upper": 0.34106090883072226,
+            "ci_width": 0.032498173497363836
+          },
+          "rouge2": {
+            "mean": 0.1197343078145699,
+            "lower": 0.10554828678590451,
+            "upper": 0.13512274345078787,
+            "ci_width": 0.029574456664883356
+          },
+          "rougeLsum": {
+            "mean": 0.2652782419585762,
+            "lower": 0.24910873648474888,
+            "upper": 0.28089878895145703,
+            "ci_width": 0.03179005246670816
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 1.1590725806451614,
+          "avg_pred_length": 57.49,
+          "avg_ref_length": 49.6
+        }
+      },
+      "baseline_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.30767071795011236,
+            "lower": 0.29182165976201546,
+            "upper": 0.3229458423362112,
+            "ci_width": 0.031124182574195747
+          },
+          "rouge2": {
+            "mean": 0.11080244713643296,
+            "lower": 0.09685182906595427,
+            "upper": 0.12597154009898645,
+            "ci_width": 0.02911971103303218
+          },
+          "rougeLsum": {
+            "mean": 0.24951325297765942,
+            "lower": 0.2350829110332797,
+            "upper": 0.2643274197521594,
+            "ci_width": 0.029244508718879708
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 1.5253024193548388,
+          "avg_pred_length": 75.655,
+          "avg_ref_length": 49.6
+        }
+      },
+      "monotonic_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.2963388566841728,
+            "lower": 0.28026977211506765,
+            "upper": 0.3106471079367857,
+            "ci_width": 0.030377335821718032
+          },
+          "rouge2": {
+            "mean": 0.105738486914076,
+            "lower": 0.09222691785068436,
+            "upper": 0.11890746357891624,
+            "ci_width": 0.026680545728231878
+          },
+          "rougeLsum": {
+            "mean": 0.2418744088943489,
+            "lower": 0.22742449316376886,
+            "upper": 0.2558568609501047,
+            "ci_width": 0.028432367786335816
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 1.5034274193548387,
+          "avg_pred_length": 74.57,
+          "avg_ref_length": 49.6
+        }
+      }
+    },
+    "xsum": {
+      "standard_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.19930747205729155,
+            "lower": 0.18823717609762264,
+            "upper": 0.21080605225574395,
+            "ci_width": 0.02256887615812131
+          },
+          "rouge2": {
+            "mean": 0.0287051740651903,
+            "lower": 0.023334630177944956,
+            "upper": 0.03424005336748099,
+            "ci_width": 0.010905423189536034
+          },
+          "rougeLsum": {
+            "mean": 0.13324334334587717,
+            "lower": 0.12555373307052825,
+            "upper": 0.14087555944977206,
+            "ci_width": 0.015321826379243814
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 1.7554356986347548,
+          "avg_pred_length": 52.075,
+          "avg_ref_length": 29.665
+        }
+      },
+      "baseline_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.20001432107484796,
+            "lower": 0.18958758568471543,
+            "upper": 0.2097546768337401,
+            "ci_width": 0.02016709114902468
+          },
+          "rouge2": {
+            "mean": 0.031803022232408204,
+            "lower": 0.026808870878222296,
+            "upper": 0.0371224944597444,
+            "ci_width": 0.010313623581522106
+          },
+          "rougeLsum": {
+            "mean": 0.1325056863335238,
+            "lower": 0.12552772652691938,
+            "upper": 0.13901767921935482,
+            "ci_width": 0.013489952692435442
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 2.371312995112085,
+          "avg_pred_length": 70.345,
+          "avg_ref_length": 29.665
+        }
+      },
+      "monotonic_t5": {
+        "rouge_scores": {
+          "rouge1": {
+            "mean": 0.18943734520635186,
+            "lower": 0.18019910734365674,
+            "upper": 0.19749839505102113,
+            "ci_width": 0.017299287707364386
+          },
+          "rouge2": {
+            "mean": 0.027683467848886777,
+            "lower": 0.02336168334679472,
+            "upper": 0.032379769734836146,
+            "ci_width": 0.009018086388041427
+          },
+          "rougeLsum": {
+            "mean": 0.12935406540992558,
+            "lower": 0.12282541510001699,
+            "upper": 0.13583030307273633,
+            "ci_width": 0.013004887972719342
+          }
+        },
+        "brevity_penalty": {
+          "brevity_penalty": 1.0,
+          "length_ratio": 2.34940165177819,
+          "avg_pred_length": 69.695,
+          "avg_ref_length": 29.665
+        }
+      }
+    }
+  },
+  "attack_summary": {
+    "uat": {
+      "learned_triggers": {
+        "standard_t5": "\u201d. shown \u00bb informed beach",
+        "baseline_t5": "2018.2. investigation identified valuable",
+        "monotonic_t5": "Thanks\u00bb electric conduct deux"
+      },
+      "results": {
+        "standard_t5": {
+          "trigger_text": "\u201d. shown \u00bb informed beach",
+          "trigger_ids": [
+            1141,
+            2008,
+            1168,
+            4862,
+            2608
+          ],
+          "rouge_deltas": {
+            "rouge1": -0.00496323505548707,
+            "rouge2": -0.0054182767791116915,
+            "rougeLsum": -0.003916231736128373
+          },
+          "nll_increase": 0.00965727548846835,
+          "clean_rouge": {
+            "rouge1": 0.28139481069745476,
+            "rouge2": 0.0895368923516302,
+            "rougeLsum": 0.22934689126430907
+          },
+          "attack_rouge": {
+            "rouge1": 0.2764315756419677,
+            "rouge2": 0.08411861557251851,
+            "rougeLsum": 0.2254306595281807
+          }
+        },
+        "baseline_t5": {
+          "trigger_text": "2018.2. investigation identified valuable",
+          "trigger_ids": [
+            3070,
+            4416,
+            4962,
+            4313,
+            3435
+          ],
+          "rouge_deltas": {
+            "rouge1": -0.0018090788553042358,
+            "rouge2": -0.0010821159447368528,
+            "rougeLsum": 0.0004193168845187112
+          },
+          "nll_increase": 0.008908758783115766,
+          "clean_rouge": {
+            "rouge1": 0.2774945005694567,
+            "rouge2": 0.09146722480506403,
+            "rougeLsum": 0.2274529504926662
+          },
+          "attack_rouge": {
+            "rouge1": 0.27568542171415245,
+            "rouge2": 0.09038510886032718,
+            "rougeLsum": 0.2278722673771849
+          }
+        },
+        "monotonic_t5": {
+          "trigger_text": "Thanks\u00bb electric conduct deux",
+          "trigger_ids": [
+            1333,
+            3704,
+            2806,
+            3498,
+            1763
+          ],
+          "rouge_deltas": {
+            "rouge1": 0.001072426922335612,
+            "rouge2": 0.00012735737627705968,
+            "rougeLsum": -0.0016403484891619746
+          },
+          "nll_increase": 0.007291523201759598,
+          "clean_rouge": {
+            "rouge1": 0.2566603192730191,
+            "rouge2": 0.07547684343937523,
+            "rougeLsum": 0.2130315301784024
+          },
+          "attack_rouge": {
+            "rouge1": 0.2577327461953547,
+            "rouge2": 0.07560420081565229,
+            "rougeLsum": 0.21139118168924043
+          }
+        }
+      },
+      "transfer_matrix": {
+        "standard_t5": {
+          "standard_t5": -0.003952445236425323,
+          "baseline_t5": -0.004466606333994899,
+          "monotonic_t5": -0.006238511308821804
+        },
+        "baseline_t5": {
+          "standard_t5": -0.003609846173020681,
+          "baseline_t5": 0.0005877002151447597,
+          "monotonic_t5": 0.002582262299953786
+        },
+        "monotonic_t5": {
+          "standard_t5": 0.004152030847749455,
+          "baseline_t5": 0.0014643768075472963,
+          "monotonic_t5": -0.005274748214399633
+        }
+      }
+    },
+    "hotflip": {
+      "results": {
+        "standard_t5": {
+          "model_name": "Standard T5",
+          "avg_degradation": 0.21346084972532883,
+          "std_degradation": 0.1935821011774355,
+          "success_rate": 0.69,
+          "avg_orig_loss": 2.4629438477754593,
+          "avg_attack_loss": 2.8784796452522277,
+          "min_degradation": -0.04514593154052621,
+          "max_degradation": 0.77547284839081,
+          "num_samples": 100
+        },
+        "baseline_t5": {
+          "model_name": "Baseline T5",
+          "avg_degradation": 0.1618004135020492,
+          "std_degradation": 0.14956780853087934,
+          "success_rate": 0.63,
+          "avg_orig_loss": 2.6529759216308593,
+          "avg_attack_loss": 3.0050441443920137,
+          "min_degradation": -0.04426572480598405,
+          "max_degradation": 0.9939573894727433,
+          "num_samples": 100
+        },
+        "monotonic_t5": {
+          "model_name": "Monotonic T5",
+          "avg_degradation": 0.052131029816178544,
+          "std_degradation": 0.09446742757746414,
+          "success_rate": 0.19,
+          "avg_orig_loss": 3.2859180998802184,
+          "avg_attack_loss": 3.421564005613327,
+          "min_degradation": -0.05451966872844526,
+          "max_degradation": 0.6499870997860839,
+          "num_samples": 100
+        }
+      },
+      "statistical_tests": {
+        "standard_vs_baseline": {
+          "t_stat": 2.1011803466304535,
+          "p_value": 0.0368903985650466,
+          "significant": "*"
+        },
+        "standard_vs_monotonic": {
+          "t_stat": 7.452157620740654,
+          "p_value": 2.789503381912699e-12,
+          "significant": "***"
+        },
+        "baseline_vs_monotonic": {
+          "t_stat": 6.168337522253503,
+          "p_value": 3.814968662963366e-09,
+          "significant": "***"
+        }
+      }
+    }
+  },
+  "key_findings": {
+    "best_rouge_cnn_dm": "standard_t5",
+    "most_robust_uat": "baseline_t5",
+    "most_robust_hotflip": "monotonic_t5"
+  },
+  "_metadata": {
+    "timestamp": "2026-01-28 16:08:08",
+    "date": "2026-01-28",
+    "time": "16:08:08",
+    "seed": 1337,
+    "unix_timestamp": 1769616488,
+    "run_id": "20260128_160808_seed1337"
+  }
+}

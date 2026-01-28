@@ -1,0 +1,136 @@
+{
+  "stage": "setup",
+  "status": "success",
+  "timestamp": "2026-01-20 10:22:34",
+  "seed": 42,
+  "environment": {
+    "hostname": "c3cpu-c11-u5-1",
+    "python_version": "3.10.19 (main, Oct 21 2025, 16:43:05) [GCC 11.2.0]",
+    "pytorch_version": "2.7.1+cu118",
+    "cuda_available": false
+  },
+  "model": {
+    "name": "t5-small",
+    "type": "t5",
+    "parameters": 60506624,
+    "vocab_size": 32000
+  },
+  "configuration": {
+    "SCRATCH_DIR": "/scratch/alpine/paco0228",
+    "PROJECT_DIR": "/projects/paco0228",
+    "WORK_DIR": "/scratch/alpine/paco0228/mono_s2s_work",
+    "RESULTS_DIR": "/scratch/alpine/paco0228/mono_s2s_results",
+    "CHECKPOINT_DIR": "/scratch/alpine/paco0228/mono_s2s_work/checkpoints",
+    "DATA_CACHE_DIR": "/scratch/alpine/paco0228/mono_s2s_work/data_cache",
+    "FINAL_RESULTS_DIR": "/projects/paco0228/mono_s2s_final_results",
+    "RANDOM_SEEDS": [
+      42,
+      1337,
+      2024,
+      8888,
+      12345
+    ],
+    "CURRENT_SEED": 42,
+    "MODEL_NAME": "t5-small",
+    "LEARNING_RATE": 5e-05,
+    "WEIGHT_DECAY": 0.01,
+    "NUM_EPOCHS": 5,
+    "BATCH_SIZE": 4,
+    "GRADIENT_ACCUMULATION_STEPS": 1,
+    "MAX_GRAD_NORM": 1.0,
+    "WARMUP_RATIO": 0.1,
+    "MONOTONIC_NUM_EPOCHS": 7,
+    "MONOTONIC_WARMUP_RATIO": 0.15,
+    "MONOTONIC_LEARNING_RATE": 5e-05,
+    "MAX_INPUT_LENGTH": 512,
+    "MAX_TARGET_LENGTH": 128,
+    "DECODE_NUM_BEAMS": 4,
+    "DECODE_LENGTH_PENALTY": 1.2,
+    "DECODE_MIN_NEW_TOKENS": 10,
+    "DECODE_MAX_NEW_TOKENS": 80,
+    "DECODE_NO_REPEAT_NGRAM_SIZE": 3,
+    "DECODE_EARLY_STOPPING": true,
+    "ROUGE_METRICS": [
+      "rouge1",
+      "rouge2",
+      "rougeLsum"
+    ],
+    "ROUGE_USE_STEMMER": true,
+    "ROUGE_BOOTSTRAP_SAMPLES": 1000,
+    "ATTACK_TRIGGER_LENGTH": 5,
+    "ATTACK_NUM_CANDIDATES": 100,
+    "ATTACK_NUM_GRAD_STEPS": 50,
+    "ATTACK_NUM_RESTARTS": 3,
+    "ATTACK_NUM_ITERATIONS": 50,
+    "ATTACK_LOSS_BATCH_SIZE": 8,
+    "USE_FULL_TEST_SETS": false,
+    "EVAL_BATCH_SIZE": 8,
+    "QUICK_TEST_SIZE": 200,
+    "TRIGGER_OPT_SIZE_QUICK": 80,
+    "TRIGGER_EVAL_SIZE_QUICK": 120,
+    "TRIGGER_OPT_SIZE_FULL": 500,
+    "TRIGGER_EVAL_SIZE_FULL": 1000,
+    "TRAIN_DATASETS": [
+      [
+        "knkarthick/dialogsum",
+        "dialogue",
+        "summary",
+        "DialogSum"
+      ],
+      [
+        "knkarthick/highlightsum",
+        "dialogue",
+        "summary",
+        "HighlightSum"
+      ],
+      [
+        "ccdv/arxiv-summarization",
+        "article",
+        "abstract",
+        "arXiv"
+      ]
+    ],
+    "TEST_DATASETS": [
+      [
+        "cnn_dailymail",
+        "3.0.0",
+        "article",
+        "highlights",
+        "CNN/DM"
+      ],
+      [
+        "xsum",
+        null,
+        "document",
+        "summary",
+        "XSUM"
+      ],
+      [
+        "samsum",
+        null,
+        "dialogue",
+        "summary",
+        "SAMSum"
+      ]
+    ],
+    "DATASET_MAX_RETRIES": 3,
+    "DATASET_RETRY_DELAY": 10,
+    "DATASET_ALLOW_PARTIAL": true,
+    "SLURM_PARTITION": "shas",
+    "SLURM_QOS": "normal",
+    "SLURM_NODES": 1,
+    "SLURM_TASKS_PER_NODE": 1,
+    "SLURM_GPUS_PER_NODE": 1,
+    "SLURM_MEM_GB": 64,
+    "TIME_SETUP": "00:30:00",
+    "TIME_DATA": "02:00:00",
+    "TIME_TRAIN": "12:00:00",
+    "TIME_EVALUATE": "04:00:00",
+    "TIME_UAT": "03:00:00",
+    "TIME_HOTFLIP": "02:00:00",
+    "TIME_AGGREGATE": "00:15:00",
+    "SAVE_CHECKPOINT_EVERY_N_EPOCHS": 1,
+    "LOG_EVERY_N_STEPS": 100,
+    "VERBOSE_LOGGING": true
+  }
+}

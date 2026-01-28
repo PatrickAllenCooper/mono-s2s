@@ -1,0 +1,312 @@
+{
+  "cnn_dm": {
+    "standard_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.32514700666354374,
+          "lower": 0.30856273533335843,
+          "upper": 0.34106090883072226,
+          "ci_width": 0.032498173497363836
+        },
+        "rouge2": {
+          "mean": 0.1197343078145699,
+          "lower": 0.10554828678590451,
+          "upper": 0.13512274345078787,
+          "ci_width": 0.029574456664883356
+        },
+        "rougeLsum": {
+          "mean": 0.2652782419585762,
+          "lower": 0.24910873648474888,
+          "upper": 0.28089878895145703,
+          "ci_width": 0.03179005246670816
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 57.49,
+        "std": 11.969958228832715,
+        "median": 57.5,
+        "min": 32,
+        "max": 80,
+        "total": 11498,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 49.6,
+        "std": 14.275503493747602,
+        "median": 47.0,
+        "min": 24,
+        "max": 100,
+        "total": 9920,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.1590725806451614,
+        "avg_pred_length": 57.49,
+        "avg_ref_length": 49.6
+      }
+    },
+    "baseline_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.30767071795011236,
+          "lower": 0.29182165976201546,
+          "upper": 0.3229458423362112,
+          "ci_width": 0.031124182574195747
+        },
+        "rouge2": {
+          "mean": 0.11080244713643296,
+          "lower": 0.09685182906595427,
+          "upper": 0.12597154009898645,
+          "ci_width": 0.02911971103303218
+        },
+        "rougeLsum": {
+          "mean": 0.24951325297765942,
+          "lower": 0.2350829110332797,
+          "upper": 0.2643274197521594,
+          "ci_width": 0.029244508718879708
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 75.655,
+        "std": 10.013289918902778,
+        "median": 80.0,
+        "min": 23,
+        "max": 80,
+        "total": 15131,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 49.6,
+        "std": 14.275503493747602,
+        "median": 47.0,
+        "min": 24,
+        "max": 100,
+        "total": 9920,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.5253024193548388,
+        "avg_pred_length": 75.655,
+        "avg_ref_length": 49.6
+      }
+    },
+    "monotonic_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.2963388566841728,
+          "lower": 0.28026977211506765,
+          "upper": 0.3106471079367857,
+          "ci_width": 0.030377335821718032
+        },
+        "rouge2": {
+          "mean": 0.105738486914076,
+          "lower": 0.09222691785068436,
+          "upper": 0.11890746357891624,
+          "ci_width": 0.026680545728231878
+        },
+        "rougeLsum": {
+          "mean": 0.2418744088943489,
+          "lower": 0.22742449316376886,
+          "upper": 0.2558568609501047,
+          "ci_width": 0.028432367786335816
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 74.57,
+        "std": 11.282069845555824,
+        "median": 79.0,
+        "min": 27,
+        "max": 80,
+        "total": 14914,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 49.6,
+        "std": 14.275503493747602,
+        "median": 47.0,
+        "min": 24,
+        "max": 100,
+        "total": 9920,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.5034274193548387,
+        "avg_pred_length": 74.57,
+        "avg_ref_length": 49.6
+      }
+    }
+  },
+  "xsum": {
+    "standard_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.19930747205729155,
+          "lower": 0.18823717609762264,
+          "upper": 0.21080605225574395,
+          "ci_width": 0.02256887615812131
+        },
+        "rouge2": {
+          "mean": 0.0287051740651903,
+          "lower": 0.023334630177944956,
+          "upper": 0.03424005336748099,
+          "ci_width": 0.010905423189536034
+        },
+        "rougeLsum": {
+          "mean": 0.13324334334587717,
+          "lower": 0.12555373307052825,
+          "upper": 0.14087555944977206,
+          "ci_width": 0.015321826379243814
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 52.075,
+        "std": 12.213082125327743,
+        "median": 52.5,
+        "min": 20,
+        "max": 78,
+        "total": 10415,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.665,
+        "std": 8.705904605496203,
+        "median": 29.0,
+        "min": 7,
+        "max": 73,
+        "total": 5933,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.7554356986347548,
+        "avg_pred_length": 52.075,
+        "avg_ref_length": 29.665
+      }
+    },
+    "baseline_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.20001432107484796,
+          "lower": 0.18958758568471543,
+          "upper": 0.2097546768337401,
+          "ci_width": 0.02016709114902468
+        },
+        "rouge2": {
+          "mean": 0.031803022232408204,
+          "lower": 0.026808870878222296,
+          "upper": 0.0371224944597444,
+          "ci_width": 0.010313623581522106
+        },
+        "rougeLsum": {
+          "mean": 0.1325056863335238,
+          "lower": 0.12552772652691938,
+          "upper": 0.13901767921935482,
+          "ci_width": 0.013489952692435442
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 70.345,
+        "std": 15.034160269200271,
+        "median": 78.0,
+        "min": 19,
+        "max": 80,
+        "total": 14069,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.665,
+        "std": 8.705904605496203,
+        "median": 29.0,
+        "min": 7,
+        "max": 73,
+        "total": 5933,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.371312995112085,
+        "avg_pred_length": 70.345,
+        "avg_ref_length": 29.665
+      }
+    },
+    "monotonic_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.18943734520635186,
+          "lower": 0.18019910734365674,
+          "upper": 0.19749839505102113,
+          "ci_width": 0.017299287707364386
+        },
+        "rouge2": {
+          "mean": 0.027683467848886777,
+          "lower": 0.02336168334679472,
+          "upper": 0.032379769734836146,
+          "ci_width": 0.009018086388041427
+        },
+        "rougeLsum": {
+          "mean": 0.12935406540992558,
+          "lower": 0.12282541510001699,
+          "upper": 0.13583030307273633,
+          "ci_width": 0.013004887972719342
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 69.695,
+        "std": 16.48126132915803,
+        "median": 79.0,
+        "min": 18,
+        "max": 80,
+        "total": 13939,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.665,
+        "std": 8.705904605496203,
+        "median": 29.0,
+        "min": 7,
+        "max": 73,
+        "total": 5933,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.34940165177819,
+        "avg_pred_length": 69.695,
+        "avg_ref_length": 29.665
+      }
+    }
+  },
+  "metadata": {
+    "seed": 42,
+    "model_name": "t5-small",
+    "use_full_test_sets": false,
+    "decoding_params": {
+      "num_beams": 4,
+      "length_penalty": 1.2,
+      "min_new_tokens": 10,
+      "max_new_tokens": 80,
+      "no_repeat_ngram_size": 3,
+      "early_stopping": true
+    },
+    "rouge_config": {
+      "metrics": [
+        "rouge1",
+        "rouge2",
+        "rougeLsum"
+      ],
+      "use_stemmer": true,
+      "bootstrap_samples": 1000
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-01-28 05:08:30",
+    "date": "2026-01-28",
+    "time": "05:08:30",
+    "seed": 42,
+    "unix_timestamp": 1769576910,
+    "run_id": "20260128_050830_seed42"
+  }
+}
