@@ -155,23 +155,49 @@ Instead of attacking summaries:
 
 ## Usage
 
-### Quick Start
+### Quick Start (Automatic Setup)
+
+The `run_all.sh` script handles EVERYTHING automatically:
+
 ```bash
-# Submit all stages with dependencies
-cd foundation_llm_experiments
-bash run_all.sh
+# Clone repository (if not already done)
+cd /projects/$USER
+git clone https://github.com/PatrickAllenCooper/mono-s2s.git
+cd mono-s2s/foundation_llm_experiments
+
+# Run pipeline (handles all setup + job submission)
+./run_all.sh
 ```
 
+**On first run, this automatically:**
+1. Checks for conda/environment
+2. Runs bootstrap if needed (installs conda, creates environment, installs dependencies)
+3. Submits all 7 experimental stages with proper dependencies
+
+**On subsequent runs:**
+- Skips setup (environment already exists)
+- Directly submits jobs
+
 ### Individual Stages
+
+If you need to run specific stages:
+
 ```bash
 # Run specific stage
 sbatch jobs/job_2_baseline.sh
+
+# With custom seed
+EXPERIMENT_SEED=1337 sbatch jobs/job_2_baseline.sh
 ```
 
 ### Monitor Progress
+
 ```bash
 # Check job status
 squeue -u $USER | grep foundation
+
+# Watch logs
+tail -f logs/job_2_baseline_*.out
 
 # Check results
 cat $SCRATCH/foundation_llm_work/experiment_summary.txt

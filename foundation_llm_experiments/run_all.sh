@@ -2,8 +2,12 @@
 ################################################################################
 # Master Submission Script for Foundation LLM Monotonicity Experiments
 #
-# Submits all experimental stages with proper dependencies.
-# Adapted from main project's run_all.sh for decoder-only models.
+# Automatically handles ALL setup and job submission:
+# - Checks for conda/environment (runs bootstrap if needed)
+# - Submits all experimental stages with proper dependencies
+#
+# USAGE: Just run this script - it handles everything!
+#   ./run_all.sh
 ################################################################################
 
 set -euo pipefail
@@ -11,6 +15,110 @@ set -euo pipefail
 echo "======================================================================"
 echo "FOUNDATION LLM MONOTONICITY EXPERIMENTS"
 echo "Master Submission Script"
+echo "======================================================================"
+echo ""
+
+# Check for required directories
+if [ ! -d "jobs" ]; then
+    echo "ERROR: jobs/ directory not found"
+    echo "Please run this script from foundation_llm_experiments/ directory"
+    exit 1
+fi
+
+if [ ! -d "scripts" ]; then
+    echo "ERROR: scripts/ directory not found"
+    exit 1
+fi
+
+# ======================================================================
+# AUTOMATIC ENVIRONMENT SETUP
+# ======================================================================
+
+echo "Checking environment setup..."
+echo ""
+
+# Define expected conda location and environment name
+CONDA_BASE="/projects/$USER/miniconda3"
+ENV_NAME="mono_s2s"
+SETUP_NEEDED=false
+
+# Check if conda is installed
+if [ ! -f "$CONDA_BASE/bin/conda" ]; then
+    echo "⚠️  Conda not found at $CONDA_BASE"
+    SETUP_NEEDED=true
+else
+    # Initialize conda for this script
+    source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null || true
+    
+    # Check if environment exists
+    if ! conda env list 2>/dev/null | grep -q "^$ENV_NAME "; then
+        echo "⚠️  Conda environment '$ENV_NAME' not found"
+        SETUP_NEEDED=true
+    else
+        # Check if PyTorch is installed
+        conda activate "$ENV_NAME" 2>/dev/null || true
+        if ! python -c "import torch" 2>/dev/null; then
+            echo "⚠️  PyTorch not installed in environment '$ENV_NAME'"
+            SETUP_NEEDED=true
+        else
+            echo "✓ Environment '$ENV_NAME' is ready"
+            echo "  Conda: $CONDA_BASE"
+            echo "  Python: $(which python)"
+            echo "  PyTorch: $(python -c 'import torch; print(torch.__version__)' 2>/dev/null || echo 'unknown')"
+        fi
+    fi
+fi
+
+# Run bootstrap if needed
+if [ "$SETUP_NEEDED" = true ]; then
+    echo ""
+    echo "======================================================================"
+    echo "FIRST-TIME SETUP REQUIRED"
+    echo "======================================================================"
+    echo ""
+    echo "The bootstrap script will automatically:"
+    echo "  - Install Miniconda to /projects/$USER (avoids home quota issues)"
+    echo "  - Create conda environment with Python 3.10"
+    echo "  - Install PyTorch with CUDA 11.8"
+    echo "  - Install all dependencies"
+    echo "  - Configure HuggingFace cache"
+    echo ""
+    echo "This will take ~5-10 minutes."
+    echo ""
+    read -p "Run automatic setup now? (y/N) " -n 1 -r
+    echo ""
+    
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo ""
+        echo "Setup cancelled. You can run it manually later:"
+        echo "  bash bootstrap_curc.sh"
+        exit 0
+    fi
+    
+    echo ""
+    echo "Running bootstrap script..."
+    echo ""
+    
+    if [ -f "bootstrap_curc.sh" ]; then
+        bash bootstrap_curc.sh
+        
+        # Re-initialize conda after bootstrap
+        source "$CONDA_BASE/etc/profile.d/conda.sh"
+        conda activate "$ENV_NAME"
+        
+        echo ""
+        echo "✓ Setup complete!"
+        echo ""
+    else
+        echo "ERROR: bootstrap_curc.sh not found"
+        echo "Please ensure you're in the foundation_llm_experiments directory"
+        exit 1
+    fi
+fi
+
+echo ""
+echo "======================================================================"
+echo "SUBMITTING EXPERIMENTAL STAGES"
 echo "======================================================================"
 echo ""
 echo "This will submit SLURM jobs for all experimental stages:"
@@ -25,18 +133,6 @@ echo "  Stage 7: Aggregate results"
 echo ""
 echo "Expected total time: ~60-70 hours per seed"
 echo ""
-
-# Check for required directories
-if [ ! -d "jobs" ]; then
-    echo "ERROR: jobs/ directory not found"
-    echo "Please run this script from foundation_llm_experiments/ directory"
-    exit 1
-fi
-
-if [ ! -d "scripts" ]; then
-    echo "ERROR: scripts/ directory not found"
-    exit 1
-fi
 
 # Create logs directory
 mkdir -p logs

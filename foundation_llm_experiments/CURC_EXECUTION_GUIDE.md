@@ -20,32 +20,38 @@ This pipeline extends the main mono-s2s experiments to general-purpose foundatio
 
 ---
 
-## Quick Start (3 Steps)
+## Quick Start (2 Steps)
 
 ```bash
-# 1. SSH to Alpine
+# 1. SSH to Alpine and clone repository
 ssh your_username@login.rc.colorado.edu
-
-# 2. Clone and bootstrap (handles all setup automatically)
 cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/foundation_llm_experiments
-bash bootstrap_curc.sh
 
-# 3. Submit jobs
+# 2. Run the pipeline (handles ALL setup automatically)
 ./run_all.sh
 ```
 
-**That's it!** The bootstrap script automatically handles:
-- ✓ Conda installation to `/projects` (avoids home directory quota issues)
-- ✓ Python 3.10 environment creation
-- ✓ PyTorch + CUDA 11.8 installation
-- ✓ All dependencies from requirements.txt
-- ✓ Making scripts executable
-- ✓ Setting up HuggingFace cache in `$SCRATCH`
+**That's literally it!** The `run_all.sh` script automatically:
 
-**Total setup time:** ~5-10 minutes  
-**Total experiment time:** ~60-70 hours per seed
+**First-time setup (if needed):**
+- ✓ Checks for conda/environment
+- ✓ Runs bootstrap if not found
+- ✓ Installs Miniconda to `/projects` (avoids home quota issues)
+- ✓ Creates Python 3.10 environment
+- ✓ Installs PyTorch + CUDA 11.8
+- ✓ Installs all dependencies
+- ✓ Sets up HuggingFace cache in `$SCRATCH`
+
+**Then automatically:**
+- ✓ Submits all 7 experimental stages
+- ✓ Sets up job dependencies
+- ✓ Provides monitoring commands
+
+**Total setup time:** ~5-10 minutes (first run only)  
+**Total experiment time:** ~60-70 hours per seed  
+**Subsequent runs:** Instant (environment already exists)
 
 ---
 
@@ -67,38 +73,39 @@ bash bootstrap_curc.sh
 
 ---
 
-## Setup Steps
+## Setup
 
-### ONE-COMMAND SETUP (Recommended)
+### Automatic Setup (Default)
 
-The bootstrap script handles everything automatically:
+**You don't need to do anything special!** Just run `./run_all.sh` and it handles all setup automatically.
 
-```bash
-# 1. Clone repository
-cd /projects/$USER
-git clone https://github.com/PatrickAllenCooper/mono-s2s.git
-cd mono-s2s/foundation_llm_experiments
+The script will:
+1. Check if conda/environment exists
+2. If not found, automatically run the bootstrap script
+3. Bootstrap installs conda, creates environment, installs dependencies
+4. Then submit all jobs
 
-# 2. Run bootstrap (installs conda, creates environment, installs dependencies)
-bash bootstrap_curc.sh
-```
-
-**The bootstrap script automatically:**
-- Installs Miniconda to `/projects/$USER/miniconda3` (avoids home quota issues)
-- Creates `mono_s2s` conda environment with Python 3.10
-- Installs PyTorch with CUDA 11.8 support
-- Installs all dependencies from `requirements.txt`
-- Makes all scripts executable
-- Sets up HuggingFace cache in `$SCRATCH`
-- Validates configuration
-
-**That's it!** You're ready to submit jobs.
+**Total setup time (first run):** ~5-10 minutes  
+**Subsequent runs:** Instant (environment already exists)
 
 ---
 
-### Manual Setup (Alternative)
+### Manual Bootstrap (Optional)
 
-If you prefer to set up manually or already have conda installed:
+If you want to run setup separately before submitting jobs:
+
+```bash
+cd /projects/$USER/mono-s2s/foundation_llm_experiments
+bash bootstrap_curc.sh
+```
+
+This is the same bootstrap that `run_all.sh` runs automatically, but you can run it manually if you want to verify setup before submitting jobs.
+
+---
+
+### Advanced: Manual Setup
+
+If you prefer complete manual control or have an existing conda installation:
 
 <details>
 <summary>Click to expand manual setup instructions</summary>
@@ -639,11 +646,14 @@ Based on extrapolation from T5-small findings:
 ### Essential Commands
 
 ```bash
-# Initial setup (run once)
-cd /projects/$USER/mono-s2s/foundation_llm_experiments
-bash bootstrap_curc.sh
+# First time: Clone and run (handles all setup automatically)
+cd /projects/$USER
+git clone https://github.com/PatrickAllenCooper/mono-s2s.git
+cd mono-s2s/foundation_llm_experiments
+./run_all.sh
 
-# Submit pipeline
+# Subsequent runs: Just run (environment already exists)
+cd /projects/$USER/mono-s2s/foundation_llm_experiments
 ./run_all.sh
 
 # Check jobs
