@@ -312,20 +312,54 @@ du -sh $SCRATCH/huggingface_cache
 
 ---
 
-## Expected Resource Usage
+## Checkpointing and Auto-Resubmission
+
+**Critical Feature:** With 70+ hours total runtime and SLURM's 24-hour limit, jobs use:
+
+### Automatic Checkpoint System
+
+**Training jobs checkpoint:**
+- Every 500 steps (step-based)
+- Every 30 minutes (time-based, critical for timeout protection)
+- Keeps last 3 checkpoints only (saves disk space)
+
+**On job timeout:**
+1. SLURM sends warning signal 10 minutes before timeout
+2. Script saves final checkpoint and exits gracefully
+3. Monitor script detects timeout
+4. Automatically resubmits job
+5. Job resumes from latest checkpoint
+
+**User experience:**
+- Submit once with `./run_all.sh`
+- Enable monitoring when prompted
+- Jobs automatically resubmit and resume on timeout
+- No manual intervention needed!
+
+### Expected Resubmissions
+
+| Stage | Total Time | Time Limit | Auto-Resubmits | Manual Action |
+|-------|-----------|------------|----------------|---------------|
+| 2: Baseline | ~24h | 23:50:00 | 1 (rarely) | None |
+| 3: Monotonic | ~32h | 23:50:00 | 1-2 | None |
+| Others | <8h | As shown | 0 | None |
+
+**Monitoring handles everything automatically!**
+
+### Expected Resource Usage
 
 ### Per-Stage Requirements
 
-| Stage | GPU | Memory | Time | Storage |
-|-------|-----|--------|------|---------|
-| 0: Setup | Yes | 80GB | 1h | ~6GB |
-| 1: Apply Monotonicity | Yes | 80GB | 30min | ~6GB |
-| 2: Baseline Training | Yes | 80GB | 24h | ~25GB |
-| 3: Monotonic Training | Yes | 80GB | 32h | ~25GB |
-| 4: Evaluation | Yes | 80GB | 8h | ~5GB |
-| 5: UAT Attacks | Yes | 80GB | 6h | ~2GB |
-| 6: HotFlip Attacks | Yes | 80GB | 4h | ~2GB |
-| 7: Aggregate | No | 16GB | 30min | ~1GB |
+| Stage | GPU | Memory | Time Limit | Actual Time | Storage |
+|-------|-----|--------|-----------|-------------|---------|
+| 0: Setup | Yes | 80GB | 1:00:00 | ~1h | ~6GB |
+| 1: Apply Monotonicity | Yes | 80GB | 0:30:00 | ~30min | ~6GB |
+| 2: Baseline Training | Yes | 80GB | 23:50:00 | ~24h | ~25GB |
+| 3: Monotonic Training | Yes | 80GB | 23:50:00 | ~32h (2 runs) | ~25GB |
+| 4: Evaluation | Yes | 80GB | 8:00:00 | ~8h | ~5GB |
+| 5: UAT Attacks | Yes | 80GB | 6:00:00 | ~6h | ~2GB |
+| 6: HotFlip Attacks | Yes | 80GB | 4:00:00 | ~4h | ~2GB |
+| 7: Aggregate | No | 16GB | 0:30:00 | ~30min | ~1GB |
 
 ### Total Resource Summary
 
@@ -479,17 +513,51 @@ squeue -u $USER --start
 
 ### Recovery Procedures
 
-#### Resume Failed Training
+#### If Monitoring Script Fails
 
-If a job fails mid-training, checkpoints are saved every 5000 steps:
+If the monitoring script stops or you didn't enable it:
 
 ```bash
-# Check available checkpoints
-ls -lh $SCRATCH/foundation_llm_work/checkpoints/baseline_checkpoints/
-ls -lh $SCRATCH/foundation_llm_work/checkpoints/monotonic_checkpoints/
+# Check which jobs timed out
+sacct -u $USER --format=JobID,JobName,State,ExitCode | grep TIMEOUT
 
-# Resubmit the failed stage
+# Manual resubmit (checkpoints resume automatically)
 sbatch jobs/job_2_baseline.sh  # Will auto-resume from latest checkpoint
+sbatch jobs/job_3_monotonic.sh
+```
+
+**The scripts automatically detect and resume from checkpoints!**
+
+#### Check Checkpoint Status
+
+```bash
+# See available checkpoints
+ls -lth $SCRATCH/foundation_llm_work/checkpoints/baseline_checkpoints/
+ls -lth $SCRATCH/foundation_llm_work/checkpoints/monotonic_checkpoints/
+
+# Most recent checkpoint
+ls -t $SCRATCH/foundation_llm_work/checkpoints/baseline_checkpoints/ | head -1
+
+# Checkpoint info (if using Python)
+python -c "
+import torch
+ckpt = torch.load('path/to/checkpoint.pt', weights_only=False)
+print(f\"Step: {ckpt.get('step', 'unknown')}\")
+print(f\"Epoch: {ckpt.get('epoch', 'unknown')}\")
+print(f\"Saved: {ckpt.get('timestamp', 'unknown')}\")
+"
+```
+
+#### Manual Restart with Monitoring
+
+If you need to restart monitoring:
+
+```bash
+# Load saved job IDs and restart monitoring
+./monitor_and_resubmit.sh $(cat .job_ids)
+
+# Or monitor specific jobs
+./monitor_and_resubmit.sh 12345678 12345679
 ```
 
 #### Clean and Restart

@@ -7,10 +7,16 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=80G
-#SBATCH --time=32:00:00
+#SBATCH --time=23:50:00
 #SBATCH --output=logs/job_3_monotonic_%j.out
 #SBATCH --error=logs/job_3_monotonic_%j.err
+#SBATCH --signal=SIGUSR1@600
 
+# MAX TIME: 23:50:00 (24h with 10min buffer for final checkpoint save)
+# Original estimate was 32h, so this will need ~2 auto-resubmissions
+# SLURM will send SIGUSR1 signal 10 minutes before timeout
+# Monitor script will automatically resubmit and resume from checkpoint
+#
 # Stage 3: Monotonic Recovery Training (W≥0 FFN Constraints)
 # Trained with IDENTICAL settings as baseline for fair comparison
 

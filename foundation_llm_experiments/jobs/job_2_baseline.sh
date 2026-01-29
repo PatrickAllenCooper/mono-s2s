@@ -7,9 +7,14 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=80G
-#SBATCH --time=24:00:00
+#SBATCH --time=23:50:00
 #SBATCH --output=logs/job_2_baseline_%j.out
 #SBATCH --error=logs/job_2_baseline_%j.err
+#SBATCH --signal=SIGUSR1@600
+
+# MAX TIME: 23:50:00 (24h with 10min buffer for final checkpoint save)
+# SLURM will send SIGUSR1 signal 10 minutes before timeout
+# This gives us time to save checkpoint and exit gracefully
 
 # Stage 2: Baseline Recovery Training (Pythia-1.4B on Pile)
 # This is the FAIR BASELINE - trained with same data/hyperparameters as monotonic

@@ -202,14 +202,61 @@ echo "  Stage 5: $JOB5"
 echo "  Stage 6: $JOB6"
 echo "  Stage 7: $JOB7"
 echo ""
-echo "Monitor progress:"
+
+# Save job IDs for monitoring script
+echo "$JOB0 $JOB1 $JOB2 $JOB3 $JOB4 $JOB5 $JOB6 $JOB7" > .job_ids
+echo "✓ Job IDs saved to .job_ids"
+echo ""
+
+# Ask about automatic monitoring and resubmission
+read -p "Start automatic job monitoring with auto-resubmit on timeout? (Y/n) " -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    echo ""
+    echo "Starting job monitor in background..."
+    echo "This will automatically resubmit jobs if they timeout."
+    echo ""
+    
+    # Make monitor script executable
+    chmod +x monitor_and_resubmit.sh 2>/dev/null || true
+    
+    # Start monitor in background
+    nohup ./monitor_and_resubmit.sh $JOB0 $JOB1 $JOB2 $JOB3 $JOB4 $JOB5 $JOB6 $JOB7 > logs/monitor_${JOB0}.out 2>&1 &
+    MONITOR_PID=$!
+    
+    echo "✓ Monitor started (PID: $MONITOR_PID)"
+    echo "  Monitor log: logs/monitor_${JOB0}.out"
+    echo "  To stop monitoring: kill $MONITOR_PID"
+    echo ""
+else
+    echo ""
+    echo "Skipping automatic monitoring."
+    echo "You can start it manually later:"
+    echo "  ./monitor_and_resubmit.sh \$(cat .job_ids)"
+    echo ""
+fi
+
+echo "======================================================================"
+echo "MONITORING COMMANDS"
+echo "======================================================================"
+echo ""
+echo "Check job status:"
 echo "  squeue -u \$USER | grep foundation"
-echo "  tail -f logs/job_0_setup_${JOB0}.out"
+echo ""
+echo "Watch specific job log:"
+echo "  tail -f logs/job_2_baseline_${JOB2}.out"
+echo ""
+echo "Check monitor log (if monitoring enabled):"
+echo "  tail -f logs/monitor_${JOB0}.out"
 echo ""
 echo "Check results:"
 echo "  cat \$SCRATCH/foundation_llm_work/experiment_summary.txt"
 echo ""
 echo "Cancel all jobs:"
 echo "  scancel $JOB0 $JOB1 $JOB2 $JOB3 $JOB4 $JOB5 $JOB6 $JOB7"
+echo ""
+echo "Manual resubmit if needed (checkpoint resume automatic):"
+echo "  sbatch jobs/job_2_baseline.sh"
 echo ""
 echo "======================================================================"

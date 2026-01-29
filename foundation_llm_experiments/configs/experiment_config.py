@@ -149,23 +149,35 @@ class FoundationExperimentConfig:
     SLURM_GPUS_PER_NODE = 1
     SLURM_MEM_GB = 80  # A100 40GB + overhead
     
-    # Time limits (Pythia-1.4B is larger than T5-small)
+    # Time limits - MAX OUT for automatic resubmission strategy
+    # SLURM typically limits to 24 hours, so we max out what we can
+    # Jobs will checkpoint and auto-resubmit if they timeout
     TIME_SETUP = "01:00:00"          # 1 hour (download model)
     TIME_APPLY_MONOTONICITY = "00:30:00"  # 30 min (apply constraints)
-    TIME_TRAIN_BASELINE = "24:00:00"  # 24 hours (1 epoch Pile)
-    TIME_TRAIN_MONOTONIC = "32:00:00"  # 32 hours (extended warmup)
+    TIME_TRAIN_BASELINE = "23:50:00"  # MAX: 24 hours (with 10 min buffer for checkpoint save)
+    TIME_TRAIN_MONOTONIC = "23:50:00"  # MAX: 24 hours (will need 2+ resubmissions)
     TIME_EVALUATE = "08:00:00"        # 8 hours (multiple benchmarks)
     TIME_UAT = "06:00:00"             # 6 hours (UAT optimization)
     TIME_HOTFLIP = "04:00:00"         # 4 hours (HotFlip attacks)
     TIME_AGGREGATE = "00:30:00"       # 30 min (aggregate results)
     
     # ======================================================================
-    # LOGGING & CHECKPOINTING
+    # LOGGING & CHECKPOINTING (CRITICAL FOR RESUME)
     # ======================================================================
     
-    SAVE_CHECKPOINT_EVERY_N_STEPS = 5000  # More frequent for long training
+    # Checkpoint frequently for resume capability
+    SAVE_CHECKPOINT_EVERY_N_STEPS = 500  # Every 500 steps (~every 30-60 min)
+    SAVE_CHECKPOINT_EVERY_N_MINUTES = 30  # Also save every 30 minutes (time-based backup)
+    
+    # Cleanup old checkpoints to save space (keep last N)
+    KEEP_LAST_N_CHECKPOINTS = 3  # Keep last 3 checkpoints only
+    
     LOG_EVERY_N_STEPS = 100
     VERBOSE_LOGGING = True
+    
+    # Auto-resubmission settings
+    MAX_RESUBMISSIONS_PER_STAGE = 5  # Max times to resubmit a timed-out job
+    RESUBMISSION_DELAY_SECONDS = 60  # Wait before resubmitting
     
     # ======================================================================
     # HELPER METHODS
