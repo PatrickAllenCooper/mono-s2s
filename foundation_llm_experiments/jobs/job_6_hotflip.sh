@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=80G
+#SBATCH --mem=78G
 #SBATCH --time=04:00:00
 #SBATCH --output=logs/job_6_hotflip_%j.out
 #SBATCH --error=logs/job_6_hotflip_%j.err
