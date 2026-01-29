@@ -1,9 +1,19 @@
 # Mono-S2S (Monotonic Seq2Seq): HPC Fair-Comparison Pipeline
 
 **Status:** Active research project for ICML 2025 submission  
-**Latest Update:** 2026-01-21  
+**Latest Update:** 2026-01-29  
 **Test Coverage:** 98.01% ✅  
 **Current Configuration:** Fair comparison (7 epochs both models), full test sets
+
+---
+
+## Quick Navigation
+
+**Want to...**
+- **Run the HPC pipeline?** → See Quick Start section below, then `hpc_version/README.md`
+- **Work on the ICML paper?** → See `documentation/README.md`
+- **Run or write tests?** → See `tests/README.md`
+- **Run foundation LLM experiments?** → See `foundation_llm_experiments/README.md`
 
 This repo contains a **fully automated SLURM/HPC pipeline** to test whether **local monotonic constraints in T5 feed-forward sublayers (FFNs)** improve adversarial robustness in seq2seq summarization, under a **methodologically fair three-way comparison**:
 
@@ -246,21 +256,13 @@ If you use CURC Alpine resources, acknowledge:
 
 ### Core Documentation
 - **README.md** (this file) - Setup and pipeline overview
-- **TESTING.md** - Test suite guide (98% coverage achieved)
-- **PAPER_STATUS.md** - ICML submission status and roadmap
+- **documentation/README.md** - Comprehensive paper development and testing guide
+- **hpc_version/README.md** - HPC pipeline usage and troubleshooting
+- **tests/README.md** - Test suite reference (98% coverage)
 
 ### Paper Development
 - **documentation/monotone_llms_paper.tex** - ICML paper draft
-- **documentation/QUICK_ICML_RECOMMENDATIONS.md** - Priority fixes
-- **documentation/paper_methods_critique.md** - Detailed methods review
-
-### Testing Documentation  
-- **TEST_COVERAGE_FINAL.md** - Coverage achievement report (98.01%)
-- **tests/README.md** - Test suite reference
-
-### HPC Documentation
-- **hpc_version/IMPROVEMENTS_SUMMARY.md** - Pipeline improvements
-- **hpc_version/CHANGES_AT_A_GLANCE.md** - Quick reference
+- **documentation/README.md** - Complete ICML recommendations and guidance
 
 ### Configuration
 All experimental settings in `hpc_version/configs/experiment_config.py`
