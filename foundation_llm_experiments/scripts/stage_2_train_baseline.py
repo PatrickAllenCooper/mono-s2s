@@ -333,15 +333,27 @@ def main():
                     break
         else:
             # Quick mode or limited samples
-            logger.log(f"  Loading Pile validation split (faster)...")
+            logger.log(f"  Loading Pile data (limited samples for fast training)...")
             
-            pile = load_dataset(
-                Config.TRAINING_DATASET,
-                split="validation",
-                streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR,
-                trust_remote_code=True
-            )
+            # Try validation split first, fall back to train split if not available
+            try:
+                pile = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="validation",
+                    streaming=False,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
+                logger.log(f"    Using validation split")
+            except (ValueError, KeyError):
+                logger.log(f"    Validation split not available, using train split")
+                pile = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="train",
+                    streaming=True,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
             
             max_samples = getattr(Config, 'TRAINING_SAMPLES', None) or getattr(Config, 'QUICK_TRAINING_SAMPLES', 10000)
             train_texts = [example['text'] for i, example in enumerate(pile) if i < max_samples]

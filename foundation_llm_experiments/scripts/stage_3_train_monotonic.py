@@ -339,27 +339,47 @@ def main():
                 if i >= 1000000:  # 1M samples max for safety
                     break
         else:
-            logger.log(f"  Loading Pile validation split...")
+            logger.log(f"  Loading Pile data (limited samples for fast training)...")
             
-            pile = load_dataset(
-                Config.TRAINING_DATASET,
-                split="validation",
-                streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR,
-                trust_remote_code=True
-            )
+            # Try validation split first, fall back to train split if not available
+            try:
+                pile = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="validation",
+                    streaming=False,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
+                logger.log(f"    Using validation split")
+            except (ValueError, KeyError):
+                logger.log(f"    Validation split not available, using train split")
+                pile = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="train",
+                    streaming=True,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
             
             max_samples = getattr(Config, 'TRAINING_SAMPLES', 10000) or 10000
             train_texts = [example['text'] for i, example in enumerate(pile) if i < max_samples]
         
         logger.log(f"  ✓ Loaded {len(train_texts)} training samples")
         
+        # Split into train/val
+        split_idx = int(len(train_texts) * 0.9)
+        train_subset = train_texts[:split_idx]
+        val_subset = train_texts[split_idx:]
+        
+        logger.log(f"  Train: {len(train_subset)} samples")
+        logger.log(f"  Val: {len(val_subset)} samples")
+        
         train_dataset = LanguageModelingDataset(
-            dummy_texts[:800],
+            train_subset,
             tokenizer
         )
         val_dataset = LanguageModelingDataset(
-            dummy_texts[800:],
+            val_subset,
             tokenizer
         )
         

@@ -109,8 +109,9 @@ class FoundationExperimentConfig:
     # ======================================================================
     
     # Training dataset (for recovery phase)
-    TRAINING_DATASET = "EleutherAI/pile"
-    TRAINING_SUBSET = "all"  # Use full Pile (or "validation" for quick tests)
+    # Note: Using pile-uncopyrighted (parquet-based) instead of old pile (deprecated script-based)
+    TRAINING_DATASET = "monology/pile-uncopyrighted"
+    TRAINING_SUBSET = "train"  # Use train split (validation also available)
     TRAINING_SAMPLES = None  # None = full dataset, set number for quick tests
     
     # For quick testing (set TRAINING_SAMPLES to this value for quick mode)

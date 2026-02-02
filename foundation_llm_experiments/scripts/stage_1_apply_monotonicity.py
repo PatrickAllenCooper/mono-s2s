@@ -120,6 +120,10 @@ def main():
         max_weight = float('-inf')
         
         for name, param in model.named_parameters():
+            # Skip .original parameters - these are pre-transformation and expected to be negative
+            if '.original' in name:
+                continue
+                
             if 'weight' in name and any(x in name.lower() for x in ['mlp', 'dense']):
                 param_min = param.data.min().item()
                 param_max = param.data.max().item()
