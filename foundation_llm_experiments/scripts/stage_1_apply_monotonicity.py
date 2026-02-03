@@ -123,8 +123,15 @@ def main():
             # Skip .original parameters - these are pre-transformation and expected to be negative
             if '.original' in name:
                 continue
+            
+            # Skip attention layers - only check FFN/MLP layers
+            if 'attention' in name.lower():
+                continue
                 
-            if 'weight' in name and any(x in name.lower() for x in ['mlp', 'dense']):
+            # Check FFN/MLP weights only (same patterns as make_model_monotonic)
+            if 'weight' in name and any(x in name.lower() for x in 
+                                       ['mlp', 'dense_h_to_4h', 'dense_4h_to_h', 
+                                        'c_fc', 'c_proj', 'fc_in', 'fc_out']):
                 param_min = param.data.min().item()
                 param_max = param.data.max().item()
                 min_weight = min(min_weight, param_min)
