@@ -301,6 +301,9 @@ def main():
             Config.MODEL_NAME,
             cache_dir=Config.DATA_CACHE_DIR
         )
+        # Set pad_token for Pythia tokenizer
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
         
         # Load training data
         logger.log("Loading training data from Pile...")
