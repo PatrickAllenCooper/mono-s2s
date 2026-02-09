@@ -410,7 +410,8 @@ def main():
         model = AutoModelForCausalLM.from_pretrained(
             Config.MODEL_NAME,
             cache_dir=Config.DATA_CACHE_DIR,
-            torch_dtype=torch.float32
+            torch_dtype=torch.bfloat16,  # Use bfloat16 to save memory
+            low_cpu_mem_usage=True
         )
         
         # Apply monotonicity
@@ -428,6 +429,10 @@ def main():
             logger.log("⚠️  No initialized weights found, using freshly applied constraints")
         
         model = model.to(device)
+        
+        # Enable gradient checkpointing to save memory
+        model.gradient_checkpointing_enable()
+        logger.log(f"  Using bfloat16 precision + gradient checkpointing")
         
         # Setup checkpoint paths
         checkpoint_dir = os.path.join(
