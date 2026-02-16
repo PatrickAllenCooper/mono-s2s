@@ -41,6 +41,7 @@ def evaluate_on_pile_test(model, tokenizer, device, max_samples=None):
     
     # Load Pile test set
     try:
+        # Try test split first
         pile_test = load_dataset(
             Config.TRAINING_DATASET,
             split="test",
@@ -48,15 +49,25 @@ def evaluate_on_pile_test(model, tokenizer, device, max_samples=None):
             cache_dir=Config.DATA_CACHE_DIR,
             trust_remote_code=True
         )
-    except:
+    except (ValueError, KeyError):
         # Fallback to validation if test not available
-        pile_test = load_dataset(
-            Config.TRAINING_DATASET,
-            split="validation",
-            streaming=False,
-            cache_dir=Config.DATA_CACHE_DIR,
-            trust_remote_code=True
-        )
+        try:
+            pile_test = load_dataset(
+                Config.TRAINING_DATASET,
+                split="validation",
+                streaming=False,
+                cache_dir=Config.DATA_CACHE_DIR,
+                trust_remote_code=True
+            )
+        except (ValueError, KeyError):
+            # Final fallback: use end of train split as test set
+            pile_test = load_dataset(
+                Config.TRAINING_DATASET,
+                split="train[-50000:]" if not max_samples else f"train[-{max_samples}:]",
+                streaming=False,
+                cache_dir=Config.DATA_CACHE_DIR,
+                trust_remote_code=True
+            )
     
     # Limit samples
     if max_samples:

@@ -257,16 +257,27 @@ def main():
                 cache_dir=Config.DATA_CACHE_DIR,
                 trust_remote_code=True
             )
-        except:
+        except (ValueError, KeyError):
             # Fallback to validation
-            logger.log("  Test split not available, using validation...")
-            pile_test = load_dataset(
-                Config.TRAINING_DATASET,
-                split="validation",
-                streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR,
-                trust_remote_code=True
-            )
+            logger.log("  Test split not available, trying validation...")
+            try:
+                pile_test = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="validation",
+                    streaming=False,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
+            except (ValueError, KeyError):
+                # Final fallback: use end of train split as test set
+                logger.log("  Using end of train split as test set...")
+                pile_test = load_dataset(
+                    Config.TRAINING_DATASET,
+                    split="train[-10000:]",
+                    streaming=False,
+                    cache_dir=Config.DATA_CACHE_DIR,
+                    trust_remote_code=True
+                )
         
         # Collect texts
         max_samples = 1500 if Config.USE_FULL_EVAL_SETS else 300
