@@ -59,13 +59,13 @@ class FoundationExperimentConfig:
     # ======================================================================
     
     # Recovery training (restore perplexity after monotonicity init)
-    RECOVERY_EPOCHS = 1  # 1 epoch on Pile (~25B tokens)
+    RECOVERY_EPOCHS = 5  # 5 epochs for better baseline performance
     RECOVERY_LR = 1e-5
     RECOVERY_WARMUP_RATIO = 0.10
     RECOVERY_WEIGHT_DECAY = 0.01
     
     # Monotonic recovery (same data, extended warmup)
-    MONOTONIC_RECOVERY_EPOCHS = 1
+    MONOTONIC_RECOVERY_EPOCHS = 10  # 10 epochs - monotonic needs more training
     MONOTONIC_RECOVERY_LR = 1e-5
     MONOTONIC_RECOVERY_WARMUP_RATIO = 0.15  # More warmup for softplus stability
     MONOTONIC_RECOVERY_WEIGHT_DECAY = 0.01
@@ -115,11 +115,11 @@ class FoundationExperimentConfig:
     TRAINING_SAMPLES = None  # None = full dataset, set number for quick tests
     
     # For quick testing (set TRAINING_SAMPLES to this value for quick mode)
-    QUICK_TRAINING_SAMPLES = 10000
+    QUICK_TRAINING_SAMPLES = 100000  # 100K samples for production runs
     
     # CRITICAL FIX: Use full test sets for publication-quality results
     # Set to False for quick testing (reduces runtime from 60h to 5h per seed)
-    USE_FULL_EVAL_SETS = False  # Set True for production runs
+    USE_FULL_EVAL_SETS = True  # Production mode: use full eval sets
     
     # ======================================================================
     # ATTACK CONFIGURATION
@@ -155,8 +155,8 @@ class FoundationExperimentConfig:
     # Jobs will checkpoint and auto-resubmit if they timeout
     TIME_SETUP = "01:00:00"          # 1 hour (download model)
     TIME_APPLY_MONOTONICITY = "00:30:00"  # 30 min (apply constraints)
-    TIME_TRAIN_BASELINE = "23:50:00"  # MAX: 24 hours (with 10 min buffer for checkpoint save)
-    TIME_TRAIN_MONOTONIC = "23:50:00"  # MAX: 24 hours (will need 2+ resubmissions)
+    TIME_TRAIN_BASELINE = "23:50:00"  # MAX: 24 hours (5 epochs will need 5+ resubmissions)
+    TIME_TRAIN_MONOTONIC = "23:50:00"  # MAX: 24 hours (10 epochs will need 10+ resubmissions)
     TIME_EVALUATE = "08:00:00"        # 8 hours (multiple benchmarks)
     TIME_UAT = "06:00:00"             # 6 hours (UAT optimization)
     TIME_HOTFLIP = "04:00:00"         # 4 hours (HotFlip attacks)
