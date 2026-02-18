@@ -2,8 +2,9 @@
 """
 Stage 2: Train Baseline Model (Standard Pythia-1.4B Recovery)
 
-Finetunes standard Pythia-1.4B on Pile training data for 1 epoch.
-This serves as the fair comparison baseline.
+Finetunes standard Pythia-1.4B on Pile training data for N epochs.
+Checkpoints every SAVE_CHECKPOINT_EVERY_N_STEPS steps and on SIGUSR1
+so that wall-time kills do not waste compute.
 
 Inputs:
 - Pythia-1.4B from cache
@@ -14,7 +15,9 @@ Outputs:
 - stage_2_train_baseline_complete.flag
 """
 
+import json
 import os
+import signal
 import sys
 import time
 import torch
@@ -35,9 +38,17 @@ from torch.optim import AdamW
 
 
 class BaselineTrainer:
-    """Trainer for standard (unconstrained) Pythia model"""
-    
-    def __init__(self, model, train_loader, val_loader, device, 
+    """Trainer for standard (unconstrained) Pythia model.
+
+    Checkpoint granularity is at the step level so that a 24-hour SLURM
+    wall-time kill never discards more than SAVE_CHECKPOINT_EVERY_N_STEPS
+    steps of work.  The SIGUSR1 handler (registered in main()) forces an
+    immediate emergency save before SLURM sends SIGTERM.
+    """
+
+    STEP_CKPT_NAME = "checkpoint_step.pt"
+
+    def __init__(self, model, train_loader, val_loader, device,
                  checkpoint_dir, history_path):
         self.model = model
         self.train_loader = train_loader
@@ -45,418 +56,394 @@ class BaselineTrainer:
         self.device = device
         self.checkpoint_dir = checkpoint_dir
         self.history_path = history_path
-        
-        # Hyperparameters
+
         self.learning_rate = Config.RECOVERY_LR
         self.weight_decay = Config.RECOVERY_WEIGHT_DECAY
         self.num_epochs = Config.RECOVERY_EPOCHS
         self.max_grad_norm = Config.MAX_GRAD_NORM
         self.warmup_ratio = Config.RECOVERY_WARMUP_RATIO
-        
-        # Optimizer
+        self.ckpt_every_n_steps = Config.SAVE_CHECKPOINT_EVERY_N_STEPS
+
         self.optimizer = AdamW(
             model.parameters(),
             lr=self.learning_rate,
-            weight_decay=self.weight_decay
+            weight_decay=self.weight_decay,
         )
-        
-        # Scheduler
+
         total_steps = len(train_loader) * self.num_epochs
         warmup_steps = int(total_steps * self.warmup_ratio)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
             num_warmup_steps=warmup_steps,
-            num_training_steps=total_steps
+            num_training_steps=total_steps,
         )
-        
-        # Training state
+
+        # Training state - may be overwritten by load_checkpoint
         self.start_epoch = 0
+        self.start_step = 0        # step within the starting epoch
+        self.global_step = 0       # total steps across all epochs
         self.train_losses = []
         self.val_perplexities = []
         self.best_val_perplexity = float('inf')
-        
-        # CRITICAL: Load checkpoint if exists (for resume after timeout)
-        self.load_checkpoint()
-    
-    def load_checkpoint(self):
-        """Load latest checkpoint if it exists (enables resume after timeout)"""
-        if not os.path.exists(self.checkpoint_dir):
-            print("\nNo checkpoint directory found. Starting from scratch.")
-            return
-        
-        checkpoints = [f for f in os.listdir(self.checkpoint_dir)
-                      if f.startswith('checkpoint_epoch_') and f.endswith('.pt')]
-        
-        if not checkpoints:
-            print("\nNo checkpoint found. Starting training from epoch 0.")
-            return
-        
-        # Get latest checkpoint
-        epochs = [int(f.replace('checkpoint_epoch_', '').replace('.pt', ''))
-                 for f in checkpoints]
-        latest_epoch = max(epochs)
-        latest_checkpoint = os.path.join(
-            self.checkpoint_dir,
-            f'checkpoint_epoch_{latest_epoch}.pt'
-        )
-        
-        print(f"\n🔄 Loading checkpoint from {latest_checkpoint}")
-        checkpoint = torch.load(latest_checkpoint, map_location=self.device, weights_only=False)
-        
-        self.model.load_state_dict(checkpoint['model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        self.start_epoch = checkpoint['epoch']
-        self.best_val_perplexity = checkpoint.get('best_val_perplexity', float('inf'))
-        
-        # Load history
-        if os.path.exists(self.history_path):
-            import json
-            try:
-                with open(self.history_path, 'r') as f:
-                    history = json.load(f)
-            except (json.JSONDecodeError, UnicodeDecodeError):
-                # Fallback to pickle
-                history = torch.load(self.history_path, weights_only=False)
-            self.train_losses = history.get('train_losses', [])
-            self.val_perplexities = history.get('val_perplexities', [])
-        
-        print(f"✓ Resuming from epoch {self.start_epoch}")
-        print(f"  Best validation perplexity so far: {self.best_val_perplexity:.2f}")
-    
-    def train_epoch(self):
-        """Train for one epoch"""
-        self.model.train()
-        total_loss = 0
-        progress_bar = tqdm(self.train_loader, desc="Training Baseline Pythia")
-        
-        for batch in progress_bar:
-            input_ids = batch['input_ids'].to(self.device)
-            attention_mask = batch['attention_mask'].to(self.device)
-            
-            # For causal LM, labels are input_ids shifted
-            labels = input_ids.clone()
-            labels[attention_mask == 0] = -100
-            
-            # Forward pass
-            outputs = self.model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=labels
-            )
-            loss = outputs.loss
-            
-            # Backward pass
-            loss.backward()
-            
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(),
-                max_norm=self.max_grad_norm
-            )
-            
-            # Optimizer step
-            self.optimizer.step()
-            self.scheduler.step()
-            self.optimizer.zero_grad()
-            
-            total_loss += loss.item()
-            progress_bar.set_postfix({
-                'loss': f'{loss.item():.4f}',
-                'lr': f'{self.scheduler.get_last_lr()[0]:.2e}'
-            })
-        
-        avg_loss = total_loss / len(self.train_loader)
-        return avg_loss
-    
-    def validate(self):
-        """Validate model - compute perplexity"""
-        result = compute_perplexity(self.model, self.val_loader, self.device)
-        return result['perplexity'], result['loss']
-    
-    def save_checkpoint(self, epoch, val_ppl, is_best=False):
-        """Save checkpoint"""
+
+        # Flag set by SIGUSR1 handler to trigger emergency save
+        self._save_and_exit = False
+
         os.makedirs(self.checkpoint_dir, exist_ok=True)
-        
-        checkpoint_path = os.path.join(
-            self.checkpoint_dir,
-            f'checkpoint_epoch_{epoch}.pt'
-        )
-        
-        save_dict = {
+        self.load_checkpoint()
+
+    # ------------------------------------------------------------------
+    # Checkpoint I/O
+    # ------------------------------------------------------------------
+
+    def _step_ckpt_path(self):
+        return os.path.join(self.checkpoint_dir, self.STEP_CKPT_NAME)
+
+    def _epoch_ckpt_path(self, epoch):
+        return os.path.join(self.checkpoint_dir, f'checkpoint_epoch_{epoch}.pt')
+
+    def _build_save_dict(self, epoch, step_in_epoch, val_ppl=None):
+        return {
             'epoch': epoch,
+            'step_in_epoch': step_in_epoch,
+            'global_step': self.global_step,
             'model_state_dict': self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict(),
             'scheduler_state_dict': self.scheduler.state_dict(),
             'best_val_perplexity': self.best_val_perplexity,
             'val_perplexity': val_ppl,
+            'train_losses': self.train_losses,
+            'val_perplexities': self.val_perplexities,
         }
-        
-        torch.save(save_dict, checkpoint_path)
-        print(f"  ✓ Checkpoint saved: epoch_{epoch}.pt")
-        
+
+    def save_step_checkpoint(self, epoch, step_in_epoch):
+        """Overwrite a single rolling step-level checkpoint."""
+        tmp = self._step_ckpt_path() + ".tmp"
+        torch.save(self._build_save_dict(epoch, step_in_epoch), tmp)
+        os.replace(tmp, self._step_ckpt_path())
+
+    def save_epoch_checkpoint(self, epoch, val_ppl, is_best=False):
+        """Save a permanent per-epoch checkpoint."""
+        path = self._epoch_ckpt_path(epoch)
+        torch.save(self._build_save_dict(epoch, 0, val_ppl), path)
+        print(f"  Checkpoint saved: checkpoint_epoch_{epoch}.pt")
+
         if is_best:
             best_path = os.path.join(self.checkpoint_dir, 'best_model.pt')
             torch.save(self.model.state_dict(), best_path)
-            print(f"  ✓ Best model saved: best_model.pt")
-        
-        # Save history
+            print(f"  Best model saved: best_model.pt")
+
         history = {
             'train_losses': self.train_losses,
             'val_perplexities': self.val_perplexities,
-            'best_val_perplexity': self.best_val_perplexity
+            'best_val_perplexity': self.best_val_perplexity,
         }
         save_json(history, self.history_path)
-    
+
+        # Remove step checkpoint now that epoch is done cleanly
+        if os.path.exists(self._step_ckpt_path()):
+            os.remove(self._step_ckpt_path())
+
+    def load_checkpoint(self):
+        """Load the best available checkpoint (step > epoch > nothing)."""
+        step_path = self._step_ckpt_path()
+        epoch_ckpts = [
+            f for f in os.listdir(self.checkpoint_dir)
+            if f.startswith('checkpoint_epoch_') and f.endswith('.pt')
+        ]
+
+        candidate = None
+        if os.path.exists(step_path):
+            candidate = step_path
+            print(f"\nFound step-level checkpoint: {step_path}")
+        elif epoch_ckpts:
+            latest_epoch = max(
+                int(f.replace('checkpoint_epoch_', '').replace('.pt', ''))
+                for f in epoch_ckpts
+            )
+            candidate = self._epoch_ckpt_path(latest_epoch)
+            print(f"\nFound epoch checkpoint: {candidate}")
+
+        if candidate is None:
+            print("\nNo checkpoint found. Starting training from scratch.")
+            return
+
+        ckpt = torch.load(candidate, map_location=self.device, weights_only=False)
+        self.model.load_state_dict(ckpt['model_state_dict'])
+        self.optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+        self.scheduler.load_state_dict(ckpt['scheduler_state_dict'])
+        self.start_epoch = ckpt['epoch']
+        self.start_step = ckpt.get('step_in_epoch', 0)
+        self.global_step = ckpt.get('global_step', 0)
+        self.best_val_perplexity = ckpt.get('best_val_perplexity', float('inf'))
+        self.train_losses = ckpt.get('train_losses', [])
+        self.val_perplexities = ckpt.get('val_perplexities', [])
+
+        print(f"Resuming from epoch {self.start_epoch}, step {self.start_step}")
+        print(f"  Best val perplexity so far: {self.best_val_perplexity:.2f}")
+
+    # ------------------------------------------------------------------
+    # Training
+    # ------------------------------------------------------------------
+
+    def validate(self):
+        result = compute_perplexity(self.model, self.val_loader, self.device)
+        return result['perplexity'], result['loss']
+
+    def train_epoch(self, epoch, skip_steps=0):
+        """Train one epoch.  skip_steps > 0 fast-forwards past already-done
+        batches when resuming mid-epoch."""
+        self.model.train()
+        total_loss = 0.0
+        steps_this_epoch = 0
+        last_ckpt_time = time.time()
+
+        progress_bar = tqdm(
+            self.train_loader,
+            desc=f"Baseline epoch {epoch + 1}/{self.num_epochs}",
+            initial=skip_steps,
+            total=len(self.train_loader),
+        )
+
+        for step, batch in enumerate(self.train_loader):
+            # Skip batches already processed before the checkpoint
+            if step < skip_steps:
+                progress_bar.update(1)
+                continue
+
+            if self._save_and_exit:
+                print(f"\nSIGUSR1 received - saving emergency checkpoint at step {step}.")
+                self.save_step_checkpoint(epoch, step)
+                print("Emergency checkpoint saved. Exiting cleanly.")
+                sys.exit(0)
+
+            input_ids = batch['input_ids'].to(self.device)
+            attention_mask = batch['attention_mask'].to(self.device)
+            labels = input_ids.clone()
+            labels[attention_mask == 0] = -100
+
+            outputs = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=labels,
+            )
+            loss = outputs.loss
+            loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+            self.optimizer.step()
+            self.scheduler.step()
+            self.optimizer.zero_grad()
+
+            total_loss += loss.item()
+            steps_this_epoch += 1
+            self.global_step += 1
+
+            progress_bar.set_postfix({
+                'loss': f'{loss.item():.4f}',
+                'lr': f'{self.scheduler.get_last_lr()[0]:.2e}',
+            })
+            progress_bar.update(1)
+
+            # Step-level checkpoint
+            minutes_since_save = (time.time() - last_ckpt_time) / 60
+            if (steps_this_epoch % self.ckpt_every_n_steps == 0 or
+                    minutes_since_save >= Config.SAVE_CHECKPOINT_EVERY_N_MINUTES):
+                self.save_step_checkpoint(epoch, step + 1)
+                last_ckpt_time = time.time()
+
+        progress_bar.close()
+        avg_loss = total_loss / max(steps_this_epoch, 1)
+        return avg_loss
+
     def train(self, max_epochs_per_run=None):
-        """Full training loop with optional epoch limit for job time constraints"""
+        """Full training loop."""
         print(f"\nStarting training from epoch {self.start_epoch + 1}/{self.num_epochs}")
-        print(f"Resume state: start_epoch={self.start_epoch}, target={self.num_epochs}")
-        print("="*80)
-        
+        print(f"  start_epoch={self.start_epoch}, start_step={self.start_step}")
+        print("=" * 80)
+
         epochs_run = 0
-        
+
         for epoch in range(self.start_epoch, self.num_epochs):
-            # Check if we reached max epochs for this run (handles job time limits)
             if max_epochs_per_run is not None and epochs_run >= max_epochs_per_run:
                 print(f"\nReached max epochs per run ({max_epochs_per_run}). Stopping.")
-                print(f"Progress: {epoch}/{self.num_epochs} epochs completed")
-                print(f"To resume: Re-submit this job (will auto-resume from epoch {epoch})")
                 break
+
             print(f"\nEpoch {epoch + 1}/{self.num_epochs}")
-            print("-"*80)
-            
-            # Train
-            train_loss = self.train_epoch()
+            print("-" * 80)
+
+            skip = self.start_step if epoch == self.start_epoch else 0
+            train_loss = self.train_epoch(epoch, skip_steps=skip)
             self.train_losses.append(train_loss)
-            
-            # Validate
+
             val_ppl, val_loss = self.validate()
             self.val_perplexities.append(val_ppl)
-            
+
             print(f"\nEpoch {epoch + 1} Results:")
             print(f"  Train Loss: {train_loss:.4f}")
             print(f"  Val Perplexity: {val_ppl:.2f}")
             print(f"  Val Loss: {val_loss:.4f}")
-            
-            # Check if best
+
             is_best = val_ppl < self.best_val_perplexity
             if is_best:
                 self.best_val_perplexity = val_ppl
-                print(f"  ✓ New best validation perplexity!")
-            
-            # Save checkpoint
-            self.save_checkpoint(epoch + 1, val_ppl, is_best)
-            
+                print(f"  New best validation perplexity!")
+
+            self.save_epoch_checkpoint(epoch + 1, val_ppl, is_best)
             epochs_run += 1
-        
-        # Calculate completion status
-        total_epochs_completed = self.start_epoch + epochs_run
-        is_complete = total_epochs_completed >= self.num_epochs
-        
+
+        total_completed = self.start_epoch + epochs_run
+        is_complete = total_completed >= self.num_epochs
+
         print(f"\n[COMPLETION CHECK]")
-        print(f"  start_epoch={self.start_epoch}")
-        print(f"  epochs_run={epochs_run}")
-        print(f"  total_epochs_completed={total_epochs_completed}")
-        print(f"  target_epochs={self.num_epochs}")
+        print(f"  total_epochs_completed={total_completed}, target={self.num_epochs}")
         print(f"  is_complete={is_complete}")
-        
+
         if is_complete:
-            print("\n" + "="*80)
-            print("✓ ALL TRAINING COMPLETE!")
-            print(f"  Total epochs completed: {total_epochs_completed}/{self.num_epochs}")
-            print(f"  Best validation perplexity: {self.best_val_perplexity:.2f}")
-            print("="*80)
+            print("\n" + "=" * 80)
+            print("ALL TRAINING COMPLETE!")
+            print(f"  Best val perplexity: {self.best_val_perplexity:.2f}")
+            print("=" * 80)
         else:
-            print(f"\n[INFO] Partial training complete ({total_epochs_completed}/{self.num_epochs} epochs)")
-            print(f"[INFO] Re-submit job to continue from epoch {total_epochs_completed + 1}")
-        
+            print(f"\n[INFO] Partial run ({total_completed}/{self.num_epochs} epochs).")
+            print(f"[INFO] Re-submit job to continue.")
+
         return self.train_losses, self.val_perplexities, is_complete
 
 
 def main():
-    """Run baseline training"""
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--max_epochs_per_run", type=int, default=None,
-                       help="Maximum number of epochs to run in this job (for time limits)")
+    parser.add_argument("--max_epochs_per_run", type=int, default=None)
     args = parser.parse_args()
-    
+
     logger = StageLogger("stage_2_train_baseline")
-    
+
     try:
-        # Check dependencies
         logger.log("Checking dependencies...")
         if not check_dependencies(['stage_0_setup']):
             logger.complete(success=False)
             return 1
-        
-        # Set seeds
+
         set_all_seeds(Config.CURRENT_SEED)
         device = Config.get_device()
-        
-        # Load tokenizer
+
         logger.log("Loading tokenizer...")
         tokenizer = AutoTokenizer.from_pretrained(
             Config.MODEL_NAME,
-            cache_dir=Config.DATA_CACHE_DIR
+            cache_dir=Config.DATA_CACHE_DIR,
         )
-        # Set pad_token for Pythia tokenizer
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
-        
-        # Load training data
+
         logger.log("Loading training data from Pile...")
-        
-        # Load Pile dataset
         from datasets import load_dataset
-        
-        if Config.USE_FULL_EVAL_SETS and hasattr(Config, 'TRAINING_SAMPLES') and Config.TRAINING_SAMPLES is None:
-            logger.log("  Loading full Pile training data (streaming)...")
-            logger.log("  ⚠️  WARNING: This will process ~300B tokens")
-            logger.log("  ⚠️  Consider using TRAINING_SAMPLES limit for testing")
-            
+
+        # Always use a bounded sample count so epochs fit within wall time.
+        # TRAINING_SAMPLES=None falls back to QUICK_TRAINING_SAMPLES (100K).
+        max_samples = Config.TRAINING_SAMPLES or Config.QUICK_TRAINING_SAMPLES
+        logger.log(f"  Sample limit: {max_samples:,}")
+
+        try:
             pile = load_dataset(
                 Config.TRAINING_DATASET,
                 split="train",
                 streaming=True,
                 cache_dir=Config.DATA_CACHE_DIR,
-                trust_remote_code=True
+                trust_remote_code=True,
             )
-            
-            # Stream and collect samples
-            train_texts = []
-            logger.log("  Streaming samples...")
-            for i, example in enumerate(pile):
-                if i % 10000 == 0:
-                    logger.log(f"    Loaded {i:,} samples...")
-                train_texts.append(example['text'])
-                # Limit for safety
-                if i >= 1000000:  # 1M samples max
-                    break
-        else:
-            # Quick mode or limited samples
-            logger.log(f"  Loading Pile data (limited samples for fast training)...")
-            
-            # Try validation split first, fall back to train split if not available
-            try:
-                pile = load_dataset(
-                    Config.TRAINING_DATASET,
-                    split="validation",
-                    streaming=False,
-                    cache_dir=Config.DATA_CACHE_DIR,
-                    trust_remote_code=True
-                )
-                logger.log(f"    Using validation split")
-            except (ValueError, KeyError):
-                logger.log(f"    Validation split not available, using train split")
-                pile = load_dataset(
-                    Config.TRAINING_DATASET,
-                    split="train",
-                    streaming=True,
-                    cache_dir=Config.DATA_CACHE_DIR,
-                    trust_remote_code=True
-                )
-            
-            max_samples = getattr(Config, 'TRAINING_SAMPLES', None) or getattr(Config, 'QUICK_TRAINING_SAMPLES', 10000)
-            train_texts = [example['text'] for i, example in enumerate(pile) if i < max_samples]
-        
-        logger.log(f"  ✓ Loaded {len(train_texts)} training samples")
-        
-        # Split into train/val
+        except Exception as e:
+            logger.log(f"  WARNING: Could not load train split ({e}), trying validation split")
+            pile = load_dataset(
+                Config.TRAINING_DATASET,
+                split="validation",
+                streaming=False,
+                cache_dir=Config.DATA_CACHE_DIR,
+                trust_remote_code=True,
+            )
+
+        train_texts = []
+        for i, example in enumerate(pile):
+            if i >= max_samples:
+                break
+            train_texts.append(example['text'])
+            if i % 10000 == 0:
+                logger.log(f"    Loaded {i:,} samples...")
+
+        logger.log(f"  Loaded {len(train_texts):,} training samples")
+
         split_idx = int(len(train_texts) * 0.9)
         train_subset = train_texts[:split_idx]
         val_subset = train_texts[split_idx:]
-        
-        logger.log(f"  Train: {len(train_subset)} samples")
-        logger.log(f"  Val: {len(val_subset)} samples")
-        
-        train_dataset = LanguageModelingDataset(
-            train_subset,
-            tokenizer
-        )
-        val_dataset = LanguageModelingDataset(
-            val_subset,
-            tokenizer
-        )
-        
-        # Create data loaders
+
+        logger.log(f"  Train: {len(train_subset):,}  Val: {len(val_subset):,}")
+
+        train_dataset = LanguageModelingDataset(train_subset, tokenizer)
+        val_dataset = LanguageModelingDataset(val_subset, tokenizer)
+
         generator = get_generator(device='cpu')
-        
         train_loader = DataLoader(
             train_dataset,
             batch_size=Config.BATCH_SIZE,
             shuffle=True,
             num_workers=0,
             worker_init_fn=worker_init_fn,
-            generator=generator
+            generator=generator,
         )
-        
         val_loader = DataLoader(
             val_dataset,
             batch_size=Config.EVAL_BATCH_SIZE,
             shuffle=False,
-            num_workers=0
+            num_workers=0,
         )
-        
-        logger.log(f"  Training batches: {len(train_loader)}")
-        logger.log(f"  Validation batches: {len(val_loader)}")
-        
-        # Load model
+
+        logger.log(f"  Training batches: {len(train_loader)}, Validation batches: {len(val_loader)}")
+
         logger.log("Loading model...")
         model = AutoModelForCausalLM.from_pretrained(
             Config.MODEL_NAME,
             cache_dir=Config.DATA_CACHE_DIR,
-            torch_dtype=torch.bfloat16,  # Use bfloat16 to save memory
-            low_cpu_mem_usage=True
+            torch_dtype=torch.bfloat16,
+            low_cpu_mem_usage=True,
         ).to(device)
-        
-        # Enable gradient checkpointing to save memory
         model.gradient_checkpointing_enable()
-        
-        logger.log(f"✓ Model loaded: {sum(p.numel() for p in model.parameters()):,} parameters")
-        logger.log(f"  Using bfloat16 precision + gradient checkpointing")
-        
-        # Setup checkpoint paths
-        checkpoint_dir = os.path.join(
-            Config.CHECKPOINT_DIR,
-            'baseline_checkpoints'
-        )
-        history_path = os.path.join(
-            Config.RESULTS_DIR,
-            'baseline_training_history.json'
-        )
-        
+        logger.log(f"  {sum(p.numel() for p in model.parameters()):,} parameters, bfloat16 + grad ckpt")
+
+        checkpoint_dir = os.path.join(Config.CHECKPOINT_DIR, 'baseline_checkpoints')
+        history_path = os.path.join(Config.RESULTS_DIR, 'baseline_training_history.json')
         os.makedirs(checkpoint_dir, exist_ok=True)
-        
-        # Create trainer
-        logger.log("\nCreating trainer...")
+
         trainer = BaselineTrainer(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
             device=device,
             checkpoint_dir=checkpoint_dir,
-            history_path=history_path
+            history_path=history_path,
         )
-        
-        # Train
+
+        # SIGUSR1: save checkpoint and exit so SLURM can kill cleanly.
+        def _sigusr1_handler(signum, frame):
+            trainer._save_and_exit = True
+
+        signal.signal(signal.SIGUSR1, _sigusr1_handler)
+
         logger.log("Starting training...")
         logger.log(f"  Epochs: {Config.RECOVERY_EPOCHS}")
         logger.log(f"  Batch size: {Config.BATCH_SIZE}")
         logger.log(f"  Gradient accumulation: {Config.GRADIENT_ACCUMULATION_STEPS}")
-        logger.log(f"  Learning rate: {Config.RECOVERY_LR}")
-        logger.log(f"  Warmup ratio: {Config.RECOVERY_WARMUP_RATIO}")
+        logger.log(f"  LR: {Config.RECOVERY_LR}  Warmup: {Config.RECOVERY_WARMUP_RATIO}")
+        logger.log(f"  Step checkpoint every: {Config.SAVE_CHECKPOINT_EVERY_N_STEPS} steps "
+                   f"/ {Config.SAVE_CHECKPOINT_EVERY_N_MINUTES} min")
         if args.max_epochs_per_run:
             logger.log(f"  Max epochs this run: {args.max_epochs_per_run}")
-        
+
         start_time = time.time()
         train_losses, val_perplexities, is_complete = trainer.train(
-            max_epochs_per_run=args.max_epochs_per_run
+            max_epochs_per_run=args.max_epochs_per_run,
         )
         training_time = time.time() - start_time
-        
-        # Save results
+
         logger.log("\nSaving training results...")
         results = {
             'train_losses': train_losses,
@@ -465,6 +452,7 @@ def main():
             'training_time_seconds': training_time,
             'training_time_hours': training_time / 3600,
             'num_epochs': Config.RECOVERY_EPOCHS,
+            'training_samples': max_samples,
             'hyperparameters': {
                 'learning_rate': Config.RECOVERY_LR,
                 'weight_decay': Config.RECOVERY_WEIGHT_DECAY,
@@ -474,24 +462,20 @@ def main():
             },
             'seed': Config.CURRENT_SEED,
         }
-        
         save_json(results, history_path)
-        
-        logger.log(f"\n✓ Baseline training phase complete!")
-        logger.log(f"  Training time: {training_time/3600:.1f} hours")
-        logger.log(f"  Best validation perplexity: {trainer.best_val_perplexity:.2f}")
-        
-        # Mark complete only if actually finished all epochs
+
+        logger.log(f"  Training time: {training_time / 3600:.1f} hours")
+        logger.log(f"  Best val perplexity: {trainer.best_val_perplexity:.2f}")
+
         if is_complete:
             logger.complete(success=True)
         else:
-            logger.log(f"\nJob finished (partial run). Resubmit to continue training.")
-            logger.log(f"Checkpoint saved at epoch {trainer.start_epoch + len(train_losses)}")
-        
+            logger.log("Job finished (partial run). Resubmit to continue.")
+
         return 0
-        
+
     except Exception as e:
-        logger.log(f"\n❌ ERROR: {str(e)}")
+        logger.log(f"\nERROR: {str(e)}")
         import traceback
         logger.log(traceback.format_exc())
         logger.complete(success=False)
