@@ -42,6 +42,9 @@ source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s
     exit 1
 }
 
+# Reduce CUDA memory fragmentation (helps when eval follows a full training epoch)
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
 # Set environment variables for determinism
 export PYTHONHASHSEED=${EXPERIMENT_SEED:-42}
 export CUBLAS_WORKSPACE_CONFIG=:16:8

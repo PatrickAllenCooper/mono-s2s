@@ -260,6 +260,11 @@ class MonotonicTrainer:
         return avg_loss
 
     def train(self, max_epochs_per_run=None):
+        if self.start_step >= len(self.train_loader):
+            self.start_epoch += 1
+            self.start_step = 0
+            print(f"Epoch {self.start_epoch} training was complete; resuming from epoch {self.start_epoch + 1}.")
+
         print(f"\nStarting monotonic training from epoch {self.start_epoch + 1}/{self.num_epochs}")
         print(f"  start_epoch={self.start_epoch}, start_step={self.start_step}")
         print(f"  Extended warmup ratio: {self.warmup_ratio}")

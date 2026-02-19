@@ -82,8 +82,9 @@ class FoundationExperimentConfig:
     # EVALUATION CONFIGURATION
     # ======================================================================
     
-    # Evaluation batch size (can be larger than training)
-    EVAL_BATCH_SIZE = 16
+    # Evaluation batch size - must be small enough to fit logits in VRAM after training.
+    # Pythia-1.4B logits: batch * 2048 * 50304 * 2 bytes = ~0.82 GB at batch=4.
+    EVAL_BATCH_SIZE = 4
     
     # Evaluation benchmarks
     EVAL_BENCHMARKS = [

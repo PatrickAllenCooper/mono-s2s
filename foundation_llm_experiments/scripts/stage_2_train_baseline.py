@@ -258,6 +258,13 @@ class BaselineTrainer:
 
     def train(self, max_epochs_per_run=None):
         """Full training loop."""
+        # If training for the checkpoint epoch is fully done (step == len(loader))
+        # but validation crashed, treat the epoch as complete and start next.
+        if self.start_step >= len(self.train_loader):
+            self.start_epoch += 1
+            self.start_step = 0
+            print(f"Epoch {self.start_epoch} training was complete; resuming from epoch {self.start_epoch + 1}.")
+
         print(f"\nStarting training from epoch {self.start_epoch + 1}/{self.num_epochs}")
         print(f"  start_epoch={self.start_epoch}, start_step={self.start_step}")
         print("=" * 80)

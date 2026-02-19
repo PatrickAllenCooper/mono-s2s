@@ -146,13 +146,19 @@ def make_model_monotonic(model):
 def compute_perplexity(model, dataloader, device):
     """
     Compute perplexity on a dataset.
-    
+
     Perplexity = exp(average cross-entropy loss)
     """
     model.eval()
+    # Free training cache before the eval forward passes so the full logit
+    # tensor (batch * seq * vocab) does not trigger OOM on a GPU that was
+    # full during the training epoch.
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     total_loss = 0.0
     total_tokens = 0
-    
+
     with torch.no_grad():
         for batch in dataloader:
             input_ids = batch['input_ids'].to(device)
