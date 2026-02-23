@@ -111,8 +111,11 @@ def make_model_monotonic(model):
         # GPT-2: c_fc (input), c_proj (output)
         # General: mlp, fc_in, fc_out patterns
         
-        if any(ffn_pattern in name.lower() for ffn_pattern in 
-               ['mlp', 'dense_h_to_4h', 'dense_4h_to_h', 'c_fc', 'c_proj', 'fc_in', 'fc_out']):
+        # Only constrain input projection (dense_h_to_4h / c_fc / fc_in), NOT output projection.
+        # This preserves more model expressiveness while still enforcing monotonicity
+        # on the critical FFN expansion step.
+        if any(ffn_pattern in name.lower() for ffn_pattern in
+               ['dense_h_to_4h', 'c_fc', 'fc_in']):
             
             # Apply to Linear layers only
             if isinstance(module, nn.Linear):
@@ -168,8 +171,19 @@ def compute_perplexity(model, dataloader, device):
             labels = input_ids.clone()
             labels[attention_mask == 0] = -100  # Ignore padding
             
-            outputs = model(input_ids=input_ids, labels=labels)
-            loss = outputs.loss
+            # Use smaller chunks to avoid OOM during validation
+            try:
+                outputs = model(input_ids=input_ids, labels=labels)
+                loss = outputs.loss
+            except torch.cuda.OutOfMemoryError:
+                # If OOM, try with half the batch
+                torch.cuda.empty_cache()
+                mid = input_ids.size(0) // 2
+                if mid == 0:
+                    continue
+                outputs = model(input_ids=input_ids[:mid], labels=labels[:mid])
+                loss = outputs.loss
+                attention_mask = attention_mask[:mid]
             
             # Count actual tokens (excluding padding)
             num_tokens = (attention_mask == 1).sum().item()

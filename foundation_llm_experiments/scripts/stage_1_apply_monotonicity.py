@@ -131,10 +131,9 @@ def main():
             if 'attention' in name.lower():
                 continue
                 
-            # Check FFN/MLP weights only (same patterns as make_model_monotonic)
-            if 'weight' in name and any(x in name.lower() for x in 
-                                       ['mlp', 'dense_h_to_4h', 'dense_4h_to_h', 
-                                        'c_fc', 'c_proj', 'fc_in', 'fc_out']):
+            # Check only input projection weights (matches make_model_monotonic constraint scope)
+            if 'weight' in name and any(x in name.lower() for x in
+                                       ['dense_h_to_4h', 'c_fc', 'fc_in']):
                 param_min = param.data.min().item()
                 param_max = param.data.max().item()
                 min_weight = min(min_weight, param_min)

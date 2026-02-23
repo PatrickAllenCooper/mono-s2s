@@ -66,8 +66,8 @@ class FoundationExperimentConfig:
     
     # Monotonic recovery (same data, extended warmup)
     MONOTONIC_RECOVERY_EPOCHS = 10  # 10 epochs - monotonic needs more training
-    MONOTONIC_RECOVERY_LR = 1e-5
-    MONOTONIC_RECOVERY_WARMUP_RATIO = 0.15  # More warmup for softplus stability
+    MONOTONIC_RECOVERY_LR = 5e-5   # Higher LR needed to escape poor initialization
+    MONOTONIC_RECOVERY_WARMUP_RATIO = 0.20  # More warmup for softplus stability
     MONOTONIC_RECOVERY_WEIGHT_DECAY = 0.01
     
     # Training batch sizes
