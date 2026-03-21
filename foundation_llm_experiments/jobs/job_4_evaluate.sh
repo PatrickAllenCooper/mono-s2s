@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=foundation_eval
 #SBATCH --partition=aa100
-#SBATCH --qos=high
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
