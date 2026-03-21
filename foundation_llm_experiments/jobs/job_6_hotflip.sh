@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=foundation_hotflip
 #SBATCH --partition=aa100
-#SBATCH --qos=normal
+#SBATCH --qos=high
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
