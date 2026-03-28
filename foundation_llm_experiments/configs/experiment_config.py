@@ -22,10 +22,12 @@ class FoundationExperimentConfig:
     SCRATCH_DIR = os.environ.get("SCRATCH", f"/scratch/alpine/{os.environ.get('USER', 'your_username')}")
     PROJECT_DIR = os.environ.get("PROJECT", f"/projects/{os.environ.get('USER', 'your_username')}")
     
-    WORK_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_work")
-    RESULTS_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_results")
+    # Seed-namespaced directories so multi-seed runs don't collide
+    _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
+    WORK_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_work{_SEED_SUFFIX}")
+    RESULTS_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}")
     CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
-    DATA_CACHE_DIR = os.path.join(WORK_DIR, "data_cache")
+    DATA_CACHE_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_data_cache")  # Shared across seeds
     
     FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "foundation_llm_final_results")
     
