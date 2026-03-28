@@ -127,10 +127,10 @@ class FoundationExperimentConfig:
     # ======================================================================
     
     # Universal Adversarial Triggers
-    ATTACK_TRIGGER_LENGTH = 10  # Longer for general LLM (vs 5 for summarization)
-    ATTACK_NUM_CANDIDATES = 200  # Larger vocabulary search
-    ATTACK_NUM_RESTARTS = 5
-    ATTACK_NUM_ITERATIONS = 100
+    ATTACK_TRIGGER_LENGTH = 10
+    ATTACK_NUM_CANDIDATES = 100  # Reduced from 200 to fit within time limit
+    ATTACK_NUM_RESTARTS = 3      # Reduced from 5 to fit within time limit
+    ATTACK_NUM_ITERATIONS = 50   # Reduced from 100 to fit within time limit
     
     # HotFlip attacks
     HOTFLIP_NUM_FLIPS = 10  # More flips for longer sequences
