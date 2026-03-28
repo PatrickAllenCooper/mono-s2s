@@ -70,12 +70,11 @@ class HotFlipAttacker:
             clean_outputs = self.model(input_ids=input_ids, labels=labels)
             clean_loss = clean_outputs.loss.item()
         
-        # Get embeddings
+        # Get embeddings - detach and re-enable grad for leaf variable
         embedding_layer = self.model.get_input_embeddings()
         
         # Compute gradients w.r.t. embeddings
-        embeddings = embedding_layer(input_ids)
-        embeddings.requires_grad = True
+        embeddings = embedding_layer(input_ids).detach().requires_grad_(True)
         
         labels = input_ids.clone()
         labels[attention_mask == 0] = -100
