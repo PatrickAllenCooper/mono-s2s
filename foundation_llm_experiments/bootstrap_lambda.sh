@@ -103,8 +103,12 @@ else
     echo "✓ Miniconda installed"
 fi
 
-# Initialise conda for this script session
+# Initialize conda for this script session
 source "$CONDA_BASE/etc/profile.d/conda.sh"
+
+# Accept Terms of Service (required for newer conda versions)
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main 2>/dev/null || true
+conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r 2>/dev/null || true
 
 # Add to .bashrc for future sessions
 if ! grep -q "conda initialize" ~/.bashrc 2>/dev/null; then
