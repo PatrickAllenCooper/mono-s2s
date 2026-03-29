@@ -27,22 +27,20 @@
 #   # Ctrl+B D to detach
 #   # tmux attach -t mono_exp to reconnect
 #
-# EXPECTED RUNTIME (on H100 80GB):
-#   Stage 0 (Setup):              ~3 minutes
-#   Stage 1 (Monotonicity):       ~3 minutes
-#   Stage 2 (Baseline Training):  ~8-10 hours    (5 epochs x 90K samples)
-#   Stage 3 (Monotonic Training): ~18-22 hours   (10 epochs x 90K samples)
-#   Stage 4 (Evaluation):         ~30 minutes
-#   Stage 5 (UAT Attacks):        ~3-4 hours
-#   Stage 6 (HotFlip Attacks):    ~1-2 hours
-#   Stage 7 (Aggregate):          ~2 minutes
-#   -----------------------------------------------------------------------
-#   Total per seed:               ~32-40 hours
-#   Total for 3 seeds:            ~4-5 days (sequential)
+# EXPECTED RUNTIME:
 #
-# COST ESTIMATE (Lambda Cloud H100 at ~$3.50/hr):
-#   Per seed:   ~$112-140
-#   3 seeds:    ~$336-420
+#   GPU            Stage 2 (Baseline)  Stage 3 (Monotonic)  Total per seed
+#   -------------- ------------------- -------------------- ---------------
+#   A10 (24GB)     ~18-22 hours        ~40-48 hours         ~65-75 hours
+#   A100 (40GB)    ~12-15 hours        ~28-34 hours         ~45-55 hours
+#   A100 (80GB)    ~10-12 hours        ~22-28 hours         ~38-45 hours
+#   H100 (80GB)    ~4-6 hours          ~9-12 hours          ~16-22 hours
+#
+# NOTE ON A10 (24GB):
+#   Batch size is automatically reduced from 8 to 4 to fit in 24GB VRAM.
+#   Gradient accumulation doubles from 4 to 8 to maintain effective batch=32.
+#   This means ~2x more gradient accumulation steps per epoch vs A100,
+#   which is why training takes roughly 2x longer.
 #
 ################################################################################
 
@@ -180,7 +178,13 @@ echo ""
 if python -c "import torch; assert torch.cuda.is_available(), 'No GPU!'" 2>/dev/null; then
     GPU_NAME=$(python -c "import torch; print(torch.cuda.get_device_name(0))")
     GPU_MEM=$(python -c "import torch; print(f'{torch.cuda.get_device_properties(0).total_memory/1e9:.0f}GB')")
+    GPU_MEM_INT=$(python -c "import torch; print(torch.cuda.get_device_properties(0).total_memory // (1024**3))")
     success "GPU: $GPU_NAME ($GPU_MEM)"
+
+    if [ "${GPU_MEM_INT:-99}" -lt 40 ]; then
+        warn "A10/small GPU detected (${GPU_MEM}). Batch size auto-reduced to 4, grad_accum=8."
+        warn "Training will take ~2x longer than on A100. See runtime table in script header."
+    fi
 else
     error "No CUDA GPU detected - experiments require a GPU"
     exit 1
@@ -363,6 +367,11 @@ done
 echo ""
 
 echo "IMPORTANT: Lambda Cloud instances are billed until terminated."
+echo "Approximate cost for this run:"
+echo "  A10  (~\$0.75/hr): 1 seed ~\$50-56, 3 seeds ~\$150-170"
+echo "  A100 (~\$1.29/hr): 1 seed ~\$49-58, 3 seeds ~\$147-175"
+echo "  H100 (~\$3.50/hr): 1 seed ~\$56-77, 3 seeds ~\$168-231"
+echo ""
 echo "Once you have copied your results, terminate the instance from"
 echo "the Lambda Cloud dashboard to stop charges."
 echo ""

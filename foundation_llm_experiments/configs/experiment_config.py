@@ -103,10 +103,20 @@ class FoundationExperimentConfig:
     MONOTONIC_RECOVERY_WEIGHT_DECAY = 0.01
     
     # Training batch sizes
-    BATCH_SIZE = 8  # Per-device batch size
-    GRADIENT_ACCUMULATION_STEPS = 4  # Effective batch size = 32
+    # A10 (24GB): batch=4, grad_accum=8  -> effective batch = 32
+    # A100/H100 (80GB): batch=8, grad_accum=4 -> effective batch = 32
+    _GPU_MEM_GB = 24  # Conservative default; auto-detected at runtime if possible
+    try:
+        import torch
+        if torch.cuda.is_available():
+            _GPU_MEM_GB = torch.cuda.get_device_properties(0).total_memory // (1024**3)
+    except Exception:
+        pass
+
+    BATCH_SIZE = 4 if _GPU_MEM_GB < 40 else 8
+    GRADIENT_ACCUMULATION_STEPS = 8 if _GPU_MEM_GB < 40 else 4  # Effective batch = 32
     MAX_GRAD_NORM = 1.0
-    
+
     # Sequence length
     MAX_SEQ_LENGTH = 2048  # Pythia's context window
     
@@ -114,9 +124,11 @@ class FoundationExperimentConfig:
     # EVALUATION CONFIGURATION
     # ======================================================================
     
-    # Evaluation batch size - must be small enough to fit logits in VRAM after training.
-    # Pythia-1.4B logits: batch * 2048 * 50304 * 2 bytes = ~0.82 GB at batch=4.
-    EVAL_BATCH_SIZE = 4
+    # Evaluation batch size
+    # Pythia-1.4B logits: batch * 2048 * 50304 * 2 bytes
+    #   batch=4 -> ~0.82GB  (safe for A10 24GB)
+    #   batch=2 -> ~0.41GB  (very safe for A10 24GB)
+    EVAL_BATCH_SIZE = 2 if _GPU_MEM_GB < 40 else 4
     
     # Evaluation benchmarks
     EVAL_BENCHMARKS = [
