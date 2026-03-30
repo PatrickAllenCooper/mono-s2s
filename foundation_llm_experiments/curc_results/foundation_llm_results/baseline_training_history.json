@@ -1,0 +1,29 @@
+{
+  "train_losses": [
+    1.936059246301651,
+    1.929587989311748,
+    1.9223902906099954,
+    1.9239407681253222,
+    1.921339461045795
+  ],
+  "val_perplexities": [
+    6.834965646025553,
+    6.827544203501811,
+    6.826859946308859,
+    6.826163929735162,
+    6.826181094799649
+  ],
+  "best_val_perplexity": 6.826163929735162,
+  "training_time_seconds": 83730.8002049923,
+  "training_time_hours": 23.258555612497858,
+  "num_epochs": 5,
+  "training_samples": 100000,
+  "hyperparameters": {
+    "learning_rate": 1e-05,
+    "weight_decay": 0.01,
+    "batch_size": 8,
+    "warmup_ratio": 0.1,
+    "max_grad_norm": 1.0
+  },
+  "seed": 42
+}

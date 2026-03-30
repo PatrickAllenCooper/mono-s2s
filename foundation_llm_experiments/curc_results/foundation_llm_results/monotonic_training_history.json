@@ -1,0 +1,45 @@
+{
+  "train_losses": [
+    6.899870468224419,
+    4.5099177955415515,
+    3.545620684856839,
+    3.3513766623814902,
+    3.2757534346065005,
+    3.2539505833413864,
+    3.2353850530730353,
+    3.233008128452301,
+    3.2220948908170066,
+    3.2276373900943334
+  ],
+  "val_perplexities": [
+    272.96002800614565,
+    42.441627315045885,
+    30.764231603974764,
+    28.466440785397218,
+    27.754326949222946,
+    27.413117448147307,
+    27.25730255755573,
+    27.193512637956783,
+    27.185671350848423,
+    27.17957034283022
+  ],
+  "best_val_perplexity": 27.17957034283022,
+  "training_time_seconds": 25533.411864042282,
+  "training_time_hours": 7.092614406678412,
+  "num_epochs": 10,
+  "training_samples": 100000,
+  "hyperparameters": {
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "batch_size": 8,
+    "warmup_ratio": 0.2,
+    "max_grad_norm": 1.0
+  },
+  "seed": 42,
+  "constraint_info": {
+    "type": "softplus_parametrization",
+    "formula": "W = softplus(V) >= 0",
+    "scope": "FFN sublayers only",
+    "globally_monotonic": false
+  }
+}

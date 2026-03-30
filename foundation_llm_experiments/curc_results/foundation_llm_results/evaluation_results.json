@@ -1,0 +1,19 @@
+{
+  "pile_test": {
+    "baseline_pythia": {
+      "perplexity": 6.918916326886044,
+      "loss": 1.9342591572055163,
+      "total_tokens": 6981283
+    },
+    "monotonic_pythia": {
+      "perplexity": 27.58502421253805,
+      "loss": 3.3172730244669144,
+      "total_tokens": 6981283
+    }
+  },
+  "metadata": {
+    "seed": 42,
+    "model_name": "EleutherAI/pythia-1.4b",
+    "use_full_eval_sets": true
+  }
+}
