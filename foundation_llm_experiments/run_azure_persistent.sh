@@ -160,11 +160,11 @@ for stage in 0_setup 1_apply_monotonicity 2_train_baseline 3_train_monotonic 4_e
         # Check for partial checkpoints
         case "$stage" in
             2_train_baseline)
-                CKPTS=$(ls ${PERSIST_WORK}/checkpoints/baseline_checkpoints/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
+                CKPTS=$(find ${PERSIST_WORK}/checkpoints/baseline_checkpoints/ -name "checkpoint_epoch_*.pt" 2>/dev/null | wc -l || echo 0)
                 [ "$CKPTS" -gt 0 ] && warn "  $stage: $CKPTS epoch(s) checkpointed" || log "  $stage: not started"
                 ;;
             3_train_monotonic)
-                CKPTS=$(ls ${PERSIST_WORK}/checkpoints/monotonic_checkpoints/checkpoint_epoch_*.pt 2>/dev/null | wc -l)
+                CKPTS=$(find ${PERSIST_WORK}/checkpoints/monotonic_checkpoints/ -name "checkpoint_epoch_*.pt" 2>/dev/null | wc -l || echo 0)
                 [ "$CKPTS" -gt 0 ] && warn "  $stage: $CKPTS epoch(s) checkpointed" || log "  $stage: not started"
                 ;;
             *)
