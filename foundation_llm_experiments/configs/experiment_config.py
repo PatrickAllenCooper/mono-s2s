@@ -22,41 +22,40 @@ class FoundationExperimentConfig:
     SCRATCH_DIR = os.environ.get("SCRATCH", f"/scratch/alpine/{os.environ.get('USER', 'your_username')}")
     PROJECT_DIR = os.environ.get("PROJECT", f"/projects/{os.environ.get('USER', 'your_username')}")
     
-    # Detect Lambda Cloud: no SCRATCH env var, home dir has large NVMe storage
-    _ON_LAMBDA = (
-        "SCRATCH" not in os.environ and
-        os.path.exists("/home/ubuntu") and
-        "SLURM_JOB_ID" not in os.environ
+    # Detect cloud environment from env vars set by bootstrap scripts
+    _ON_CLOUD = (
+        "AZURE_WORK" in os.environ or
+        "LAMBDA_SEED_WORK" in os.environ or
+        "LAMBDA_CACHE" in os.environ or
+        ("SCRATCH" not in os.environ and "SLURM_JOB_ID" not in os.environ)
     )
     
-    if _ON_LAMBDA:
-        # Lambda Cloud: use ~/foundation_llm_work_seedN
-        _HOME = os.environ.get("HOME", "/home/ubuntu")
-        _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
-        SCRATCH_DIR = _HOME
-        PROJECT_DIR = _HOME
-        WORK_DIR = os.environ.get(
-            "LAMBDA_SEED_WORK",
-            os.path.join(_HOME, f"foundation_llm_work{_SEED_SUFFIX}")
-        )
-        RESULTS_DIR = os.environ.get(
-            "LAMBDA_SEED_RESULTS",
-            os.path.join(_HOME, f"foundation_llm_results{_SEED_SUFFIX}")
-        )
-        DATA_CACHE_DIR = os.environ.get(
-            "LAMBDA_CACHE",
-            os.path.join(_HOME, "foundation_llm_cache")
-        )
+    _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
+    
+    if _ON_CLOUD:
+        # Cloud VM (Azure, Lambda, etc): use env vars from .azure_env or .lambda_env
+        _BASE = os.environ.get("AZURE_WORK",
+                os.environ.get("LAMBDA_SEED_WORK",
+                os.path.join(os.environ.get("HOME", "/home/ubuntu"), "foundation_llm_work")))
+        # Strip any existing seed suffix from base to avoid doubling
+        for sfx in ["_seed42", "_seed1337", "_seed2024", "_seed8888", "_seed12345"]:
+            if _BASE.endswith(sfx):
+                _BASE = _BASE[:-len(sfx)]
+                break
+        
+        SCRATCH_DIR = os.path.dirname(_BASE)
+        PROJECT_DIR = SCRATCH_DIR
+        WORK_DIR = os.environ.get("LAMBDA_SEED_WORK", f"{_BASE}{_SEED_SUFFIX}")
+        RESULTS_DIR = os.environ.get("LAMBDA_SEED_RESULTS",
+                      os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}"))
+        DATA_CACHE_DIR = os.environ.get("AZURE_CACHE",
+                         os.environ.get("LAMBDA_CACHE",
+                         os.path.join(SCRATCH_DIR, "foundation_llm_cache")))
     else:
         # CURC Alpine (or any SLURM cluster): use $SCRATCH with seed-namespaced dirs
-        _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
         WORK_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_work{_SEED_SUFFIX}")
         RESULTS_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}")
-        # Data cache is shared across seeds to avoid re-downloading
-        DATA_CACHE_DIR = os.environ.get(
-            "LAMBDA_CACHE",
-            os.path.join(SCRATCH_DIR, "foundation_llm_data_cache")
-        )
+        DATA_CACHE_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_data_cache")
     
     CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
     FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "foundation_llm_final_results")
