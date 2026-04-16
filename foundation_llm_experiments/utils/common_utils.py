@@ -201,6 +201,83 @@ def compute_perplexity(model, dataloader, device):
     }
 
 
+def compute_perplexity_resumable(
+    model,
+    dataloader,
+    device,
+    progress_path=None,
+    flush_every=10,
+    log_fn=None,
+):
+    """
+    Perplexity computation with durable per-batch checkpointing.
+
+    On deallocation-triggered restart, state is reloaded from
+    `progress_path` and already-processed batches are skipped. The
+    dataloader MUST be deterministic (shuffle=False) for skip-resume
+    to be correct; evaluation loaders satisfy this.
+
+    Progress file schema:
+      {"batches_done": int, "total_loss_weighted": float, "total_tokens": int}
+    """
+    model.eval()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    state = {"batches_done": 0, "total_loss_weighted": 0.0, "total_tokens": 0}
+    if progress_path and os.path.exists(progress_path):
+        loaded = load_json_safe(progress_path)
+        if isinstance(loaded, dict) and "batches_done" in loaded:
+            state.update(loaded)
+            if log_fn:
+                log_fn(f"  Resuming from batch {state['batches_done']} "
+                       f"({state['total_tokens']} tokens already scored)")
+
+    start_batch = state["batches_done"]
+
+    with torch.no_grad():
+        for batch_idx, batch in enumerate(dataloader):
+            if batch_idx < start_batch:
+                continue
+
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = input_ids.clone()
+            labels[attention_mask == 0] = -100
+
+            try:
+                outputs = model(input_ids=input_ids, labels=labels)
+                loss = outputs.loss
+            except torch.cuda.OutOfMemoryError:
+                torch.cuda.empty_cache()
+                mid = input_ids.size(0) // 2
+                if mid == 0:
+                    state["batches_done"] = batch_idx + 1
+                    continue
+                outputs = model(input_ids=input_ids[:mid], labels=labels[:mid])
+                loss = outputs.loss
+                attention_mask = attention_mask[:mid]
+
+            num_tokens = int((attention_mask == 1).sum().item())
+            state["total_loss_weighted"] += float(loss.item()) * num_tokens
+            state["total_tokens"] += num_tokens
+            state["batches_done"] = batch_idx + 1
+
+            if progress_path and (batch_idx + 1) % flush_every == 0:
+                atomic_save_json(state, progress_path)
+
+    if progress_path:
+        atomic_save_json(state, progress_path)
+
+    tot = state["total_tokens"]
+    avg_loss = state["total_loss_weighted"] / tot if tot > 0 else float('inf')
+    return {
+        "perplexity": float(np.exp(avg_loss)),
+        "loss": avg_loss,
+        "total_tokens": tot,
+    }
+
+
 def evaluate_language_modeling(model, tokenizer, dataset_name, device, max_samples=None):
     """
     Evaluate on language modeling benchmarks (LAMBADA, etc.)
@@ -223,12 +300,31 @@ def evaluate_language_modeling(model, tokenizer, dataset_name, device, max_sampl
 # FILE & LOGGING HELPERS
 # ======================================================================
 
-def save_json(data, filepath, indent=2):
-    """Save data to JSON file"""
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    with open(filepath, 'w') as f:
+def atomic_save_json(data, filepath, indent=2, verbose=False):
+    """
+    Atomically write JSON to filepath.
+
+    Writes to a sibling .tmp file, fsyncs, then renames over the target.
+    This ensures that a partially written file is never observed by a
+    resuming process (critical for Azure spot deallocations).
+    """
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    tmp_path = filepath + ".tmp"
+    with open(tmp_path, 'w') as f:
         json.dump(data, f, indent=indent)
-    print(f"✓ Saved to: {filepath}")
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+    os.replace(tmp_path, filepath)
+    if verbose:
+        print(f"✓ Saved to: {filepath}")
+
+
+def save_json(data, filepath, indent=2):
+    """Save data to JSON file (atomic write, resilient to mid-write crashes)."""
+    atomic_save_json(data, filepath, indent=indent, verbose=True)
 
 
 def load_json(filepath):
@@ -237,6 +333,89 @@ def load_json(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
     with open(filepath, 'r') as f:
         return json.load(f)
+
+
+def load_json_safe(filepath, default=None):
+    """
+    Load JSON, returning a default on missing or corrupt file.
+
+    Used by resume paths where a half-flushed file from a killed process
+    must not abort the run.
+    """
+    if not os.path.exists(filepath):
+        return default
+    try:
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return default
+
+
+def append_jsonl(filepath, record):
+    """
+    Append a single JSON record as one line with flush + fsync.
+
+    Enables incremental result persistence for long attack loops: even
+    if the VM is deallocated mid-loop, all completed records are durable
+    and a restarted run will skip them.
+
+    Defensively handles the case where a previous interrupted write left
+    a partial line without a trailing newline by starting a fresh line
+    before the new record. The malformed fragment is preserved but
+    isolated; `load_jsonl` will stop at it on the next read.
+    """
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    line = json.dumps(record)
+    prefix = ""
+    if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+        with open(filepath, 'rb') as f:
+            f.seek(-1, os.SEEK_END)
+            if f.read(1) != b"\n":
+                prefix = "\n"
+    with open(filepath, 'a') as f:
+        f.write(prefix + line + "\n")
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+
+
+def load_jsonl(filepath):
+    """
+    Load all valid records from a JSONL file.
+
+    Malformed lines are skipped (not fatal). This is the right behaviour
+    for our resume pattern: a crash can leave a truncated line, but the
+    subsequent restart appends valid records afterwards and the caller
+    uses per-record indices to de-duplicate, so silently dropping the
+    corrupt fragment is both safe and correct.
+    """
+    records = []
+    if not os.path.exists(filepath):
+        return records
+    with open(filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return records
+
+
+def partial_results_dir(subdir="partial"):
+    """
+    Return a per-stage partial-results directory on the persistent
+    results disk. All resume state (per-batch perplexity progress,
+    per-model attack output, per-restart UAT state) lives here so a
+    spot deallocation never loses finished work.
+    """
+    base = os.path.join(Config.RESULTS_DIR, subdir)
+    os.makedirs(base, exist_ok=True)
+    return base
 
 
 def create_completion_flag(stage_name, work_dir=None):

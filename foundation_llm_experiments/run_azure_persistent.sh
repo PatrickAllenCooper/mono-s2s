@@ -153,11 +153,12 @@ done
 # Show checkpoint status
 echo ""
 log "Checkpoint status:"
+PARTIAL_DIR="${PERSIST_RESULTS}/partial"
 for stage in 0_setup 1_apply_monotonicity 2_train_baseline 3_train_monotonic 4_evaluate 5_uat 6_hotflip; do
     if stage_done "$stage"; then
         success "  $stage: COMPLETE"
     else
-        # Check for partial checkpoints
+        # Check for partial checkpoints / resumable state (see Stage 4/5/6 hardening).
         case "$stage" in
             2_train_baseline)
                 CKPTS=$(find ${PERSIST_WORK}/checkpoints/baseline_checkpoints/ -name "checkpoint_epoch_*.pt" 2>/dev/null | wc -l || echo 0)
@@ -166,6 +167,25 @@ for stage in 0_setup 1_apply_monotonicity 2_train_baseline 3_train_monotonic 4_e
             3_train_monotonic)
                 CKPTS=$(find ${PERSIST_WORK}/checkpoints/monotonic_checkpoints/ -name "checkpoint_epoch_*.pt" 2>/dev/null | wc -l || echo 0)
                 [ "$CKPTS" -gt 0 ] && warn "  $stage: $CKPTS epoch(s) checkpointed" || log "  $stage: not started"
+                ;;
+            4_evaluate)
+                DONE=$(find "$PARTIAL_DIR" -maxdepth 1 -name "*_pile.json" 2>/dev/null | wc -l || echo 0)
+                [ "$DONE" -gt 0 ] && warn "  $stage: $DONE/2 model(s) scored" || log "  $stage: not started"
+                ;;
+            5_uat)
+                DONE=$(find "$PARTIAL_DIR" -maxdepth 1 -name "uat_*_pythia.json" 2>/dev/null | wc -l || echo 0)
+                [ "$DONE" -gt 0 ] && warn "  $stage: $DONE/2 model(s) attacked" || log "  $stage: not started"
+                ;;
+            6_hotflip)
+                DONE=$(find "$PARTIAL_DIR" -maxdepth 1 -name "hotflip_*_pythia.json" 2>/dev/null | wc -l || echo 0)
+                JSONL=$(find "$PARTIAL_DIR" -maxdepth 1 -name "hotflip_*_pythia.jsonl" 2>/dev/null | wc -l || echo 0)
+                if [ "$DONE" -gt 0 ]; then
+                    warn "  $stage: $DONE/2 model(s) complete"
+                elif [ "$JSONL" -gt 0 ]; then
+                    warn "  $stage: streaming per-example results ($JSONL file(s))"
+                else
+                    log "  $stage: not started"
+                fi
                 ;;
             *)
                 log "  $stage: not started"
