@@ -308,7 +308,20 @@ else
 fi
 
 # ============================================================================
-# STAGES 5+6: PARALLEL ATTACKS
+# STAGES 5+6: SEQUENTIAL ATTACKS
+#
+# Earlier this script ran UAT and HotFlip in parallel (GPU 0 and GPU 1).
+# In practice that doubled host-RAM pressure during simultaneous Pythia
+# from_pretrained + load_state_dict calls and reproducibly invited the
+# Linux OOM killer to take out one of the two processes (always Stage 5
+# first, since it allocates a slightly larger embedding-gradient matrix
+# for UAT before HotFlip's first forward pass). SIGKILL leaves no Python
+# traceback and silently produces a "5 incomplete, 6 complete" partial
+# state that's hard to spot.
+#
+# Sequential is safer: each attack stage gets the full host RAM and
+# either GPU, and a deallocation only ever loses one stage's progress
+# (which is per-restart / per-example checkpointed under partial/).
 # ============================================================================
 
 UAT_DONE=false
@@ -319,26 +332,25 @@ stage_done "6_hotflip" && HOTFLIP_DONE=true
 if $UAT_DONE && $HOTFLIP_DONE; then
     success "[Stage 5+6] Both complete"
 else
-    header "STAGES 5+6: PARALLEL ATTACKS"
     cd scripts
 
-    UAT_PID=""
-    HOTFLIP_PID=""
-
     if ! $UAT_DONE; then
+        header "STAGE 5: UAT"
         CUDA_VISIBLE_DEVICES=0 python stage_5_uat_attacks.py \
-            2>&1 | tee "$LOG_DIR/stage5_gpu0_seed${SEED}.log" &
-        UAT_PID=$!
+            2>&1 | tee "$LOG_DIR/stage5_gpu0_seed${SEED}.log" \
+            && success "UAT COMPLETE" || warn "UAT FAILED (rerun to resume)"
+    else
+        success "[Stage 5] Already complete"
     fi
 
     if ! $HOTFLIP_DONE; then
-        CUDA_VISIBLE_DEVICES=1 python stage_6_hotflip_attacks.py \
-            2>&1 | tee "$LOG_DIR/stage6_gpu1_seed${SEED}.log" &
-        HOTFLIP_PID=$!
+        header "STAGE 6: HOTFLIP"
+        CUDA_VISIBLE_DEVICES=0 python stage_6_hotflip_attacks.py \
+            2>&1 | tee "$LOG_DIR/stage6_gpu0_seed${SEED}.log" \
+            && success "HotFlip COMPLETE" || warn "HotFlip FAILED (rerun to resume)"
+    else
+        success "[Stage 6] Already complete"
     fi
-
-    [ -n "$UAT_PID" ] && { wait $UAT_PID && success "UAT COMPLETE" || warn "UAT FAILED"; }
-    [ -n "$HOTFLIP_PID" ] && { wait $HOTFLIP_PID && success "HotFlip COMPLETE" || warn "HotFlip FAILED"; }
 
     cd "$SCRIPT_DIR"
 fi
