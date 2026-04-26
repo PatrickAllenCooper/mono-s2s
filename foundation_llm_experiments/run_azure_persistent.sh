@@ -49,6 +49,11 @@ PERSIST_WORK="${PERSIST}/foundation_llm_work_seed${SEED}"
 PERSIST_RESULTS="${PERSIST}/foundation_llm_results_seed${SEED}"
 FAST_CACHE="${FAST}/foundation_llm_cache"
 
+# HuggingFace datasets cache lives on /persist so the ~12 GB Pile-uncopyrighted
+# parquet shards survive spot deallocations. Model weights (~3 GB, fast to
+# re-download) stay on /data NVMe for slightly faster cold load.
+PERSIST_DATASETS_CACHE="${PERSIST}/foundation_llm_cache/huggingface/datasets"
+
 # ============================================================================
 # VERIFY STORAGE
 # ============================================================================
@@ -86,6 +91,16 @@ mkdir -p "${PERSIST_WORK}/checkpoints/monotonic_checkpoints"
 mkdir -p "${PERSIST_WORK}/stage_logs"
 mkdir -p "${PERSIST_RESULTS}"
 mkdir -p "${FAST_CACHE}/huggingface"
+mkdir -p "${PERSIST_DATASETS_CACHE}"
+
+# One-time migration: if a previous run finished downloading the dataset to
+# the ephemeral NVMe before being deallocated, salvage those shards into the
+# persistent cache so we never re-download.
+if [ -d "${FAST_CACHE}/huggingface/datasets" ] && \
+   [ -z "$(ls -A "${PERSIST_DATASETS_CACHE}" 2>/dev/null)" ]; then
+    echo "Migrating existing NVMe datasets cache to persistent disk..."
+    rsync -a "${FAST_CACHE}/huggingface/datasets/" "${PERSIST_DATASETS_CACHE}/" 2>/dev/null || true
+fi
 
 # ============================================================================
 # ENVIRONMENT
@@ -98,7 +113,8 @@ export LAMBDA_SEED_WORK="${PERSIST_WORK}"
 export LAMBDA_SEED_RESULTS="${PERSIST_RESULTS}"
 export LAMBDA_CACHE="${FAST_CACHE}"
 export HF_HOME="${FAST_CACHE}/huggingface"
-export HF_DATASETS_CACHE="${FAST_CACHE}/huggingface/datasets"
+# Datasets cache must be on /persist; model weights cache stays on /data.
+export HF_DATASETS_CACHE="${PERSIST_DATASETS_CACHE}"
 export TRANSFORMERS_CACHE="${FAST_CACHE}/huggingface/transformers"
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
@@ -137,10 +153,11 @@ stage_done() { [ -f "$(flag "$1")" ]; }
 
 header "AZURE 2xA100 - PERSISTENT CHECKPOINT MODE"
 
-log "Seed:         $SEED"
-log "Persist dir:  $PERSIST_WORK  (survives deallocation)"
-log "Cache dir:    $FAST_CACHE  (fast NVMe, ephemeral)"
-log "Results dir:  $PERSIST_RESULTS"
+log "Seed:           $SEED"
+log "Persist work:   $PERSIST_WORK  (survives deallocation)"
+log "Persist data:   $PERSIST_DATASETS_CACHE  (datasets cache, durable)"
+log "Fast cache:     $FAST_CACHE  (model weights, ephemeral NVMe)"
+log "Results dir:    $PERSIST_RESULTS"
 echo ""
 
 GPU_COUNT=$(python -c "import torch; print(torch.cuda.device_count())")
