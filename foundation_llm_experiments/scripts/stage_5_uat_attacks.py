@@ -37,7 +37,7 @@ from configs.experiment_config import FoundationExperimentConfig as Config
 from utils.common_utils import (
     set_all_seeds, save_json, load_json, atomic_save_json, load_json_safe,
     StageLogger, check_dependencies, make_model_monotonic,
-    partial_results_dir,
+    partial_results_dir, load_pile_eval_texts,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -260,24 +260,8 @@ def _load_model(model_type, device):
 
 
 def _load_pile_texts(logger, max_samples):
-    from datasets import load_dataset
-
-    for split in ("test", "validation"):
-        try:
-            ds = load_dataset(
-                Config.TRAINING_DATASET, split=split, streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR, trust_remote_code=True,
-            )
-            logger.log(f"  Loaded '{split}' split.")
-            return ds
-        except (ValueError, KeyError):
-            continue
-
-    logger.log("  Falling back to tail of train split.")
-    return load_dataset(
-        Config.TRAINING_DATASET, split="train[-10000:]", streaming=False,
-        cache_dir=Config.DATA_CACHE_DIR, trust_remote_code=True,
-    )
+    """Stream Pile eval texts (skips training prefix to avoid leakage)."""
+    return load_pile_eval_texts(max_samples, log_fn=logger.log)
 
 
 def main():
@@ -300,10 +284,17 @@ def main():
             tokenizer.pad_token = tokenizer.eos_token
 
         logger.log("Loading Pile test data...")
-        pile_test = _load_pile_texts(logger, max_samples=1500)
-
         max_samples = 1500 if Config.USE_FULL_EVAL_SETS else 300
-        all_texts = [ex['text'] for i, ex in enumerate(pile_test) if i < max_samples]
+
+        partial = partial_results_dir()
+        texts_cache = os.path.join(partial, f"pile_attack_texts_{max_samples}.json")
+        if os.path.exists(texts_cache):
+            logger.log(f"  Loading cached attack texts from {texts_cache}")
+            all_texts = load_json(texts_cache)
+        else:
+            all_texts = _load_pile_texts(logger, max_samples=max_samples)
+            atomic_save_json(all_texts, texts_cache)
+            logger.log(f"  Saved attack texts to {texts_cache}")
         logger.log(f"  Loaded {len(all_texts)} test samples.")
 
         split_idx = int(len(all_texts) * 0.4)

@@ -33,52 +33,16 @@ from configs.experiment_config import FoundationExperimentConfig as Config
 from utils.common_utils import (
     set_all_seeds, save_json, load_json, atomic_save_json,
     StageLogger, check_dependencies, compute_perplexity_resumable,
-    make_model_monotonic, partial_results_dir,
+    make_model_monotonic, partial_results_dir, load_pile_eval_texts,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
-def _load_pile_test(logger, max_samples):
-    """Load Pile test samples, preferring test/validation splits."""
-    from datasets import load_dataset
-
-    for split in ("test", "validation"):
-        try:
-            ds = load_dataset(
-                Config.TRAINING_DATASET,
-                split=split,
-                streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR,
-                trust_remote_code=True,
-            )
-            logger.log(f"  Loaded '{split}' split.")
-            return ds
-        except (ValueError, KeyError):
-            continue
-
-    slice_size = max_samples or 50000
-    logger.log(f"  No test/validation split; taking last {slice_size} train rows.")
-    return load_dataset(
-        Config.TRAINING_DATASET,
-        split=f"train[-{slice_size}:]",
-        streaming=False,
-        cache_dir=Config.DATA_CACHE_DIR,
-        trust_remote_code=True,
-    )
-
-
-def _run_pile_perplexity(model, tokenizer, device, logger, progress_path, max_samples):
+def _run_pile_perplexity(test_texts, model, tokenizer, device, logger, progress_path):
     """Compute pile perplexity with resumable per-batch checkpointing."""
     from torch.utils.data import DataLoader
     from utils.common_utils import LanguageModelingDataset
-
-    pile_test = _load_pile_test(logger, max_samples)
-
-    if max_samples:
-        test_texts = [ex['text'] for i, ex in enumerate(pile_test) if i < max_samples]
-    else:
-        test_texts = [ex['text'] for ex in pile_test]
 
     dataset = LanguageModelingDataset(test_texts, tokenizer, max_length=Config.MAX_SEQ_LENGTH)
     dataloader = DataLoader(dataset, batch_size=Config.EVAL_BATCH_SIZE, shuffle=False)
@@ -119,7 +83,7 @@ def _load_monotonic(device):
     return model
 
 
-def _eval_one_model(name, loader_fn, tokenizer, device, logger, max_samples):
+def _eval_one_model(name, loader_fn, tokenizer, device, logger, test_texts):
     """Evaluate one model, reusing its persisted partial result if present."""
     partial = partial_results_dir()
     result_path = os.path.join(partial, f"{name}_pile.json")
@@ -135,9 +99,8 @@ def _eval_one_model(name, loader_fn, tokenizer, device, logger, max_samples):
 
     logger.log(f"[{name}] Computing perplexity on Pile test set...")
     result = _run_pile_perplexity(
-        model, tokenizer, device, logger,
+        test_texts, model, tokenizer, device, logger,
         progress_path=progress_path,
-        max_samples=max_samples,
     )
     logger.log(f"[{name}] Perplexity: {result['perplexity']:.2f}")
 
@@ -181,11 +144,23 @@ def main():
             else Config.QUICK_PILE_TEST_SIZE
         )
 
+        # Cache eval texts on persistent disk so a deallocation mid-stage
+        # doesn't force us to re-stream from HuggingFace next boot.
+        partial = partial_results_dir()
+        texts_cache = os.path.join(partial, f"pile_eval_texts_{max_samples}.json")
+        if os.path.exists(texts_cache):
+            logger.log(f"Loading cached eval texts from {texts_cache}")
+            test_texts = load_json(texts_cache)
+        else:
+            test_texts = load_pile_eval_texts(max_samples, log_fn=logger.log)
+            atomic_save_json(test_texts, texts_cache)
+            logger.log(f"Saved eval texts to {texts_cache}")
+
         baseline_pile = _eval_one_model(
-            "baseline_pythia", _load_baseline, tokenizer, device, logger, max_samples
+            "baseline_pythia", _load_baseline, tokenizer, device, logger, test_texts
         )
         monotonic_pile = _eval_one_model(
-            "monotonic_pythia", _load_monotonic, tokenizer, device, logger, max_samples
+            "monotonic_pythia", _load_monotonic, tokenizer, device, logger, test_texts
         )
 
         results = {

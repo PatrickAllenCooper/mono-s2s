@@ -278,6 +278,58 @@ def compute_perplexity_resumable(
     }
 
 
+def load_pile_eval_texts(num_samples, skip_first=None, log_fn=print):
+    """
+    Stream evaluation texts from the configured Pile training dataset.
+
+    Materializing slice notation like ``train[-10000:]`` against the full
+    monology/pile-uncopyrighted dataset triggers a ~700 GB single-file
+    Arrow build that overruns any reasonable persistent disk. This helper
+    instead opens the train split in streaming mode, skips past the rows
+    we trained on (so evaluation never overlaps training), and pulls
+    exactly ``num_samples`` text rows into memory.
+
+    Args:
+        num_samples: number of text rows to return.
+        skip_first: rows to skip from the start of the train split before
+            taking samples. Defaults to ``Config.QUICK_TRAINING_SAMPLES``
+            so we never evaluate on data the model was recovery-trained
+            on.
+        log_fn: callable for progress messages.
+
+    Returns:
+        list[str]
+    """
+    from datasets import load_dataset
+
+    if skip_first is None:
+        skip_first = Config.QUICK_TRAINING_SAMPLES
+
+    log_fn(f"  Streaming Pile eval texts: skip first {skip_first:,}, "
+           f"take {num_samples:,}")
+
+    streamed = load_dataset(
+        Config.TRAINING_DATASET,
+        split="train",
+        streaming=True,
+        cache_dir=Config.DATA_CACHE_DIR,
+    )
+    if skip_first:
+        streamed = streamed.skip(skip_first)
+    streamed = streamed.take(num_samples)
+
+    texts = []
+    for example in streamed:
+        text = example.get("text", "")
+        if text:
+            texts.append(text)
+        if len(texts) >= num_samples:
+            break
+
+    log_fn(f"  Collected {len(texts):,} eval texts.")
+    return texts
+
+
 def evaluate_language_modeling(model, tokenizer, dataset_name, device, max_samples=None):
     """
     Evaluate on language modeling benchmarks (LAMBADA, etc.)

@@ -38,6 +38,7 @@ from utils.common_utils import (
     set_all_seeds, save_json, load_json, atomic_save_json,
     append_jsonl, load_jsonl, partial_results_dir,
     StageLogger, check_dependencies, make_model_monotonic,
+    load_pile_eval_texts,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -209,25 +210,9 @@ def _load_model(model_type, device):
     return model
 
 
-def _load_pile_texts(logger):
-    from datasets import load_dataset
-
-    for split in ("test", "validation"):
-        try:
-            ds = load_dataset(
-                Config.TRAINING_DATASET, split=split, streaming=False,
-                cache_dir=Config.DATA_CACHE_DIR, trust_remote_code=True,
-            )
-            logger.log(f"  Loaded '{split}' split.")
-            return ds
-        except (ValueError, KeyError):
-            continue
-
-    logger.log("  Falling back to tail of train split.")
-    return load_dataset(
-        Config.TRAINING_DATASET, split="train[-10000:]", streaming=False,
-        cache_dir=Config.DATA_CACHE_DIR, trust_remote_code=True,
-    )
+def _load_pile_texts(logger, max_samples):
+    """Stream Pile eval texts (skips training prefix to avoid leakage)."""
+    return load_pile_eval_texts(max_samples, log_fn=logger.log)
 
 
 def main():
@@ -250,12 +235,18 @@ def main():
             tokenizer.pad_token = tokenizer.eos_token
 
         logger.log("Loading Pile test data...")
-        pile_test = _load_pile_texts(logger)
         max_samples = Config.HOTFLIP_NUM_SAMPLES
-        test_texts = [ex['text'] for i, ex in enumerate(pile_test) if i < max_samples]
-        logger.log(f"  Test set: {len(test_texts)} samples.")
 
         partial = partial_results_dir()
+        texts_cache = os.path.join(partial, f"hotflip_texts_{max_samples}.json")
+        if os.path.exists(texts_cache):
+            logger.log(f"  Loading cached hotflip texts from {texts_cache}")
+            test_texts = load_json(texts_cache)
+        else:
+            test_texts = _load_pile_texts(logger, max_samples=max_samples)
+            atomic_save_json(test_texts, texts_cache)
+            logger.log(f"  Saved hotflip texts to {texts_cache}")
+        logger.log(f"  Test set: {len(test_texts)} samples.")
         all_results = {}
 
         for model_name, model_type in [
