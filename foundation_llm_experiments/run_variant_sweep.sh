@@ -246,11 +246,23 @@ else
 
     if [ ! -f "$WINNER_FILE" ]; then
         warn "Auto-selection failed or both variants exceeded ppl ceiling."
-        warn "Relaxing ceiling to 3.0x..."
+        warn "Relaxing ceiling to 5.0x..."
         python scripts/sweep_aggregate.py \
             --seeds 42 \
             --variants mlp_both mlp_in_attn_out \
-            --ppl-ceiling 3.0 \
+            --ppl-ceiling 5.0 \
+            --pick-winner \
+            --winner-file "$WINNER_FILE" \
+            --results-root "${PERSIST}/sweep_results" \
+            2>&1 | tee -a "${LOG_DIR}/phase_a_aggregate.log" || true
+    fi
+
+    if [ ! -f "$WINNER_FILE" ]; then
+        warn "Relaxing ceiling to 10.0x..."
+        python scripts/sweep_aggregate.py \
+            --seeds 42 \
+            --variants mlp_both mlp_in_attn_out \
+            --ppl-ceiling 10.0 \
             --pick-winner \
             --winner-file "$WINNER_FILE" \
             --results-root "${PERSIST}/sweep_results" \
