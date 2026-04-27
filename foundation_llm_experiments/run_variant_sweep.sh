@@ -118,11 +118,14 @@ run_cell() {
 
     export EXPERIMENT_SEED="$SEED"
     export MONOTONIC_VARIANT="$VARIANT"
-    export AZURE_WORK="${CELL_WORK}"
-    export AZURE_RESULTS="${CELL_RESULTS}"
     export AZURE_CACHE="${FAST_CACHE}"
-    # Propagate seed-work for internal Config path resolution
-    unset LAMBDA_SEED_WORK LAMBDA_SEED_RESULTS LAMBDA_CACHE
+    # Use LAMBDA_SEED_WORK / LAMBDA_SEED_RESULTS which Config reads directly
+    # as WORK_DIR / RESULTS_DIR with no seed-suffix appended (unlike AZURE_WORK
+    # which triggers Config's seed-suffix logic and produces double suffixes).
+    export LAMBDA_SEED_WORK="${CELL_WORK}"
+    export LAMBDA_SEED_RESULTS="${CELL_RESULTS}"
+    export LAMBDA_CACHE="${FAST_CACHE}"
+    unset AZURE_WORK AZURE_RESULTS
 
     # Fast-mode training budget
     export OVERRIDE_TRAINING_SAMPLES="$FAST_TRAINING_SAMPLES"
