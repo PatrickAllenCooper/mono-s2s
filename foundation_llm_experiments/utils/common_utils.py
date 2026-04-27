@@ -70,6 +70,33 @@ def worker_init_fn(worker_id):
 # MONOTONIC NEURAL NETWORK COMPONENTS
 # ======================================================================
 
+# Layer-name patterns that identify which Linear modules each monotonic variant
+# should constrain with softplus. All matches are done as substring checks on
+# the full dotted module name (e.g. "gpt_neox.layers.3.mlp.dense_h_to_4h").
+#
+# "mlp_in"          - original scheme: only the MLP input projection.
+# "mlp_both"        - full MLP sublayer: input + output projections.
+# "mlp_in_attn_out" - MLP input + attention output projection (closes the
+#                     attention-routing leak path observed in HotFlip results).
+MONOTONIC_VARIANT_PATTERNS = {
+    "mlp_in": [
+        "dense_h_to_4h", "c_fc", "fc_in",
+    ],
+    "mlp_both": [
+        "dense_h_to_4h", "dense_4h_to_h",
+        "c_fc", "c_proj",
+        "fc_in", "fc_out",
+    ],
+    "mlp_in_attn_out": [
+        "dense_h_to_4h", "c_fc", "fc_in",
+        # GPTNeoX attention output projection is called "attention.dense"
+        "attention.dense",
+        # GPT-2 / GPTNeo style
+        "attn.c_proj",
+    ],
+}
+
+
 class NonNegativeParametrization(nn.Module):
     """
     Softplus parametrization: W = softplus(V) >= 0
@@ -78,10 +105,10 @@ class NonNegativeParametrization(nn.Module):
     def __init__(self, init_weight=None):
         super().__init__()
         self.init_weight = init_weight
-        
+
     def forward(self, V):
         return F.softplus(V)
-    
+
     def right_inverse(self, W):
         """Initialize V from pretrained W"""
         eps = 1e-4
@@ -90,55 +117,59 @@ class NonNegativeParametrization(nn.Module):
         return V
 
 
-def make_model_monotonic(model):
+def make_model_monotonic(model, variant=None):
     """
-    Apply non-negative weight constraints to FFN layers in decoder-only model.
-    
-    For Pythia/GPT-style models:
-    - FFN structure: fc_in (d_model -> d_ff), fc_out (d_ff -> d_model)
-    - Apply constraints to both fc_in and fc_out weight matrices
-    
-    Note: This is adapted from T5 implementation for decoder-only architectures
+    Apply non-negative weight constraints to selected Linear layers.
+
+    variant selects which layer patterns are constrained (see
+    MONOTONIC_VARIANT_PATTERNS above). When variant is None the value is
+    read from the MONOTONIC_VARIANT environment variable, defaulting to
+    "mlp_in" for backward compatibility with existing checkpoints.
+
+    For Pythia/GPTNeoX architecture:
+      - dense_h_to_4h  : MLP input projection  (d_model -> 4*d_model)
+      - dense_4h_to_h  : MLP output projection (4*d_model -> d_model)
+      - attention.dense: attention output projection (d_model -> d_model)
     """
+    if variant is None:
+        variant = os.environ.get("MONOTONIC_VARIANT", "mlp_in")
+    if variant not in MONOTONIC_VARIANT_PATTERNS:
+        raise ValueError(
+            f"Unknown monotonic variant '{variant}'. "
+            f"Valid options: {list(MONOTONIC_VARIANT_PATTERNS)}"
+        )
+    patterns = MONOTONIC_VARIANT_PATTERNS[variant]
     modified_count = 0
-    
-    # Pythia uses GPTNeoX architecture with specific naming
-    # FFN layers are in: model.gpt_neox.layers[i].mlp.dense_h_to_4h and dense_4h_to_h
-    
+
     for name, module in model.named_modules():
-        # Check for MLP/FFN layers
-        # Pythia: dense_h_to_4h (input projection), dense_4h_to_h (output projection)
-        # GPT-2: c_fc (input), c_proj (output)
-        # General: mlp, fc_in, fc_out patterns
-        
-        # Only constrain input projection (dense_h_to_4h / c_fc / fc_in), NOT output projection.
-        # This preserves more model expressiveness while still enforcing monotonicity
-        # on the critical FFN expansion step.
-        if any(ffn_pattern in name.lower() for ffn_pattern in
-               ['dense_h_to_4h', 'c_fc', 'fc_in']):
-            
-            # Apply to Linear layers only
-            if isinstance(module, nn.Linear):
-                # Get current weight for initialization
-                current_weight = module.weight.data.clone()
-                
-                # Register parametrization
-                P.register_parametrization(
-                    module, "weight",
-                    NonNegativeParametrization(init_weight=current_weight)
-                )
-                modified_count += 1
-                print(f"  ✓ Applied monotonicity to: {name}")
-    
+        if not isinstance(module, nn.Linear):
+            continue
+        name_lower = name.lower()
+        if any(pat in name_lower for pat in patterns):
+            current_weight = module.weight.data.clone()
+            P.register_parametrization(
+                module, "weight",
+                NonNegativeParametrization(init_weight=current_weight)
+            )
+            modified_count += 1
+            print(f"  ✓ Applied monotonicity to: {name}")
+
     if modified_count == 0:
         raise RuntimeError(
-            "No FFN layers found to make monotonic! "
+            f"No layers matched variant '{variant}' patterns {patterns}. "
             "Check model architecture compatibility."
         )
-    
-    print(f"\n✓ Applied softplus parametrization to {modified_count} weight matrices")
-    print(f"  ⚠️  Note: Model is NOT globally monotonic (attention + residuals unconstrained)")
-    
+
+    print(f"\n✓ Applied softplus parametrization to {modified_count} weight matrices "
+          f"(variant='{variant}')")
+    unconstrained = []
+    if "attention.dense" not in patterns and "attn.c_proj" not in patterns:
+        unconstrained.append("attention")
+    if "dense_4h_to_h" not in patterns and "fc_out" not in patterns:
+        unconstrained.append("MLP output projection")
+    if unconstrained:
+        print(f"  Note: {', '.join(unconstrained)} unconstrained")
+
     return model
 
 

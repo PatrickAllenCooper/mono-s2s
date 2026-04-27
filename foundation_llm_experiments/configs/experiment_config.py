@@ -79,6 +79,29 @@ class FoundationExperimentConfig:
     #            = 2 * 2048 * 8192 * 24 ≈ 805M parameters
     
     # ======================================================================
+    # ENV-VAR OVERRIDES FOR SWEEP MODE
+    # Set any of these before launching to override the defaults below
+    # without editing source code. The run_variant_sweep.sh orchestrator
+    # uses this mechanism to run fast Phase-A screening cells.
+    # ======================================================================
+
+    @staticmethod
+    def _env_int(key, default):
+        try:
+            return int(os.environ[key])
+        except (KeyError, ValueError):
+            return default
+
+    @staticmethod
+    def _env_str(key, default):
+        return os.environ.get(key, default)
+
+    # Which monotonic variant to apply.  See MONOTONIC_VARIANT_PATTERNS in
+    # common_utils.py.  Recognised values: "mlp_in", "mlp_both",
+    # "mlp_in_attn_out".
+    MONOTONIC_VARIANT: str = _env_str.__func__("MONOTONIC_VARIANT", "mlp_in")
+
+    # ======================================================================
     # RANDOM SEEDS
     # ======================================================================
     
@@ -90,13 +113,13 @@ class FoundationExperimentConfig:
     # ======================================================================
     
     # Recovery training (restore perplexity after monotonicity init)
-    RECOVERY_EPOCHS = 5  # 5 epochs for better baseline performance
+    RECOVERY_EPOCHS = _env_int.__func__("OVERRIDE_RECOVERY_EPOCHS", 5)
     RECOVERY_LR = 1e-5
     RECOVERY_WARMUP_RATIO = 0.10
     RECOVERY_WEIGHT_DECAY = 0.01
     
     # Monotonic recovery (same data, extended warmup)
-    MONOTONIC_RECOVERY_EPOCHS = 10  # 10 epochs - monotonic needs more training
+    MONOTONIC_RECOVERY_EPOCHS = _env_int.__func__("OVERRIDE_MONOTONIC_RECOVERY_EPOCHS", 10)
     MONOTONIC_RECOVERY_LR = 5e-5   # Higher LR needed to escape poor initialization
     MONOTONIC_RECOVERY_WARMUP_RATIO = 0.20  # More warmup for softplus stability
     MONOTONIC_RECOVERY_WEIGHT_DECAY = 0.01
@@ -117,7 +140,7 @@ class FoundationExperimentConfig:
     MAX_GRAD_NORM = 1.0
 
     # Sequence length
-    MAX_SEQ_LENGTH = 2048  # Pythia's context window
+    MAX_SEQ_LENGTH = _env_int.__func__("OVERRIDE_MAX_SEQ_LENGTH", 2048)  # Pythia's context window
     
     # ======================================================================
     # EVALUATION CONFIGURATION
@@ -143,7 +166,7 @@ class FoundationExperimentConfig:
     
     # Quick testing sizes (when USE_FULL_EVAL_SETS=False)
     QUICK_EVAL_SIZE = 500
-    QUICK_PILE_TEST_SIZE = 1000
+    QUICK_PILE_TEST_SIZE = _env_int.__func__("OVERRIDE_QUICK_PILE_TEST_SIZE", 1000)
     
     # Full evaluation sizes
     FULL_PILE_TEST_SIZE = 10000  # 10K examples from Pile test
@@ -159,7 +182,7 @@ class FoundationExperimentConfig:
     TRAINING_SAMPLES = None  # None = full dataset, set number for quick tests
     
     # For quick testing (set TRAINING_SAMPLES to this value for quick mode)
-    QUICK_TRAINING_SAMPLES = 100000  # 100K samples for production runs
+    QUICK_TRAINING_SAMPLES = _env_int.__func__("OVERRIDE_TRAINING_SAMPLES", 100000)
     
     # CRITICAL FIX: Use full test sets for publication-quality results
     # Set to False for quick testing (reduces runtime from 60h to 5h per seed)
@@ -177,7 +200,7 @@ class FoundationExperimentConfig:
     
     # HotFlip attacks
     HOTFLIP_NUM_FLIPS = 10  # More flips for longer sequences
-    HOTFLIP_NUM_SAMPLES = 200  # Test on diverse prompts
+    HOTFLIP_NUM_SAMPLES = _env_int.__func__("OVERRIDE_HOTFLIP_NUM_SAMPLES", 200)
     
     # Attack evaluation
     ATTACK_LOSS_BATCH_SIZE = 8

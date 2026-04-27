@@ -84,7 +84,7 @@ def main():
         logger.log("  2. Apply inverse softplus transformation")
         logger.log("  3. Register softplus parametrization")
         
-        model = make_model_monotonic(model)
+        model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
         
         # Count parameters after (should include parametrization params)
         num_params_after = sum(p.numel() for p in model.parameters())

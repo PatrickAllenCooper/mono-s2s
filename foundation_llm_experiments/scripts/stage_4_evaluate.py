@@ -76,7 +76,7 @@ def _load_monotonic(device):
         cache_dir=Config.DATA_CACHE_DIR,
         torch_dtype=torch.float32,
     )
-    model = make_model_monotonic(model)
+    model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
     model.load_state_dict(torch.load(path, map_location=device, weights_only=False))
     model = model.to(device)
     model.eval()

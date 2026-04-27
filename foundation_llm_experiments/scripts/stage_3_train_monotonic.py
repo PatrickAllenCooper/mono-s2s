@@ -415,7 +415,7 @@ def main():
         )
 
         logger.log("Applying monotonicity constraints...")
-        model = make_model_monotonic(model)
+        model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
 
         init_path = os.path.join(Config.CHECKPOINT_DIR, 'monotonic_initialized.pt')
         if os.path.exists(init_path):
