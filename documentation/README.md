@@ -1,6 +1,6 @@
 # Mono-S2S Documentation
 
-**Last Updated:** 2026-01-29  
+**Last Updated:** 2026-03-28  
 **Documentation Type:** Comprehensive guidance for paper development and testing
 
 ---
@@ -348,6 +348,25 @@ Located in `$SCRATCH/mono_s2s_results/` and `$PROJECT/mono_s2s_final_results/`:
 
 ---
 
+## Supplementary Results Report
+
+**File:** `supplementary_results.tex`
+
+A standalone LaTeX report compiling all experimental results obtained after the initial ICML 2026 submission. Contents include:
+
+- Full epoch-by-epoch training curves (baseline and monotonic)
+- Full test set evaluations beyond the n=200 subsets in the paper
+- Prediction length analysis across models and datasets
+- Detailed HotFlip per-example degradation distributions
+- Cross-infrastructure reproducibility (HPC vs Lambda)
+- Complete UAT transfer matrix with numerical values
+- Learned adversarial trigger sequences
+- Early model (Dec 2025) vs final model (Jan 2026) comparison
+- Multi-seed attack stability verification
+- Foundation model (Pythia-1.4B) experiment pipeline status
+
+---
+
 ## Next Actions
 
 ### For Running Experiments
@@ -362,9 +381,10 @@ Located in `$SCRATCH/mono_s2s_results/` and `$PROJECT/mono_s2s_final_results/`:
 1. Review this document's "Must-Have Additions" section
 2. Run pipeline with current configuration (fair comparison enabled)
 3. Collect all results for tables
-4. Expand Methods section (0.5 → 2.5 pages)
+4. Expand Methods section (0.5 to 2.5 pages)
 5. Add missing results tables
 6. Implement statistical testing corrections
+7. Integrate supplementary_results.tex findings into paper revision
 
 ### For Testing
 
@@ -401,5 +421,5 @@ For questions about:
 
 ---
 
-**Last Updated:** 2026-01-29  
-**Status:** Production-ready documentation for ICML 2025 submission
+**Last Updated:** 2026-03-28  
+**Status:** Production-ready documentation for ICML 2026 submission
