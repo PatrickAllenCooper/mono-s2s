@@ -53,15 +53,19 @@ export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
-# Redirect HuggingFace cache to scratch (not home directory)
+# Redirect HuggingFace cache to scratch (not home directory).
 export HF_HOME="$SCRATCH/huggingface_cache"
 export HF_DATASETS_CACHE="$SCRATCH/huggingface_cache/datasets"
 export TRANSFORMERS_CACHE="$SCRATCH/huggingface_cache/transformers"
+export MONOTONIC_VARIANT="${MONOTONIC_VARIANT:-mlp_both}"
+
+mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
 
 # Print GPU info for debugging
 echo ""
 echo "GPU Information:"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>/dev/null || echo "nvidia-smi not available"
+echo "Monotonic variant: $MONOTONIC_VARIANT"
 echo ""
 
 # Navigate to scripts directory

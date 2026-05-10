@@ -35,12 +35,20 @@ export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 export HF_HOME="$SCRATCH/huggingface_cache"
+export HF_DATASETS_CACHE="$SCRATCH/huggingface_cache/datasets"
+export TRANSFORMERS_CACHE="$SCRATCH/huggingface_cache/transformers"
+export MONOTONIC_VARIANT="${MONOTONIC_VARIANT:-mlp_both}"
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export CUBLAS_WORKSPACE_CONFIG=:16:8
+export TOKENIZERS_PARALLELISM=false
+
+mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
 
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || exit 1
 
 echo ""
-echo "Evaluating models on Pile test set..."
+echo "Evaluating models on Pile test set (variant=$MONOTONIC_VARIANT)..."
 python stage_4_evaluate.py
 
 EXIT_CODE=$?

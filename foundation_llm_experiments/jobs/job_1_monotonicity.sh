@@ -46,6 +46,9 @@ export PROJECT=${PROJECT:-/projects/$USER}
 export HF_HOME="$SCRATCH/huggingface_cache"
 export HF_DATASETS_CACHE="$SCRATCH/huggingface_cache/datasets"
 export TRANSFORMERS_CACHE="$SCRATCH/huggingface_cache/transformers"
+export MONOTONIC_VARIANT="${MONOTONIC_VARIANT:-mlp_both}"
+
+mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
 
 # Navigate to scripts directory
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
@@ -56,7 +59,7 @@ cd scripts || {
 
 # Run monotonicity application script
 echo ""
-echo "Applying monotonicity constraints to Pythia-1.4B FFN layers..."
+echo "Applying monotonicity constraints ($MONOTONIC_VARIANT) to Pythia-1.4B..."
 python stage_1_apply_monotonicity.py
 
 EXIT_CODE=$?

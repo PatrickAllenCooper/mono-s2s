@@ -758,5 +758,50 @@ $PROJECT/foundation_llm_final_results/
 
 ---
 
-**Last Updated:** 2026-01-29  
-**Status:** Production-ready for CURC Alpine
+---
+
+## Monotonic Variant Selection
+
+The CURC jobs use `MONOTONIC_VARIANT=mlp_both` by default. This is the result of an Azure-based Phase A screening experiment that tested three variants on Pythia-1.4B:
+
+| Variant | PPL ratio | HotFlip SR drop | Notes |
+|---|---|---|---|
+| `mlp_in` | 3.65x | **-12pp** (wrong direction) | Original default; fails on Pythia |
+| `mlp_both` | 6.80x | **+30.5pp** | Validated winner; both MLP projections |
+| `mlp_in_attn_out` | 12.49x | +39.5pp | Better SR but 12x PPL cost |
+
+The `mlp_in` scheme works well on T5 (encoder-decoder) but fails on Pythia-1.4B because the unconstrained MLP output projection and attention output layers provide leak paths for gradient-based attacks. `mlp_both` is the correct choice for decoder-only architectures.
+
+To use a different variant:
+
+```bash
+MONOTONIC_VARIANT=mlp_in_attn_out ./submit_all_seeds.sh
+```
+
+---
+
+## Quick Deployment (3 Seeds, Production Run)
+
+```bash
+# 1. SSH to Alpine
+ssh your_username@login.rc.colorado.edu
+
+# 2. Clone repo (first time only)
+cd /projects/$USER
+git clone https://github.com/PatrickAllenCooper/mono-s2s.git
+cd mono-s2s/foundation_llm_experiments
+
+# 3. Bootstrap (first time only, ~10 min)
+bash bootstrap_curc.sh
+
+# 4. Submit all three seeds in one command
+conda activate mono_s2s
+./submit_all_seeds.sh
+```
+
+This submits 24 SLURM jobs (8 per seed × 3 seeds) with full dependency chains. All seeds run concurrently. Total wall time ~70h, GPU-hours ~225.
+
+---
+
+**Last Updated:** 2026-05-10
+**Status:** Production-ready for CURC Alpine (PyTorch cu121, MONOTONIC_VARIANT=mlp_both)

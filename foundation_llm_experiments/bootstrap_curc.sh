@@ -110,8 +110,8 @@ echo ""
 # STEP 3: Install dependencies
 # ======================================================================
 
-echo "Installing PyTorch with CUDA 11.8 support..."
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --quiet
+echo "Installing PyTorch with CUDA 12.1 support (current CURC Alpine)..."
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121 --quiet
 
 echo "Installing other dependencies from requirements.txt..."
 if [ -f "requirements.txt" ]; then
@@ -152,10 +152,11 @@ SCRATCH_DIR="${SCRATCH:-/scratch/alpine/$USER}"
 export HF_HOME="$SCRATCH_DIR/huggingface_cache"
 export HF_DATASETS_CACHE="$SCRATCH_DIR/huggingface_cache/datasets"
 export TRANSFORMERS_CACHE="$SCRATCH_DIR/huggingface_cache/transformers"
+# mlp_both is the experimentally validated variant for Pythia-1.4B.
+# mlp_in (original default) was shown to fail on decoder-only architectures.
+export MONOTONIC_VARIANT="mlp_both"
 
-mkdir -p "$HF_HOME"
-mkdir -p "$HF_DATASETS_CACHE"
-mkdir -p "$TRANSFORMERS_CACHE"
+mkdir -p "$HF_HOME" "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
 
 echo "✓ Cache directories created:"
 echo "  HF_HOME: $HF_HOME"
