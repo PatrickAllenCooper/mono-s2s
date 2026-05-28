@@ -265,8 +265,8 @@ while [ ${#ACTIVE_JOBS[@]} -gt 0 ]; do
     ACTIVE_JOBS=()
     for job in "${MONITORED_JOBS[@]}"; do
         if [ -z "$job" ]; then continue; fi
-        local status=$(get_job_status "$job")
-        if [[ "$status" != "NOT_FOUND" ]] || [[ "$status" == "RUNNING" ]] || [[ "$status" == "PENDING" ]]; then
+        _status=$(get_job_status "$job")
+        if [[ "$_status" != "NOT_FOUND" ]] || [[ "$_status" == "RUNNING" ]] || [[ "$_status" == "PENDING" ]]; then
             ACTIVE_JOBS+=("$job")
         fi
     done
@@ -288,10 +288,10 @@ log ""
 log "Final status summary:"
 for job in "${MONITORED_JOBS[@]}"; do
     if [ -z "$job" ]; then continue; fi
-    local job_name=$(get_job_name "$job")
-    local state=$(sacct -j "$job" -n -o State | head -1 | tr -d ' ')
-    local count=${RESUBMISSION_COUNT[$job]:-0}
-    log "  Job $job ($job_name): $state (resubmitted $count times)"
+    _job_name=$(get_job_name "$job")
+    _state=$(sacct -j "$job" -n -o State 2>/dev/null | head -1 | tr -d ' ')
+    _count=${RESUBMISSION_COUNT[$job]:-0}
+    log "  Job $job ($_job_name): $_state (resubmitted $_count times)"
 done
 
 log ""
