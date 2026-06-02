@@ -68,6 +68,15 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>/dev/null
 echo "Monotonic variant: $MONOTONIC_VARIANT"
 echo ""
 
+# Early-exit if this stage already completed (continuation job safety check).
+# When a pre-queued continuation runs after the primary job already finished
+# within its wall time, we skip all work and exit 0 immediately.
+_WORK_DIR="${LAMBDA_SEED_WORK:-/scratch/alpine/${USER}/foundation_llm_work_seed${EXPERIMENT_SEED}}"
+if [ -f "${_WORK_DIR}/stage_3_train_monotonic_complete.flag" ]; then
+    echo "Stage 3 already complete for seed ${EXPERIMENT_SEED}. Nothing to do."
+    exit 0
+fi
+
 # Navigate to scripts directory
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || {
