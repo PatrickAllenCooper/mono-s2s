@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=foundation_aggregate
 #SBATCH --partition=aa100
-#SBATCH --qos=normal
+#SBATCH --qos=gpu-normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:a100_80gb:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00
