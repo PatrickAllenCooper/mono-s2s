@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=23:50:00
-#SBATCH --output=logs/job_3_monotonic_%j.out
-#SBATCH --error=logs/job_3_monotonic_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_3_monotonic_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_3_monotonic_%j.err
 #SBATCH --signal=SIGUSR1@600
 
 # MAX TIME: 23:50:00 (24h with 10min buffer for final checkpoint save)

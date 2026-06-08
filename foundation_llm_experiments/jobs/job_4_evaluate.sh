@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=08:00:00
-#SBATCH --output=logs/job_4_evaluate_%j.out
-#SBATCH --error=logs/job_4_evaluate_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_4_evaluate_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_4_evaluate_%j.err
 
 # Stage 4: Evaluation on LLM Benchmarks
 

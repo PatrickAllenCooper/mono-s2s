@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=12:00:00
-#SBATCH --output=logs/sweep_cell_%j.out
-#SBATCH --error=logs/sweep_cell_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/sweep_cell_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/sweep_cell_%j.err
 #SBATCH --signal=SIGUSR1@600
 
 # Variant Sweep Cell Job

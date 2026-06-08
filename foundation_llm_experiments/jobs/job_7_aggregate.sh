@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --time=00:30:00
-#SBATCH --output=logs/job_7_aggregate_%j.out
-#SBATCH --error=logs/job_7_aggregate_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_7_aggregate_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_7_aggregate_%j.err
 
 # Stage 7: Aggregate Results
 

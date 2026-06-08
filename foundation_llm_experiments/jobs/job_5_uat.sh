@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=06:00:00
-#SBATCH --output=logs/job_5_uat_%j.out
-#SBATCH --error=logs/job_5_uat_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_5_uat_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_5_uat_%j.err
 
 # Stage 5: Universal Adversarial Trigger Attacks
 

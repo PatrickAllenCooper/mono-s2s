@@ -8,8 +8,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=04:00:00
-#SBATCH --output=logs/job_6_hotflip_%j.out
-#SBATCH --error=logs/job_6_hotflip_%j.err
+#SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_6_hotflip_%j.out
+#SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_6_hotflip_%j.err
 
 # Stage 6: HotFlip Gradient-Based Attacks
 
