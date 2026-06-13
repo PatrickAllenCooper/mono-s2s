@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --job-name=foundation_uat
 #SBATCH --partition=aa100
-#SBATCH --qos=gpu-normal
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:a100_80gb:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
-#SBATCH --time=06:00:00
+#SBATCH --time=23:50:00
 #SBATCH --output=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_5_uat_%j.out
 #SBATCH --error=/projects/%u/mono-s2s/foundation_llm_experiments/logs/job_5_uat_%j.err
 
@@ -36,8 +36,16 @@ export MONOTONIC_VARIANT="${MONOTONIC_VARIANT:-mlp_both}"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 export CUBLAS_WORKSPACE_CONFIG=:16:8
 export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1
 
 mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
+
+# Early-exit if this stage already completed (continuation job safety check).
+_WORK_DIR="${LAMBDA_SEED_WORK:-/scratch/alpine/${USER}/foundation_llm_work_seed${EXPERIMENT_SEED}}"
+if [ -f "${_WORK_DIR}/stage_5_uat_complete.flag" ]; then
+    echo "Stage 5 already complete for seed ${EXPERIMENT_SEED}. Nothing to do."
+    exit 0
+fi
 
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || exit 1

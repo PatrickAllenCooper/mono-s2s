@@ -225,7 +225,7 @@ class FoundationExperimentConfig:
     TIME_TRAIN_BASELINE = "23:50:00"  # MAX: 24 hours (5 epochs will need 5+ resubmissions)
     TIME_TRAIN_MONOTONIC = "23:50:00"  # MAX: 24 hours (10 epochs will need 10+ resubmissions)
     TIME_EVALUATE = "08:00:00"        # 8 hours (multiple benchmarks)
-    TIME_UAT = "06:00:00"             # 6 hours (UAT optimization)
+    TIME_UAT = "23:50:00"             # 24h; UAT at full scale needs 2+ chained runs
     TIME_HOTFLIP = "04:00:00"         # 4 hours (HotFlip attacks)
     TIME_AGGREGATE = "00:30:00"       # 30 min (aggregate results)
     

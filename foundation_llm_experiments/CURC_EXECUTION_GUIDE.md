@@ -336,6 +336,21 @@ du -sh $SCRATCH/huggingface_cache
 - Jobs automatically resubmit and resume on timeout
 - No manual intervention needed!
 
+### aa100 SLURM headers (required)
+
+Use the settings documented on [CURC Alpine hardware](https://curc.readthedocs.io/en/latest/clusters/alpine/alpine-hardware.html):
+
+```bash
+#SBATCH --partition=aa100
+#SBATCH --qos=normal
+#SBATCH --gres=gpu:1
+#SBATCH --mem=77G
+```
+
+Do **not** use `--qos=gpu-normal` or `--gres=gpu:a100_80gb:1` until CURC officially documents them; submissions fail with `Requested node configuration is not available`.
+
+UAT at full scale needs **23:50:00** wall time (in the script, not via CLI `--time` override). Chain continuation jobs with `--dependency=afterany:<prev>` if a single 24h slot is not enough.
+
 ### Expected Resubmissions
 
 | Stage | Total Time | Time Limit | Auto-Resubmits | Manual Action |
@@ -357,7 +372,7 @@ du -sh $SCRATCH/huggingface_cache
 | 2: Baseline Training | Yes | 80GB | 23:50:00 | ~24h | ~25GB |
 | 3: Monotonic Training | Yes | 80GB | 23:50:00 | ~32h (2 runs) | ~25GB |
 | 4: Evaluation | Yes | 80GB | 8:00:00 | ~8h | ~5GB |
-| 5: UAT Attacks | Yes | 80GB | 6:00:00 | ~6h | ~2GB |
+| 5: UAT Attacks | Yes | 80GB | 23:50:00 | ~24h/run (2+ runs) | ~2GB |
 | 6: HotFlip Attacks | Yes | 80GB | 4:00:00 | ~4h | ~2GB |
 | 7: Aggregate | No | 16GB | 0:30:00 | ~30min | ~1GB |
 

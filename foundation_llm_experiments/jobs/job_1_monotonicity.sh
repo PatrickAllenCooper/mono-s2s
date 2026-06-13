@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=foundation_monotonic
 #SBATCH --partition=aa100
-#SBATCH --qos=gpu-normal
+#SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:a100_80gb:1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=77G
 #SBATCH --time=00:30:00
