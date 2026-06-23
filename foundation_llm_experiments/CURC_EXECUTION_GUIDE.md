@@ -351,6 +351,8 @@ Do **not** use `--qos=gpu-normal` or `--gres=gpu:a100_80gb:1` until CURC officia
 
 UAT at full scale needs **23:50:00** wall time (in the script, not via CLI `--time` override). Chain continuation jobs with `--dependency=afterany:<prev>` if a single 24h slot is not enough.
 
+**UAT sample budget:** Always pass `OVERRIDE_UAT_MAX_SAMPLES=200` in `--export` (matches paper: 80 opt + 120 eval texts). The default 1500-sample screen exceeds one 24h SLURM slot per UAT restart; no partial checkpoints are written until a restart completes, so oversized runs never resume.
+
 ### Expected Resubmissions
 
 | Stage | Total Time | Time Limit | Auto-Resubmits | Manual Action |

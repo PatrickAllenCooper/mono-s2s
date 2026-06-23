@@ -195,8 +195,11 @@ class FoundationExperimentConfig:
     # Universal Adversarial Triggers
     ATTACK_TRIGGER_LENGTH = 10
     ATTACK_NUM_CANDIDATES = 100  # Reduced from 200 to fit within time limit
-    ATTACK_NUM_RESTARTS = 3      # Reduced from 5 to fit within time limit
-    ATTACK_NUM_ITERATIONS = 50   # Reduced from 100 to fit within time limit
+    ATTACK_NUM_RESTARTS = _env_int.__func__("OVERRIDE_ATTACK_NUM_RESTARTS", 3)
+    ATTACK_NUM_ITERATIONS = _env_int.__func__("OVERRIDE_ATTACK_NUM_ITERATIONS", 50)
+    # UAT Pile texts: paper uses 80 opt + 120 eval = 200 total (40/60 split in stage_5).
+    # Set OVERRIDE_UAT_MAX_SAMPLES=200 on CURC (1500 full-screen exceeds 24h/restart).
+    UAT_MAX_SAMPLES = _env_int.__func__("OVERRIDE_UAT_MAX_SAMPLES", 0)  # 0 = auto from USE_FULL_EVAL_SETS
     
     # HotFlip attacks
     HOTFLIP_NUM_FLIPS = 10  # More flips for longer sequences

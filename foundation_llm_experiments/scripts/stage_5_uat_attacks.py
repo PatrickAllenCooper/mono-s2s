@@ -284,7 +284,10 @@ def main():
             tokenizer.pad_token = tokenizer.eos_token
 
         logger.log("Loading Pile test data...")
-        max_samples = 1500 if Config.USE_FULL_EVAL_SETS else 300
+        if Config.UAT_MAX_SAMPLES > 0:
+            max_samples = Config.UAT_MAX_SAMPLES
+        else:
+            max_samples = 1500 if Config.USE_FULL_EVAL_SETS else 300
 
         partial = partial_results_dir()
         texts_cache = os.path.join(partial, f"pile_attack_texts_{max_samples}.json")

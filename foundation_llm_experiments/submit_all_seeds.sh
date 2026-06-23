@@ -105,7 +105,7 @@ submit_seed() {
     echo "Submitting seed $SEED (variant=$VARIANT)..."
     echo "----------------------------------------------------------------------"
 
-    local SBATCH_ARGS="--export=ALL,EXPERIMENT_SEED=$SEED,MONOTONIC_VARIANT=$VARIANT"
+    local SBATCH_ARGS="--export=ALL,EXPERIMENT_SEED=$SEED,MONOTONIC_VARIANT=$VARIANT,OVERRIDE_UAT_MAX_SAMPLES=200"
 
     # Stage 0: setup (no dependency)
     local J0
