@@ -193,40 +193,48 @@ def optimize_trigger_resumable(
         atomic_save_json(state, state_path)
         logger.log(f"  Restart {restart + 1} done: loss={final_loss:.4f} "
                    f"(best so far={state['best_loss']:.4f})")
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if state["best_trigger"] is None and state["completed_restarts"]:
+        last = state["completed_restarts"][-1]["trigger_ids"]
+        state["best_trigger"] = list(last)
+        atomic_save_json(state, state_path)
 
     return state["best_trigger"], state["best_loss"]
 
 
-def evaluate_trigger(model, tokenizer, trigger_ids, texts, device):
-    """Evaluate trigger impact on held-out texts."""
+def evaluate_trigger(model, tokenizer, trigger_ids, texts, device, batch_size=None):
+    """Evaluate trigger impact on held-out texts (batched to avoid OOM)."""
+    batch_size = batch_size or Config.ATTACK_LOSS_BATCH_SIZE
     model.eval()
 
-    clean_encodings = tokenizer(
-        texts, return_tensors='pt', padding=True, truncation=True,
-        max_length=Config.MAX_SEQ_LENGTH,
-    ).to(device)
+    def _mean_loss(text_list, prepend_trigger=False):
+        trigger_text = ""
+        if prepend_trigger:
+            trigger_text = tokenizer.decode(trigger_ids, skip_special_tokens=True) + " "
+        total_loss = 0.0
+        count = 0
+        with torch.no_grad():
+            for i in range(0, len(text_list), batch_size):
+                batch = text_list[i:i + batch_size]
+                if prepend_trigger:
+                    batch = [trigger_text + t for t in batch]
+                encodings = tokenizer(
+                    batch, return_tensors='pt', padding=True, truncation=True,
+                    max_length=Config.MAX_SEQ_LENGTH,
+                ).to(device)
+                labels = encodings.input_ids.clone()
+                labels[encodings.attention_mask == 0] = -100
+                outputs = model(**encodings, labels=labels)
+                total_loss += outputs.loss.item() * len(batch)
+                count += len(batch)
+        return total_loss / count if count > 0 else 0.0
 
-    with torch.no_grad():
-        clean_labels = clean_encodings.input_ids.clone()
-        clean_labels[clean_encodings.attention_mask == 0] = -100
-        clean_outputs = model(**clean_encodings, labels=clean_labels)
-        clean_loss = clean_outputs.loss.item()
-
+    clean_loss = _mean_loss(texts, prepend_trigger=False)
+    attacked_loss = _mean_loss(texts, prepend_trigger=True)
     trigger_text = tokenizer.decode(trigger_ids, skip_special_tokens=True)
-    attacked_texts = [trigger_text + " " + text for text in texts]
-
-    attacked_encodings = tokenizer(
-        attacked_texts, return_tensors='pt', padding=True, truncation=True,
-        max_length=Config.MAX_SEQ_LENGTH,
-    ).to(device)
-
-    with torch.no_grad():
-        attacked_labels = attacked_encodings.input_ids.clone()
-        attacked_labels[attacked_encodings.attention_mask == 0] = -100
-        attacked_outputs = model(**attacked_encodings, labels=attacked_labels)
-        attacked_loss = attacked_outputs.loss.item()
-
-    nll_increase = (attacked_loss - clean_loss) / clean_loss
+    nll_increase = (attacked_loss - clean_loss) / clean_loss if clean_loss else 0.0
 
     return {
         'trigger_text': trigger_text,
