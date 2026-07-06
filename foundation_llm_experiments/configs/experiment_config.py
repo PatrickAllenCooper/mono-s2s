@@ -206,7 +206,7 @@ class FoundationExperimentConfig:
     HOTFLIP_NUM_SAMPLES = _env_int.__func__("OVERRIDE_HOTFLIP_NUM_SAMPLES", 200)
     
     # Attack evaluation
-    ATTACK_LOSS_BATCH_SIZE = 8
+    ATTACK_LOSS_BATCH_SIZE = _env_int.__func__("OVERRIDE_ATTACK_LOSS_BATCH_SIZE", 4)
     ATTACK_SUCCESS_THRESHOLD = 0.15  # 15% perplexity increase (vs 10% for ROUGE)
     
     # ======================================================================

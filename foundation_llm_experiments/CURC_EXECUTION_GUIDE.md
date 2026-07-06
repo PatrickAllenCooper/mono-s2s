@@ -336,22 +336,18 @@ du -sh $SCRATCH/huggingface_cache
 - Jobs automatically resubmit and resume on timeout
 - No manual intervention needed!
 
-### aa100 SLURM headers (required)
-
-Use the settings documented on [CURC Alpine hardware](https://curc.readthedocs.io/en/latest/clusters/alpine/alpine-hardware.html):
+### aa100 SLURM headers (required, post–July 2026)
 
 ```bash
 #SBATCH --partition=aa100
-#SBATCH --qos=normal
-#SBATCH --gres=gpu:1
+#SBATCH --qos=gpu-normal
+#SBATCH --gres=gpu:a100_80gb:1
 #SBATCH --mem=77G
 ```
 
-Do **not** use `--qos=gpu-normal` or `--gres=gpu:a100_80gb:1` until CURC officially documents them; submissions fail with `Requested node configuration is not available`.
+**Always request `a100_80gb`.** `--gres=gpu:1` can land on a 40GB A100; UAT loads Pythia-1.4B in memory and OOMs on 40GB nodes (`39.5 GiB` in logs). Training stages already completed on 80GB nodes from earlier submissions.
 
-UAT at full scale needs **23:50:00** wall time (in the script, not via CLI `--time` override). Chain continuation jobs with `--dependency=afterany:<prev>` if a single 24h slot is not enough.
-
-**UAT sample budget:** Always pass `OVERRIDE_UAT_MAX_SAMPLES=200` in `--export` (matches paper: 80 opt + 120 eval texts). The default 1500-sample screen exceeds one 24h SLURM slot per UAT restart; no partial checkpoints are written until a restart completes, so oversized runs never resume.
+UAT uses bfloat16 inference and `OVERRIDE_UAT_MAX_SAMPLES=200` (paper scale: 80 opt + 120 eval). Do not chain S7 with `afterok` on UAT run2 — submit S7 manually after `stage_5_uat_complete.flag` appears.
 
 ### Expected Resubmissions
 

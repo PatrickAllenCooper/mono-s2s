@@ -247,22 +247,24 @@ def evaluate_trigger(model, tokenizer, trigger_ids, texts, device, batch_size=No
 
 
 def _load_model(model_type, device):
+    dtype = torch.bfloat16 if device.type == 'cuda' else torch.float32
     if model_type == 'baseline':
         path = os.path.join(Config.CHECKPOINT_DIR, 'baseline_checkpoints', 'best_model.pt')
         model = AutoModelForCausalLM.from_pretrained(
             Config.MODEL_NAME, cache_dir=Config.DATA_CACHE_DIR,
-            torch_dtype=torch.float32,
-        ).to(device)
-        model.load_state_dict(torch.load(path, map_location=device, weights_only=False))
+            torch_dtype=dtype,
+        )
+        model.load_state_dict(torch.load(path, map_location='cpu', weights_only=False))
+        model = model.to(device=device, dtype=dtype)
     else:
         path = os.path.join(Config.CHECKPOINT_DIR, 'monotonic_checkpoints', 'best_model.pt')
         model = AutoModelForCausalLM.from_pretrained(
             Config.MODEL_NAME, cache_dir=Config.DATA_CACHE_DIR,
-            torch_dtype=torch.float32,
+            torch_dtype=dtype,
         )
         model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
-        model.load_state_dict(torch.load(path, map_location=device, weights_only=False))
-        model = model.to(device)
+        model.load_state_dict(torch.load(path, map_location='cpu', weights_only=False))
+        model = model.to(device=device, dtype=dtype)
     model.eval()
     return model, path
 
