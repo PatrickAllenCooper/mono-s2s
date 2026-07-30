@@ -24,6 +24,18 @@ htmlcov/
 .hypothesis/
 
 # ============================================================================
+# LaTeX build artifacts
+# ============================================================================
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.blg
+paper/*.bbl
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+
+# ============================================================================
 # Large Model Files - DO NOT TRACK (reference in metadata instead)
 # ============================================================================
 *.pt
