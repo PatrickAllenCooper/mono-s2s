@@ -381,9 +381,55 @@ Variant & PPL base & PPL mono & PPL ratio & HF SR base & HF SR mono & SR drop \\
     \item \textbf{Attention constraints amplify robustness at greater cost.} The \texttt{mlp\_in\_attn\_out} variant reduces SR further (35.5\% vs.\ 44.5\% for \texttt{mlp\_both}) but increases the perplexity ratio to $12.49\times$, roughly doubling the quality penalty for a 9pp additional SR drop. This diminishing return is consistent with attention layers being a secondary leak path.
 \end{itemize}
 
-\subsection{Multi-Seed Validation (Phase B, Pending)}
+\subsection{Multi-Seed Validation (Phase B, Full Budget, \texttt{mlp\_both})}
 
-Phase B runs \texttt{mlp\_both} -- the variant with the best perplexity--robustness tradeoff -- on seeds 1337 and 2024 to assess cross-seed stability. Results will be appended to \texttt{paper\_evidence/sweep\_summary.json} and this document updated upon completion.
+Phase B ran the selected variant \texttt{mlp\_both} on seeds 42, 1337, and 2024 with the full CURC recovery-training budget (baseline 5 epochs / monotonic 10 epochs) and paper-scale UAT evaluation (80 optimisation / 120 evaluation texts). HotFlip uses $n=200$ samples with 10 flips.
+
+\begin{table}[h]
+\caption{Pythia-1.4B \texttt{mlp\_both} multi-seed results (full recovery budget). Perplexity on Pile held-out stream; HotFlip success rate (SR); UAT NLL increase under the model-specific learned trigger.}
+\label{tab:pythia-mlp-both-seeds}
+\centering
+\begin{tabular}{lcccccc}
+\toprule
+Seed & PPL base & PPL mono & PPL ratio & HF SR base & HF SR mono & HF SR drop \\
+\midrule
+42   & 6.72 & 36.01 & $5.36\times$ & 69.0\% & 43.5\% & $+25.5$pp \\
+1337 & 6.72 & 42.00 & $6.25\times$ & 69.0\% & 39.0\% & $+30.0$pp \\
+2024 & 6.72 & 35.03 & $5.21\times$ & 69.0\% & 45.0\% & $+24.0$pp \\
+\midrule
+Mean & 6.72 & 37.68 & $5.61\times$ & 69.0\% & 42.5\% & $+26.5$pp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\caption{Pythia-1.4B \texttt{mlp\_both} UAT results (paper-scale budget).}
+\label{tab:pythia-uat-seeds}
+\centering
+\begin{tabular}{lcc}
+\toprule
+Seed & UAT NLL$\uparrow$ base & UAT NLL$\uparrow$ mono \\
+\midrule
+42   & $+15.46\%$ & $+8.79\%$ \\
+1337 & $+16.38\%$ & $+8.08\%$ \\
+2024 & $+16.51\%$ & $+14.96\%$ \\
+\midrule
+Mean & $+16.12\%$ & $+10.61\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Phase B findings.}
+
+\begin{itemize}
+    \item \textbf{HotFlip robustness is stable across seeds.} Relative SR reduction averages $38.4\%$ (absolute mean drop $26.5$pp), with mono SR in $[39.0\%, 45.0\%]$. This confirms the Phase-A screening signal for \texttt{mlp\_both}.
+
+    \item \textbf{Perplexity cost remains severe.} Mean PPL ratio is $5.61\times$ (range $5.21$--$6.25\times$), consistent with the fast-budget screening result ($6.80\times$) and far above T5's $\approx 1.24\times$. Full-budget recovery training does not close the expressivity gap.
+
+    \item \textbf{UAT is more damaging on Pythia than on T5.} Unlike the T5 track (NLL increases $<1\%$), Pythia UATs raise NLL by $\sim$16\% on the baseline. The monotonic model is consistently less damaged (mean $+10.61\%$ vs.\ $+16.12\%$), but the absolute effect is large enough that UAT is a meaningful attack for decoder-only models.
+
+    \item \textbf{Seed 1337 is the most robust HotFlip cell} (39.0\% mono SR, 43.5\% relative reduction) but also the worst perplexity cell ($6.25\times$).
+\end{itemize}
 
 \subsection{Interpretation: Architecture-Dependent Transferability}
 
@@ -391,7 +437,7 @@ The T5 and Pythia experiments together isolate a previously unstated dependency:
 
 For T5, constraining only the feed-forward sublayers ($\approx$40\% of parameters) reduces HotFlip SR from 63\% to 19\% at a $\sim$1.24$\times$ perplexity cost. The encoder-decoder bottleneck, cross-attention alignment objective, and shared embedding across encoder and decoder all limit the routes through which a gradient-based token perturbation can propagate without passing through a constrained layer.
 
-For Pythia-1.4B, the same constraint scope is insufficient: the autoregressive self-attention pathway connects every token position to every previous token position without passing through any constrained layer, providing a full-rank bypass. Effective robustness requires constraining at least both MLP projections (\texttt{mlp\_both}), and even then the perplexity cost is $6.8\times$ rather than $1.24\times$.
+For Pythia-1.4B, the same constraint scope is insufficient: the autoregressive self-attention pathway connects every token position to every previous token position without passing through any constrained layer, providing a full-rank bypass. Effective robustness requires constraining at least both MLP projections (\texttt{mlp\_both}), and even then the full-budget perplexity cost averages $5.61\times$ rather than $1.24\times$.
 
 This finding motivates three directions for future work:
 \begin{enumerate}
@@ -423,7 +469,7 @@ The results compiled in this report reinforce the conclusions of the submitted p
 
     \item \textbf{UAT consistency.} Detailed UAT analysis (Section~\ref{sec:uat-detail}) confirms the paper's finding that universal triggers are minimally effective against sequence-to-sequence models, with the monotonic model exhibiting the smallest NLL increase.
 
-    \item \textbf{Architecture-conditional robustness transfer.} Foundation model experiments (Section~\ref{sec:foundation-llm}) show that the softplus-MLP constraint scheme transfers to Pythia-1.4B only when extended to both MLP projections. The \texttt{mlp\_in} scheme, which succeeds on T5, fails on Pythia (SR increases by 12pp). The \texttt{mlp\_both} variant restores robustness (SR drops 30.5pp) but at a $6.8\times$ perplexity cost, substantially higher than T5's $\approx 1.24\times$. This establishes that the residual-stream routing structure of decoder-only architectures requires broader constraint coverage to close adversarial leak paths.
+    \item \textbf{Architecture-conditional robustness transfer.} Foundation model experiments (Section~\ref{sec:foundation-llm}) show that the softplus-MLP constraint scheme transfers to Pythia-1.4B only when extended to both MLP projections. The \texttt{mlp\_in} scheme, which succeeds on T5, fails on Pythia (SR increases by 12pp). Full-budget multi-seed validation of \texttt{mlp\_both} (seeds 42/1337/2024) confirms a mean HotFlip SR drop of $26.5$pp (relative reduction $\approx 38\%$) at a mean perplexity cost of $5.61\times$, substantially higher than T5's $\approx 1.24\times$. UAT NLL increases are also larger on Pythia ($\sim$16\% baseline / $\sim$11\% monotonic) than on T5 ($<1\%$). This establishes that the residual-stream routing structure of decoder-only architectures requires broader constraint coverage to close adversarial leak paths, and that the quality--robustness trade-off is architecture-dependent.
 \end{enumerate}
 
 

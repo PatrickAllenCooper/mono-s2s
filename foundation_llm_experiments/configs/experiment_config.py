@@ -58,7 +58,8 @@ class FoundationExperimentConfig:
         DATA_CACHE_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_data_cache")
     
     CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
-    FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "foundation_llm_final_results")
+    # Seed-namespaced so multi-seed Stage 7 jobs do not overwrite each other.
+    FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, f"foundation_llm_final_results{_SEED_SUFFIX}")
     
     # ======================================================================
     # MODEL CONFIGURATION

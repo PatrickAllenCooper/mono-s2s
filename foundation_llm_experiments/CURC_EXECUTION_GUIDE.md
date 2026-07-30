@@ -349,6 +349,12 @@ du -sh $SCRATCH/huggingface_cache
 
 UAT uses bfloat16 inference and `OVERRIDE_UAT_MAX_SAMPLES=200` (paper scale: 80 opt + 120 eval). Do not chain S7 with `afterok` on UAT run2 — submit S7 manually after `stage_5_uat_complete.flag` appears.
 
+Stage 7 writes to seed-namespaced paths:
+- `/projects/$USER/foundation_llm_final_results_seed{SEED}/final_results.json`
+- `$SCRATCH/foundation_llm_results_seed{SEED}/final_results.json`
+
+**Phase B status (Jul 2026):** All three seeds (42/1337/2024) completed stages 0–7 for `mlp_both`. Mean HotFlip SR drop ≈26.5pp at ≈5.61× PPL cost.
+
 ### Expected Resubmissions
 
 | Stage | Total Time | Time Limit | Auto-Resubmits | Manual Action |

@@ -101,9 +101,9 @@ Monotonic          | {results['attack_summary']['uat']['results']['monotonic_pyt
 KEY FINDINGS
 {'='*80}
 
-✓ Perplexity Gap: {ppl_gap:+.1f}% (monotonic slightly worse on clean data)
+✓ Perplexity Gap: {ppl_gap:+.1f}% (monotonic worse on clean data)
 ✓ HotFlip Robustness: {hotflip_reduction:.1f}% attack success reduction
-✓ UAT Robustness: Minimal impact (<1% NLL increase across all models)
+✓ UAT NLL increase: baseline {baseline_uat_nll:+.2f}%, monotonic {monotonic_uat_nll:+.2f}%
 
 {'='*80}
 PAPER INTEGRATION
@@ -202,6 +202,10 @@ def main():
         final_path = os.path.join(Config.FINAL_RESULTS_DIR, 'final_results.json')
         save_json(final_results, final_path)
         logger.log(f"✓ Saved to: {final_path}")
+        # Also keep a per-seed copy under RESULTS_DIR (scratch) for easy collection.
+        results_copy = os.path.join(Config.RESULTS_DIR, 'final_results.json')
+        save_json(final_results, results_copy)
+        logger.log(f"✓ Saved to: {results_copy}")
         
         # Create text summary
         logger.log("\nCreating text summary...")
@@ -211,6 +215,8 @@ def main():
         with open(summary_path, 'w') as f:
             f.write(summary_text)
         logger.log(f"✓ Saved to: {summary_path}")
+        with open(os.path.join(Config.RESULTS_DIR, 'experiment_summary.txt'), 'w') as f:
+            f.write(summary_text)
         
         # Print summary
         logger.log("\n" + summary_text)
