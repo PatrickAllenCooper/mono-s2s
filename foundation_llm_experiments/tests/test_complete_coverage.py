@@ -312,7 +312,7 @@ class TestTokenizerEdgeCases:
         assert 'input_ids' in item
 
 
-class TestOptimizer AndSchedulerEdgeCases:
+class TestOptimizerAndSchedulerEdgeCases:
     """Test optimizer and scheduler handling"""
     
     def test_scheduler_warmup_steps_calculation(self):

@@ -20,6 +20,22 @@ class ExperimentConfig:
     
     RANDOM_SEEDS = [42, 1337, 2024, 8888, 12345]
     CURRENT_SEED = int(os.environ.get("EXPERIMENT_SEED", "42"))  # Can set via SLURM
+
+    # ======================================================================
+    # ATTRIBUTION-ABLATION MODE
+    # ======================================================================
+    # Which FFN weight parametrization make_model_monotonic applies to the
+    # "monotonic" model. "nonneg" (default) is the real monotonicity
+    # constraint behind the paper's main results. "sign_frozen" and
+    # "abs_init_free" are attribution-ablation controls (see
+    # utils/common_utils.py NonNegativeParametrization) that isolate
+    # nonnegativity from initialization disruption. Non-default modes are
+    # namespaced into their own checkpoint/results/flag directories via
+    # SEED_TAG below, so an ablation run never overwrites the main run for
+    # the same seed.
+    T5_ABLATION_MODE = os.environ.get("T5_ABLATION_MODE", "nonneg")
+    _ABLATION_SUFFIX = "" if T5_ABLATION_MODE == "nonneg" else f"_{T5_ABLATION_MODE}"
+    SEED_TAG = f"{CURRENT_SEED}{_ABLATION_SUFFIX}"
     
     # ======================================================================
     # PATHS (CUSTOMIZE FOR YOUR HPC ENVIRONMENT)
@@ -41,18 +57,33 @@ class ExperimentConfig:
     # For multi-seed experiments, results and checkpoints are stored in seed-specific subdirectories
     WORK_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_work")
     
-    # Results directory: seed-specific to avoid overwriting across runs
+    # Results directory: seed-specific (and ablation-mode-specific via SEED_TAG)
+    # to avoid overwriting across runs
     _BASE_RESULTS_DIR = os.path.join(SCRATCH_DIR, "mono_s2s_results")
-    RESULTS_DIR = os.path.join(_BASE_RESULTS_DIR, f"seed_{CURRENT_SEED}")
+    RESULTS_DIR = os.path.join(_BASE_RESULTS_DIR, f"seed_{SEED_TAG}")
     
-    # Checkpoint directory: seed-specific to allow parallel training of different seeds
+    # Checkpoint directory: seed-specific (and ablation-mode-specific) to allow
+    # parallel training of different seeds/ablation arms
     _BASE_CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
-    CHECKPOINT_DIR = os.path.join(_BASE_CHECKPOINT_DIR, f"seed_{CURRENT_SEED}")
+    CHECKPOINT_DIR = os.path.join(_BASE_CHECKPOINT_DIR, f"seed_{SEED_TAG}")
+
+    # The baseline (unconstrained) model is NOT re-trained per ablation arm:
+    # attribution-ablation controls only replace the monotonic model's
+    # parametrization, and are compared against the same baseline checkpoint
+    # used by the main ("nonneg") run for that seed. BASELINE_CHECKPOINT_DIR
+    # therefore always points at the non-ablation directory for CURRENT_SEED,
+    # while CHECKPOINT_DIR (used for the monotonic model) is ablation-specific.
+    BASELINE_CHECKPOINT_DIR = os.path.join(_BASE_CHECKPOINT_DIR, f"seed_{CURRENT_SEED}")
     
     DATA_CACHE_DIR = os.path.join(WORK_DIR, "data_cache")  # Shared across seeds
     
-    # Final results (copy to project for persistence)
-    FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "mono_s2s_final_results")
+    # Final results (copy to project for persistence). Namespaced by seed
+    # (and ablation mode) the same way as RESULTS_DIR/CHECKPOINT_DIR, and
+    # matching the "mono_s2s_final_results/seed_X" layout already used by
+    # scripts/archive_experiment.sh, so multi-seed / multi-ablation-arm runs
+    # each get their own permanent copy instead of overwriting one another.
+    _BASE_FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, "mono_s2s_final_results")
+    FINAL_RESULTS_DIR = os.path.join(_BASE_FINAL_RESULTS_DIR, f"seed_{SEED_TAG}")
     
     # ======================================================================
     # MODEL CONFIGURATION
@@ -127,6 +158,21 @@ class ExperimentConfig:
     # Micro-batch size used inside attack loss computations (stage 5/6).
     # Larger is faster but may OOM depending on GPU + sequence lengths.
     ATTACK_LOSS_BATCH_SIZE = 8
+
+    # ------------------------------------------------------------------
+    # Stage 6b: HotFlip substitution transfer + gradient-free controls
+    # ------------------------------------------------------------------
+    # Number of examples re-attacked (with gradients) per source model.
+    # Defaults to Stage 6's own sample count for direct comparability.
+    HOTFLIP_TRANSFER_NUM_SAMPLES = int(os.environ.get("OVERRIDE_HOTFLIP_TRANSFER_NUM_SAMPLES", "0"))
+    # Query-based (gradient-free) attack: greedy per-position search scoring
+    # candidate flips by the target model's own loss, no gradients anywhere.
+    # Skippable if time-constrained.
+    RUN_QUERY_ATTACK = os.environ.get("OVERRIDE_RUN_QUERY_ATTACK", "1").lower() not in ("0", "false", "no")
+    QUERY_ATTACK_NUM_SAMPLES = int(os.environ.get("OVERRIDE_QUERY_ATTACK_NUM_SAMPLES", "50"))
+    QUERY_ATTACK_CANDIDATES_PER_POSITION = int(
+        os.environ.get("OVERRIDE_QUERY_ATTACK_CANDIDATES_PER_POSITION", "20")
+    )
     
     # ======================================================================
     # EVALUATION CONFIGURATION
@@ -198,7 +244,9 @@ class ExperimentConfig:
     TIME_TRAIN = "12:00:00"      # 12 hours (per model)
     TIME_EVALUATE = "20:00:00"   # 20 hours (full test set needs more time)
     TIME_UAT = "03:00:00"        # 3 hours
+    TIME_UAT_TRANSFER = "01:00:00"     # 1 hour (replays already-learned triggers only)
     TIME_HOTFLIP = "02:00:00"    # 2 hours
+    TIME_HOTFLIP_TRANSFER = "04:00:00"  # 4 hours (re-attack both models + cross-eval + controls)
     TIME_AGGREGATE = "00:15:00"  # 15 minutes
     
     # ======================================================================

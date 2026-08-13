@@ -451,8 +451,10 @@ def main():
         
         # Baseline T5
         logger.log("\n2. Loading Baseline T5...")
+        # Baseline is shared across attribution-ablation arms; always load it
+        # from the non-ablation checkpoint directory for this seed.
         baseline_checkpoint = os.path.join(
-            ExperimentConfig.CHECKPOINT_DIR, 'baseline_checkpoints', 'best_model.pt'
+            ExperimentConfig.BASELINE_CHECKPOINT_DIR, 'baseline_checkpoints', 'best_model.pt'
         )
         models['baseline_t5'], _ = load_model('baseline', checkpoint_path=baseline_checkpoint, device=device)
         

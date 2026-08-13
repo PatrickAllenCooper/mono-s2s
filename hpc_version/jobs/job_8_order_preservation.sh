@@ -1,82 +1,76 @@
 #!/bin/bash
-#SBATCH --job-name=mono_s2s_monotonic
+#SBATCH --job-name=mono_s2s_order_preservation
 #SBATCH --partition=aa100
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --time=24:00:00
-#SBATCH --output=logs/job_3_monotonic_%j.out
-#SBATCH --error=logs/job_3_monotonic_%j.err
+#SBATCH --mem=32G
+#SBATCH --time=02:00:00
+#SBATCH --output=logs/job_8_order_preservation_%j.out
+#SBATCH --error=logs/job_8_order_preservation_%j.err
 
-# Stage 3: Train Monotonic Model (W≥0 FFN Constraints)
-# Trained with IDENTICAL settings as baseline for fair comparison
+# Stage 8: End-to-end order preservation (inference only; T5-small forward
+# passes over a few hundred short sentences plus lightweight logistic-
+# regression probe fitting -- cheap relative to earlier stages). Requires
+# hpc_version/data/ordered_pairs.json to exist (committed to the repo; only
+# regenerate with build_ordered_pairs.py if you intend to change the corpus).
 
 echo "=========================================="
-echo "SLURM Job: Stage 3 - Train Monotonic Model"
+echo "SLURM Job: Stage 8 - Order Preservation"
 echo "Job ID: $SLURM_JOB_ID"
 echo "Node: $SLURM_NODELIST"
 echo "GPU: $CUDA_VISIBLE_DEVICES"
 echo "Started: $(date)"
 echo "=========================================="
 
-# Load modules (try to load CUDA if available)
 module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
-# Activate conda environment (installed to /projects)
 CONDA_BASE="/projects/$USER/miniconda3"
 source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s2s
 
-# Set environment variables for determinism
 export PYTHONHASHSEED=42
 export CUBLAS_WORKSPACE_CONFIG=:16:8
 export TOKENIZERS_PARALLELISM=false
-export CUDA_LAUNCH_BLOCKING=1
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
 export T5_ABLATION_MODE=${T5_ABLATION_MODE:-nonneg}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 
-# Redirect HuggingFace cache to scratch
 export HF_HOME="$SCRATCH/hf_cache"
 export HF_DATASETS_CACHE="$SCRATCH/hf_cache/datasets"
 export TRANSFORMERS_CACHE="$SCRATCH/hf_cache/transformers"
 
-# Print GPU info
-echo "GPU Information:"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
+cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
+
+if [ ! -f "data/ordered_pairs.json" ]; then
+    echo "data/ordered_pairs.json missing; generating it now (deterministic, committed thereafter)."
+    python scripts/build_ordered_pairs.py
+fi
+
+cd scripts || exit 1
+
 echo ""
-
-# Navigate and run
-cd $SLURM_SUBMIT_DIR/scripts
-
-echo "Training MONOTONIC model (W≥0 FFN constraints)..."
-echo "Using softplus reparametrization: W = softplus(V)"
-echo "Training with IDENTICAL settings as baseline for fair comparison"
-echo ""
-
-python stage_3_train_monotonic.py "$@"
+echo "Running order-preservation measurement (ablation_mode=$T5_ABLATION_MODE)..."
+python stage_8_order_preservation.py
 
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo ""
     echo "=========================================="
-    echo "Stage 3: COMPLETED SUCCESSFULLY"
-    echo "Monotonic model trained and saved"
+    echo "Stage 8: COMPLETED SUCCESSFULLY"
+    echo "Order-preservation results and depth plot saved"
     echo "Ended: $(date)"
     echo "=========================================="
 else
     echo ""
     echo "=========================================="
-    echo "Stage 3: FAILED (exit code: $EXIT_CODE)"
-    echo "Check logs for training errors"
+    echo "Stage 8: FAILED (exit code: $EXIT_CODE)"
     echo "Ended: $(date)"
     echo "=========================================="
 fi
 
 exit $EXIT_CODE
-

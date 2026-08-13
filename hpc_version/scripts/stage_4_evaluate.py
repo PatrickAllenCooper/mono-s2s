@@ -166,8 +166,11 @@ def main():
         
         # 2. Baseline T5 (fine-tuned, unconstrained)
         logger.log("\n2. Loading Baseline T5 (fine-tuned, unconstrained)...")
+        # Baseline is shared across attribution-ablation arms (only the
+        # monotonic model's parametrization changes), so always read it from
+        # the non-ablation checkpoint directory for this seed.
         baseline_checkpoint = os.path.join(
-            ExperimentConfig.CHECKPOINT_DIR,
+            ExperimentConfig.BASELINE_CHECKPOINT_DIR,
             'baseline_checkpoints',
             'best_model.pt'
         )

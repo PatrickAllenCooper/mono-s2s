@@ -209,6 +209,28 @@ class FoundationExperimentConfig:
     # Attack evaluation
     ATTACK_LOSS_BATCH_SIZE = _env_int.__func__("OVERRIDE_ATTACK_LOSS_BATCH_SIZE", 4)
     ATTACK_SUCCESS_THRESHOLD = 0.15  # 15% perplexity increase (vs 10% for ROUGE)
+
+    # ------------------------------------------------------------------
+    # Stage 6b: HotFlip substitution transfer + gradient-free controls
+    # ------------------------------------------------------------------
+    # Number of examples re-attacked (with gradients, to get transferable
+    # token sequences) per source model. Defaults to the same sample size
+    # as Stage 6 for direct comparability; override for a cheaper screen.
+    HOTFLIP_TRANSFER_NUM_SAMPLES = _env_int.__func__(
+        "OVERRIDE_HOTFLIP_TRANSFER_NUM_SAMPLES", HOTFLIP_NUM_SAMPLES
+    )
+    # Query-based (gradient-free) attack: greedy per-position search that
+    # scores candidate flips by the target model's own loss, with no
+    # gradients anywhere. Skippable (set to "0"/"false") if time-constrained,
+    # since it is the most expensive control (many forward passes/example).
+    RUN_QUERY_ATTACK = _env_str.__func__("OVERRIDE_RUN_QUERY_ATTACK", "1").lower() not in ("0", "false", "no")
+    # Kept small by default: cost is
+    # QUERY_ATTACK_NUM_SAMPLES * HOTFLIP_NUM_FLIPS * QUERY_ATTACK_CANDIDATES_PER_POSITION
+    # forward passes per model (50 * 10 * 20 = 10,000 by default).
+    QUERY_ATTACK_NUM_SAMPLES = _env_int.__func__("OVERRIDE_QUERY_ATTACK_NUM_SAMPLES", 50)
+    QUERY_ATTACK_CANDIDATES_PER_POSITION = _env_int.__func__(
+        "OVERRIDE_QUERY_ATTACK_CANDIDATES_PER_POSITION", 20
+    )
     
     # ======================================================================
     # HPC-SPECIFIC SETTINGS
@@ -230,7 +252,9 @@ class FoundationExperimentConfig:
     TIME_TRAIN_MONOTONIC = "23:50:00"  # MAX: 24 hours (10 epochs will need 10+ resubmissions)
     TIME_EVALUATE = "08:00:00"        # 8 hours (multiple benchmarks)
     TIME_UAT = "23:50:00"             # 24h; UAT at full scale needs 2+ chained runs
+    TIME_UAT_TRANSFER = "02:00:00"    # 2 hours (replay of already-learned triggers only)
     TIME_HOTFLIP = "04:00:00"         # 4 hours (HotFlip attacks)
+    TIME_HOTFLIP_TRANSFER = "10:00:00"  # 10 hours (re-attack both models + cross-eval + controls)
     TIME_AGGREGATE = "00:30:00"       # 30 min (aggregate results)
     
     # ======================================================================

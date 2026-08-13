@@ -185,7 +185,9 @@ class TestLoadModel:
         
         model, is_pretrained = load_model("monotonic", checkpoint_path=None, device='cpu')
         
-        mock_make_monotonic.assert_called_once_with(mock_model)
+        # load_model always forwards its ablation_mode (default None -> standard
+        # nonneg parametrization) to make_model_monotonic as an explicit kwarg.
+        mock_make_monotonic.assert_called_once_with(mock_model, mode=None)
     
     @patch('transformers.T5ForConditionalGeneration')
     @patch('os.path.exists', return_value=False)

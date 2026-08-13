@@ -107,7 +107,13 @@ tail -f $SCRATCH/mono_s2s_work/stage_logs/stage_*.log
 
 ## Pipeline Stages
 
-The pipeline runs 7 stages with automatic dependency management:
+The pipeline runs 7 core stages with automatic dependency management, plus
+two follow-up stages (6b, 8) added for the attack-transfer and
+order-preservation experiments. (Stage 5's own `uat_results.json` already
+includes the cross-model trigger-transfer matrix -- see Stage 5 below -- so
+T5 has no separate "Stage 5b"; the Pythia track in
+`foundation_llm_experiments/` does have one, since its Stage 5 only records
+each model's own trigger.)
 
 ```
 Stage 0: Setup
@@ -119,10 +125,13 @@ Stage 1: Data Preparation
          ↓
     Stage 4: Evaluation
          ↓
-         ├── Stage 5: UAT Attacks (parallel)
-         └── Stage 6: HotFlip Attacks (parallel)
+         ├── Stage 5: UAT Attacks (+ transfer matrix, parallel)
+         └── Stage 6: HotFlip Attacks (parallel) → Stage 6b: HotFlip Transfer + Controls
               ↓
          Stage 7: Aggregate Results
+
+    Stage 8: Order Preservation (inference-only; depends on Stage 3, not
+             Stages 4-7 -- can run as soon as both models are trained)
 ```
 
 ### Stage Details
@@ -180,6 +189,33 @@ Stage 1: Data Preparation
 - Adds timestamp metadata to all outputs
 - Time: ~15 minutes | Memory: 8 GB | GPU: No
 
+**Stage 6b: HotFlip Substitution Transfer + Gradient-Free Controls**
+- Re-attacks baseline and monotonic T5 with gradients (as in Stage 6), but
+  persists the attacked token ids and cross-evaluates each source's attack
+  against both models (2x2 crafted-on x evaluated-on matrix)
+- Adds a random-substitution control (same flip budget, no model/gradient
+  involved in generating it) and an optional gradient-free query-based
+  attack (greedy search scoring flips by target loss directly)
+- Tests whether the Stage 6 robustness gap is a property of each model's
+  function or an artifact of attacking each model with its own gradients
+- Set `OVERRIDE_RUN_QUERY_ATTACK=0` to skip the query attack if time-constrained
+- Time: ~2-4 hours | Memory: 32 GB | GPU: Yes
+
+**Stage 8: Order Preservation**
+- Runs on `hpc_version/data/ordered_pairs.json` (generate once via
+  `python scripts/build_ordered_pairs.py`; committed to the repo so it never
+  needs to be regenerated unless the corpus itself changes)
+- Extracts encoder hidden states at every layer for baseline and monotonic
+  T5 on ~900 templated sentences (13 semantic axes x 18 topics x 4 severity
+  levels), fits 64 post-hoc probe directions on a disjoint fit split, and
+  reports the fraction of probe coordinates satisfying `Ah <= Ah'` on the
+  held-out eval pairs, per layer, with bootstrap 95% CIs
+- Produces `order_preservation_depth.png`, a line plot of order preservation
+  vs. encoder depth for both models
+- Inference-only; depends only on Stage 3 (not Stages 4-7), so it can run
+  as soon as both models finish training
+- Time: ~1-2 hours | Memory: 32 GB | GPU: Yes
+
 ---
 
 ## Resource Requirements
@@ -195,7 +231,9 @@ Stage 1: Data Preparation
 | 4 | Yes | 32 GB | 2-4 hr | aa100 |
 | 5 | Yes | 16 GB | 2-3 hr | aa100 |
 | 6 | Yes | 16 GB | 1-2 hr | aa100 |
+| 6b | Yes | 32 GB | 2-4 hr | aa100 |
 | 7 | No | 8 GB | 15 min | amilan |
+| 8 | Yes | 32 GB | 1-2 hr | aa100 |
 
 ### Total Resource Usage
 
@@ -276,17 +314,24 @@ hpc_version/
 │   ├── job_4_evaluate.sh         # Stage 4
 │   ├── job_5_uat.sh              # Stage 5
 │   ├── job_6_hotflip.sh          # Stage 6
-│   └── job_7_aggregate.sh        # Stage 7
+│   ├── job_6b_hotflip_transfer.sh # Stage 6b
+│   ├── job_7_aggregate.sh        # Stage 7
+│   └── job_8_order_preservation.sh # Stage 8
 ├── scripts/
 │   ├── stage_0_setup.py          # Setup implementation
 │   ├── stage_1_prepare_data.py   # Data loading
 │   ├── stage_2_train_baseline.py # Baseline training
 │   ├── stage_3_train_monotonic.py # Monotonic training
 │   ├── stage_4_evaluate.py       # Evaluation
-│   ├── stage_5_uat_attacks.py    # UAT attacks
+│   ├── stage_5_uat_attacks.py    # UAT attacks (+ transfer matrix)
 │   ├── stage_6_hotflip_attacks.py # HotFlip attacks
+│   ├── stage_6b_hotflip_transfer.py # HotFlip substitution transfer + controls
 │   ├── stage_7_aggregate.py      # Results aggregation
+│   ├── build_ordered_pairs.py    # Generates data/ordered_pairs.json
+│   ├── stage_8_order_preservation.py # End-to-end order preservation
 │   └── aggregate_multi_seed.py   # Multi-seed analysis
+├── data/
+│   └── ordered_pairs.json        # Committed, reproducible ordered-pair corpus
 ├── utils/
 │   └── common_utils.py           # Shared utilities
 ├── run_all.sh                    # Master pipeline script
@@ -558,6 +603,42 @@ sbatch jobs/job_4_evaluate.sh
 
 # Run with custom parameters
 sbatch --time=6:00:00 jobs/job_2_baseline.sh
+
+# Attack-transfer + gradient-free controls (after Stage 6 has completed)
+sbatch jobs/job_6b_hotflip_transfer.sh
+# Skip the (most expensive) query-based control if time-constrained:
+OVERRIDE_RUN_QUERY_ATTACK=0 sbatch jobs/job_6b_hotflip_transfer.sh
+
+# End-to-end order preservation (generate the corpus once, then run)
+python scripts/build_ordered_pairs.py   # only needed once; output is committed
+sbatch jobs/job_8_order_preservation.sh
+```
+
+### Attribution-Ablation Arms
+
+The attribution-ablation controls (see `NonNegativeParametrization` in
+`utils/common_utils.py`) isolate the two things the monotonic
+reparameterization changes relative to the pretrained model: the
+nonnegativity constraint itself, and the initialization disruption from
+`|W_pretrained|`. Select an arm with `T5_ABLATION_MODE`; results, checkpoints,
+and logs are automatically namespaced (e.g. `seed_42_sign_frozen`) so they
+never collide with the main `nonneg` run for the same seed. The baseline
+model is **not** retrained per arm -- only Stages 3-8 need to be resubmitted:
+
+```bash
+# Sign-frozen control: same reparameterization/magnitudes, but preserves
+# the pretrained mixed-sign pattern (not monotone)
+T5_ABLATION_MODE=sign_frozen EXPERIMENT_SEED=42 sbatch jobs/job_3_monotonic.sh
+T5_ABLATION_MODE=sign_frozen EXPERIMENT_SEED=42 sbatch jobs/job_4_evaluate.sh
+T5_ABLATION_MODE=sign_frozen EXPERIMENT_SEED=42 sbatch jobs/job_5_uat.sh
+T5_ABLATION_MODE=sign_frozen EXPERIMENT_SEED=42 sbatch jobs/job_6_hotflip.sh
+
+# Init-disruption control: unconstrained training from the same
+# sign-disrupting |W_pretrained| starting point, no nonnegativity constraint
+T5_ABLATION_MODE=abs_init_free EXPERIMENT_SEED=42 sbatch jobs/job_3_monotonic.sh
+T5_ABLATION_MODE=abs_init_free EXPERIMENT_SEED=42 sbatch jobs/job_4_evaluate.sh
+T5_ABLATION_MODE=abs_init_free EXPERIMENT_SEED=42 sbatch jobs/job_5_uat.sh
+T5_ABLATION_MODE=abs_init_free EXPERIMENT_SEED=42 sbatch jobs/job_6_hotflip.sh
 ```
 
 ### Testing Before Full Run

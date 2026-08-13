@@ -31,6 +31,11 @@ from hpc_version.utils.common_utils import (
     compute_avg_loss,
     save_json,
     load_json,
+    load_json_safe,
+    atomic_save_json,
+    append_jsonl,
+    load_jsonl,
+    partial_results_dir,
     create_completion_flag,
     check_completion_flag,
     check_dependencies,
@@ -213,6 +218,111 @@ class TestNonNegativeParametrization:
             W = param.forward(V)
             assert W.shape == shape
 
+    def test_default_mode_is_nonneg(self):
+        """Test that the default mode is the real monotonicity constraint"""
+        param = NonNegativeParametrization()
+        assert param.mode == "nonneg"
+
+    def test_unknown_mode_raises(self):
+        """Test that an unrecognized ablation mode is rejected up front"""
+        with pytest.raises(ValueError, match="Unknown parametrization mode"):
+            NonNegativeParametrization(mode="not_a_real_mode")
+
+
+class TestAblationModes:
+    """Tests for the attribution-ablation parametrization modes (sign_frozen,
+    abs_init_free) that isolate nonnegativity from initialization disruption."""
+
+    def test_sign_frozen_is_not_nonnegative(self):
+        """sign_frozen must NOT enforce monotonicity: it should reproduce
+        the pretrained mixed-sign pattern, not clamp to non-negative."""
+        W_pre = torch.tensor([-3.0, 2.0, -0.5, 4.0, -10.0])
+        param = NonNegativeParametrization(init_weight=W_pre, mode="sign_frozen")
+
+        V = param.right_inverse(W_pre)
+        W_reconstructed = param.forward(V)
+
+        assert (W_reconstructed < 0).any(), "sign_frozen should retain negative weights"
+        # Reconstructs the pretrained weight (up to eps) at initialization.
+        assert torch.allclose(W_reconstructed, W_pre, atol=1e-2)
+
+    def test_sign_frozen_preserves_sign_pattern_after_training_step(self):
+        """The sign buffer must keep the pretrained sign pattern fixed even
+        after V is updated by an optimizer step (only magnitude changes)."""
+        W_pre = torch.tensor([-3.0, 2.0, -0.5, 4.0])
+        param = NonNegativeParametrization(init_weight=W_pre, mode="sign_frozen")
+        original_sign = torch.sign(W_pre)
+
+        V = torch.nn.Parameter(param.right_inverse(W_pre))
+        # Simulate a training step that moves V arbitrarily.
+        with torch.no_grad():
+            V += torch.tensor([1.0, -2.0, 0.3, -0.1])
+        W_after = param.forward(V)
+
+        assert torch.equal(torch.sign(W_after), original_sign), \
+            "sign_frozen must preserve the original sign pattern through training"
+
+    def test_sign_frozen_zero_weight_treated_as_positive(self):
+        """Zero-valued pretrained weights should not silently vanish from
+        the sign buffer (sign(0) is remapped to +1 by convention)."""
+        W_pre = torch.tensor([0.0, -1.0, 1.0])
+        param = NonNegativeParametrization(init_weight=W_pre, mode="sign_frozen")
+        assert param.sign[0].item() == 1.0
+
+    def test_abs_init_free_is_unconstrained_identity(self):
+        """abs_init_free applies no constraint at all: forward(V) == V."""
+        param = NonNegativeParametrization(mode="abs_init_free")
+        V = torch.tensor([-5.0, 0.0, 3.0, -0.001])
+        W = param.forward(V)
+        assert torch.equal(W, V), "abs_init_free must not transform V at all"
+
+    def test_abs_init_free_right_inverse_matches_abs_plus_eps(self):
+        """abs_init_free's initialization should start from |W_pretrained| +
+        eps -- the same sign-disrupting starting point as 'nonneg' -- but
+        with no softplus applied on the way back out."""
+        W_pre = torch.tensor([-4.0, 3.0, -0.2])
+        param = NonNegativeParametrization(init_weight=W_pre, mode="abs_init_free")
+        V = param.right_inverse(W_pre)
+        expected = torch.abs(W_pre) + 1e-4
+        assert torch.allclose(V, expected, atol=1e-6)
+        # And forward is identity, so this is also the initial "weight".
+        assert torch.equal(param.forward(V), V)
+
+    def test_abs_init_free_allows_negative_after_training(self):
+        """Unlike nonneg/sign_frozen, abs_init_free must be able to drift
+        to negative values under free training (no constraint to prevent it)."""
+        param = NonNegativeParametrization(mode="abs_init_free")
+        V = torch.tensor([0.5, 0.3])
+        with torch.no_grad():
+            V -= torch.tensor([10.0, 10.0])  # simulate a large gradient step
+        W = param.forward(V)
+        assert (W < 0).all()
+
+    def test_nonneg_mode_has_no_sign_buffer(self):
+        """The sign buffer is only meaningful for sign_frozen; nonneg and
+        abs_init_free should leave it unset (None)."""
+        for mode in ("nonneg", "abs_init_free"):
+            param = NonNegativeParametrization(
+                init_weight=torch.tensor([-1.0, 2.0]), mode=mode
+            )
+            assert param.sign is None
+
+    @pytest.mark.parametrize("mode", ["nonneg", "sign_frozen", "abs_init_free"])
+    def test_all_modes_preserve_shape(self, mode):
+        """All three ablation modes must preserve tensor shape end to end."""
+        W_pre = torch.randn(6, 8)
+        param = NonNegativeParametrization(init_weight=W_pre, mode=mode)
+        V = param.right_inverse(W_pre)
+        W = param.forward(V)
+        assert W.shape == W_pre.shape
+
+    @pytest.mark.parametrize("mode", ["nonneg", "sign_frozen", "abs_init_free"])
+    def test_all_modes_reject_unknown_mode_in_forward_path(self, mode):
+        """Constructing with a valid mode should never raise; only unknown
+        modes should be rejected (regression guard for ABLATION_MODES)."""
+        # Should not raise for any of the three supported modes.
+        NonNegativeParametrization(mode=mode)
+
 
 class TestModelCreation:
     """Tests for model creation and modification"""
@@ -376,6 +486,116 @@ class TestFileAndLogging:
         create_completion_flag("stage_1", work_dir=temp_work_dir["work_dir"])
         result = check_dependencies(["stage_0", "stage_1"], work_dir=temp_work_dir["work_dir"])
         assert result is True
+
+
+class TestResumabilityIOHelpers:
+    """Tests for the atomic/JSONL persistence helpers ported from
+    foundation_llm_experiments/utils/common_utils.py, used by the new
+    transfer/order-preservation stages for crash-safe resume."""
+
+    def test_load_json_safe_missing_file_returns_default(self, temp_dir):
+        result = load_json_safe(os.path.join(temp_dir, "missing.json"), default={"a": 1})
+        assert result == {"a": 1}
+
+    def test_load_json_safe_missing_file_default_none(self, temp_dir):
+        assert load_json_safe(os.path.join(temp_dir, "missing.json")) is None
+
+    def test_load_json_safe_valid_file(self, temp_dir):
+        path = os.path.join(temp_dir, "ok.json")
+        with open(path, 'w') as f:
+            json.dump({"x": 42}, f)
+        assert load_json_safe(path) == {"x": 42}
+
+    def test_load_json_safe_corrupt_file_returns_default(self, temp_dir):
+        path = os.path.join(temp_dir, "corrupt.json")
+        with open(path, 'w') as f:
+            f.write("{not valid json,,,")
+        assert load_json_safe(path, default="fallback") == "fallback"
+
+    def test_atomic_save_json_writes_readable_file(self, temp_dir):
+        path = os.path.join(temp_dir, "nested", "out.json")
+        atomic_save_json({"result": 1.5}, path)
+        assert os.path.exists(path)
+        assert not os.path.exists(path + ".tmp"), "temp file must be renamed away"
+        with open(path) as f:
+            assert json.load(f) == {"result": 1.5}
+
+    def test_atomic_save_json_overwrites_existing(self, temp_dir):
+        path = os.path.join(temp_dir, "out.json")
+        atomic_save_json({"v": 1}, path)
+        atomic_save_json({"v": 2}, path)
+        with open(path) as f:
+            assert json.load(f) == {"v": 2}
+
+    def test_append_jsonl_creates_one_line_per_record(self, temp_dir):
+        path = os.path.join(temp_dir, "records.jsonl")
+        append_jsonl(path, {"idx": 0, "val": "a"})
+        append_jsonl(path, {"idx": 1, "val": "b"})
+        with open(path) as f:
+            lines = [l for l in f.read().splitlines() if l]
+        assert len(lines) == 2
+        assert json.loads(lines[0]) == {"idx": 0, "val": "a"}
+        assert json.loads(lines[1]) == {"idx": 1, "val": "b"}
+
+    def test_append_jsonl_handles_missing_trailing_newline(self, temp_dir):
+        """If a prior write was interrupted mid-line (no trailing newline),
+        the next append must still start on a fresh line."""
+        path = os.path.join(temp_dir, "records.jsonl")
+        with open(path, 'w') as f:
+            f.write(json.dumps({"idx": 0}))  # no trailing newline, simulates a crash
+        append_jsonl(path, {"idx": 1})
+        records = load_jsonl(path)
+        assert records == [{"idx": 0}, {"idx": 1}]
+
+    def test_load_jsonl_missing_file_returns_empty_list(self, temp_dir):
+        assert load_jsonl(os.path.join(temp_dir, "missing.jsonl")) == []
+
+    def test_load_jsonl_skips_malformed_trailing_line(self, temp_dir):
+        path = os.path.join(temp_dir, "records.jsonl")
+        with open(path, 'w') as f:
+            f.write('{"idx": 0}\n')
+            f.write('{"idx": 1, "broken":')  # truncated, simulates a kill mid-write
+        records = load_jsonl(path)
+        assert records == [{"idx": 0}]
+
+    def test_load_jsonl_skips_blank_lines(self, temp_dir):
+        path = os.path.join(temp_dir, "records.jsonl")
+        with open(path, 'w') as f:
+            f.write('{"idx": 0}\n\n{"idx": 1}\n')
+        records = load_jsonl(path)
+        assert records == [{"idx": 0}, {"idx": 1}]
+
+    def test_partial_results_dir_created_under_results_dir(self, temp_dir, monkeypatch):
+        # Patch the ExperimentConfig object common_utils actually holds a
+        # reference to (imported via `from configs.experiment_config import
+        # ExperimentConfig` inside the hpc_version package), rather than the
+        # `hpc_version.configs.experiment_config` import path used elsewhere
+        # in this test module -- the two can be distinct module instances
+        # depending on how sys.path was primed, so patching the latter would
+        # silently not affect the function under test.
+        import hpc_version.utils.common_utils as common_utils_module
+        results_dir = os.path.join(temp_dir, "results")
+        monkeypatch.setattr(common_utils_module.ExperimentConfig, "RESULTS_DIR", results_dir)
+
+        path = partial_results_dir()
+        assert os.path.isdir(path)
+        assert path.startswith(results_dir)
+
+    def test_partial_results_dir_custom_subdir(self, temp_dir, monkeypatch):
+        import hpc_version.utils.common_utils as common_utils_module
+        results_dir = os.path.join(temp_dir, "results")
+        monkeypatch.setattr(common_utils_module.ExperimentConfig, "RESULTS_DIR", results_dir)
+
+        path = partial_results_dir(subdir="craft")
+        assert os.path.basename(path) == "craft"
+        assert os.path.isdir(path)
+
+    def test_append_then_load_jsonl_roundtrip_many_records(self, temp_dir):
+        path = os.path.join(temp_dir, "many.jsonl")
+        expected = [{"idx": i, "loss": i * 0.1} for i in range(50)]
+        for record in expected:
+            append_jsonl(path, record)
+        assert load_jsonl(path) == expected
 
 
 class TestDatasetLoading:

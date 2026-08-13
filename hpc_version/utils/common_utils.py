@@ -228,22 +228,65 @@ def compute_brevity_penalty(predictions, references, tokenizer=None):
 # MODEL CREATION & LOADING
 # ======================================================================
 
+ABLATION_MODES = ("nonneg", "sign_frozen", "abs_init_free")
+
+
 class NonNegativeParametrization(nn.Module):
     """
-    Improved softplus parametrization: W = softplus(V) >= 0
-    
+    Improved softplus parametrization: W = softplus(V) >= 0 (mode="nonneg")
+
     Uses inverse softplus initialization to preserve pretrained weights:
     V_init = inverse_softplus(|W_pretrained| + eps)
-    
+
     This minimizes disruption to pretrained model knowledge while enforcing W >= 0.
+
+    Attribution-ablation modes (see ``make_model_monotonic``) isolate the two
+    things this reparameterization changes relative to the pretrained model:
+    the nonnegativity constraint itself (monotonicity), and the disruption to
+    the pretrained weight geometry caused by initializing from |W_pretrained|.
+    Both controls keep the exact same softplus reparameterization, magnitude
+    initialization, and optimizer geometry as "nonneg"; only the constraint
+    that is (or isn't) imposed on top of it differs:
+
+      - "nonneg" (default): W = softplus(V) >= 0. This is monotonicity.
+      - "sign_frozen": W = sign(W_pretrained) * softplus(V). Reconstructs the
+        pretrained weight (up to eps) at initialization and preserves its
+        mixed-sign pattern throughout training via a frozen (non-trainable)
+        sign buffer, so W is never constrained to be nonnegative and the
+        resulting FFN sublayer is not monotone. If robustness gains vanish
+        under this control, nonnegativity is the causal factor; if they
+        persist, the softplus reparameterization/initialization alone
+        (independent of monotonicity) is doing the work.
+      - "abs_init_free": W = V, i.e. no constraint is applied, but V is
+        initialized to |W_pretrained| + eps -- the same sign-disrupting
+        starting point as "nonneg" -- and then trained completely freely.
+        Isolates the effect of the initialization disruption (and
+        subsequent recovery training) alone, without any constraint.
     """
-    def __init__(self, init_weight=None):
+    def __init__(self, init_weight=None, mode="nonneg"):
         super().__init__()
+        if mode not in ABLATION_MODES:
+            raise ValueError(
+                f"Unknown parametrization mode '{mode}'. Valid options: {ABLATION_MODES}"
+            )
         self.init_weight = init_weight
-        
+        self.mode = mode
+        sign = None
+        if init_weight is not None and mode == "sign_frozen":
+            sign = torch.sign(init_weight)
+            sign[sign == 0] = 1.0
+        # Registered as a (non-trainable) buffer so it moves with .to(device)
+        # and is included in state_dict, but never receives gradients.
+        self.register_buffer("sign", sign)
+
     def forward(self, V):
-        return F.softplus(V)
-    
+        if self.mode == "abs_init_free":
+            return V
+        W = F.softplus(V)
+        if self.mode == "sign_frozen":
+            W = self.sign * W
+        return W
+
     def right_inverse(self, W):
         """
         Initialize V from pretrained W to preserve learned features.
@@ -255,6 +298,8 @@ class NonNegativeParametrization(nn.Module):
         """
         eps = 1e-4
         W_abs = torch.abs(W) + eps
+        if self.mode == "abs_init_free":
+            return W_abs
         # inverse_softplus(x) = log(exp(x) - 1) 
         # For numerical stability, use: log(expm1(x)) for x > 0
         # But simpler: inverse_softplus(x) ≈ x for large x, log(x) + log(2) for small x
@@ -263,15 +308,26 @@ class NonNegativeParametrization(nn.Module):
         return V
 
 
-def make_model_monotonic(model):  # pragma: no cover - Requires transformers/T5, tested on HPC
+def make_model_monotonic(model, mode=None):  # pragma: no cover - Requires transformers/T5, tested on HPC
     """
     Apply non-negative weight constraints to FFN layers using softplus parametrization.
     
     Covers both standard (wi, wo) and gated (wi_0, wi_1, wo) FFN variants.
+
+    Args:
+        mode: One of ABLATION_MODES ("nonneg", "sign_frozen", "abs_init_free").
+            See NonNegativeParametrization for what each mode isolates. When
+            None, read from the T5_ABLATION_MODE environment variable,
+            defaulting to "nonneg" (the real monotonicity constraint used for
+            the paper's main results).
     
     Note: This does NOT make the full model globally monotonic due to LayerNorm,
     residual connections, and unconstrained attention.
     """
+    if mode is None:
+        mode = os.environ.get("T5_ABLATION_MODE", "nonneg")
+    if mode not in ABLATION_MODES:
+        raise ValueError(f"Unknown parametrization mode '{mode}'. Valid options: {ABLATION_MODES}")
     # Try importing the FFN class - handle both old and new transformers versions
     try:
         from transformers.models.t5.modeling_t5 import T5DenseReluDense
@@ -306,7 +362,7 @@ def make_model_monotonic(model):  # pragma: no cover - Requires transformers/T5,
                             # Register with improved initialization
                             P.register_parametrization(
                                 sub_module, "weight", 
-                                NonNegativeParametrization(init_weight=current_weight)
+                                NonNegativeParametrization(init_weight=current_weight, mode=mode)
                             )
                             modified_count += 1
     else:  # pragma: no cover - Duck typing fallback for transformers version compatibility
@@ -330,20 +386,23 @@ def make_model_monotonic(model):  # pragma: no cover - Requires transformers/T5,
                             # Register with improved initialization
                             P.register_parametrization(
                                 sub_module, "weight",
-                                NonNegativeParametrization(init_weight=current_weight)
+                                NonNegativeParametrization(init_weight=current_weight, mode=mode)
                             )
                             modified_count += 1
     
     if modified_count == 0:  # pragma: no cover - Error condition
         raise RuntimeError("No FFN layers found to make monotonic! Check transformers version compatibility.")
     
-    print(f"Applied softplus parametrization to {modified_count} weight matrices")
+    print(f"Applied softplus parametrization to {modified_count} weight matrices (mode='{mode}')")
     print(f"  Covers: wi, wi_0, wi_1, wo (handles gated variants)")
-    print(f"  NOTE: Model is NOT globally monotonic (LayerNorm + residuals + attention)")
+    if mode == "nonneg":
+        print(f"  NOTE: Model is NOT globally monotonic (LayerNorm + residuals + attention)")
+    else:
+        print(f"  NOTE: mode='{mode}' is an attribution-ablation control, not the monotonicity constraint")
     return model
 
 
-def load_model(model_type, checkpoint_path=None, device='cuda'):  # pragma: no cover - Requires T5 model, tested on HPC
+def load_model(model_type, checkpoint_path=None, device='cuda', ablation_mode=None):  # pragma: no cover - Requires T5 model, tested on HPC
     """
     Load model: standard, baseline, or monotonic.
     
@@ -351,6 +410,9 @@ def load_model(model_type, checkpoint_path=None, device='cuda'):  # pragma: no c
         model_type: 'standard', 'baseline', or 'monotonic'
         checkpoint_path: Path to checkpoint (None for pre-trained)
         device: Device to load model on
+        ablation_mode: Passed through to make_model_monotonic when
+            model_type == 'monotonic' (see ABLATION_MODES). None defaults to
+            the T5_ABLATION_MODE environment variable ("nonneg" if unset).
     
     Returns:
         model, is_pretrained_only
@@ -368,7 +430,7 @@ def load_model(model_type, checkpoint_path=None, device='cuda'):  # pragma: no c
     
     # Apply monotonic constraints if needed
     if model_type == 'monotonic':
-        model = make_model_monotonic(model)
+        model = make_model_monotonic(model, mode=ablation_mode)
     
     # Load fine-tuned weights if provided
     if checkpoint_path and os.path.exists(checkpoint_path):
@@ -480,21 +542,131 @@ def load_json(filepath):
         return json.load(f)
 
 
+def load_json_safe(filepath, default=None):
+    """
+    Load JSON, returning a default on missing or corrupt file.
+
+    Used by resume paths where a half-flushed file from an interrupted
+    process must not abort the run.
+    """
+    if not os.path.exists(filepath):
+        return default
+    try:
+        with open(filepath, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return default
+
+
+def atomic_save_json(data, filepath, indent=2, verbose=False):
+    """
+    Atomically write JSON to filepath.
+
+    Writes to a sibling .tmp file, fsyncs, then renames over the target,
+    so a resuming process never observes a partially written file.
+    Mirrors foundation_llm_experiments/utils/common_utils.py so the new
+    transfer/order-preservation stages can persist incremental progress
+    the same way the Pythia track already does.
+    """
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    tmp_path = filepath + ".tmp"
+    with open(tmp_path, 'w') as f:
+        json.dump(data, f, indent=indent)
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+    os.replace(tmp_path, filepath)
+    if verbose:
+        print(f"✓ Saved to: {filepath}")
+
+
+def append_jsonl(filepath, record):
+    """
+    Append a single JSON record as one line with flush + fsync, for
+    incremental per-example result persistence in long attack loops.
+    """
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    line = json.dumps(record)
+    prefix = ""
+    if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+        with open(filepath, 'rb') as f:
+            f.seek(-1, os.SEEK_END)
+            if f.read(1) != b"\n":
+                prefix = "\n"
+    with open(filepath, 'a') as f:
+        f.write(prefix + line + "\n")
+        f.flush()
+        try:
+            os.fsync(f.fileno())
+        except OSError:
+            pass
+
+
+def load_jsonl(filepath):
+    """
+    Load all valid records from a JSONL file. Malformed trailing lines
+    (e.g. from a process killed mid-write) are skipped, not fatal.
+    """
+    records = []
+    if not os.path.exists(filepath):
+        return records
+    with open(filepath, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return records
+
+
+def partial_results_dir(subdir="partial"):
+    """
+    Return a per-stage partial-results directory under RESULTS_DIR.
+    Resume state (per-example attack records, per-cell transfer results)
+    lives here so an interrupted job never loses finished work.
+    """
+    base = os.path.join(ExperimentConfig.RESULTS_DIR, subdir)
+    os.makedirs(base, exist_ok=True)
+    return base
+
+
 def _get_flag_dir(stage_name, work_dir=None):
     """
     Get the directory for flag files.
     Stages 0-1 (setup, data) are shared across seeds.
-    Stages 2-7 (training, eval, attacks) are seed-specific.
+    Stage 2 (baseline training) is seed-specific but NOT ablation-specific:
+    attribution-ablation arms reuse the same baseline as the main "nonneg"
+    run for that seed (only the monotonic model's parametrization changes),
+    so its flag lives under the base seed directory regardless of
+    T5_ABLATION_MODE -- this lets stage_4/5/6's dependency check on
+    'stage_2_train_baseline' succeed under an ablation arm without
+    retraining the baseline.
+    Stages 3-8 (monotonic training, eval, attacks, order-preservation) are
+    seed-specific AND ablation-specific (ExperimentConfig.SEED_TAG), so an
+    ablation arm never shares those completion flags -- and therefore never
+    shares checkpoints or results -- with the main run for the same seed.
     """
     if work_dir is None:
         work_dir = ExperimentConfig.WORK_DIR
-    
-    # Check if this is a seed-specific stage (stages 2-7)
-    seed_specific_prefixes = ['stage_2', 'stage_3', 'stage_4', 'stage_5', 'stage_6', 'stage_7']
+
+    if stage_name.startswith('stage_2'):
+        seed_dir = os.path.join(work_dir, f"seed_{ExperimentConfig.CURRENT_SEED}")
+        os.makedirs(seed_dir, exist_ok=True)
+        return seed_dir
+
+    # Check if this is a seed-specific stage (stages 3-8)
+    seed_specific_prefixes = [
+        'stage_3', 'stage_4', 'stage_5', 'stage_6', 'stage_7', 'stage_8',
+    ]
     is_seed_specific = any(stage_name.startswith(prefix) for prefix in seed_specific_prefixes)
     
     if is_seed_specific:
-        seed_dir = os.path.join(work_dir, f"seed_{ExperimentConfig.CURRENT_SEED}")
+        seed_dir = os.path.join(work_dir, f"seed_{ExperimentConfig.SEED_TAG}")
         os.makedirs(seed_dir, exist_ok=True)
         return seed_dir
     else:
@@ -686,7 +858,22 @@ class StageLogger:
     def __init__(self, stage_name, log_dir=None):
         self.stage_name = stage_name
         if log_dir is None:
-            log_dir = os.path.join(ExperimentConfig.WORK_DIR, 'stage_logs')
+            # Mirrors _get_flag_dir's namespacing: stage_2 (baseline) is
+            # seed-specific but shared across ablation arms; stages 3-8 are
+            # additionally namespaced by ablation mode (SEED_TAG) so an
+            # ablation arm's log never interleaves with the main run's log
+            # for the same seed. Stages 0-1 are fully shared.
+            if stage_name.startswith('stage_2'):
+                log_dir = os.path.join(
+                    ExperimentConfig.WORK_DIR, 'stage_logs', f"seed_{ExperimentConfig.CURRENT_SEED}"
+                )
+            elif any(stage_name.startswith(p) for p in
+                     ('stage_3', 'stage_4', 'stage_5', 'stage_6', 'stage_7', 'stage_8')):
+                log_dir = os.path.join(
+                    ExperimentConfig.WORK_DIR, 'stage_logs', f"seed_{ExperimentConfig.SEED_TAG}"
+                )
+            else:
+                log_dir = os.path.join(ExperimentConfig.WORK_DIR, 'stage_logs')
         os.makedirs(log_dir, exist_ok=True)
         
         self.log_file = os.path.join(log_dir, f"{stage_name}.log")

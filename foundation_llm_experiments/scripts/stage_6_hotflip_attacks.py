@@ -54,8 +54,16 @@ class HotFlipAttacker:
         self.num_flips = num_flips
         self.vocab_size = len(tokenizer)
 
-    def attack_single_example(self, text):
-        """Attack one text. Returns scalar metrics only (JSON-safe)."""
+    def attack_single_example(self, text, return_ids=False):
+        """
+        Attack one text. Returns scalar metrics only (JSON-safe) by default.
+
+        When return_ids=True, additionally includes the clean and flipped
+        token-id sequences plus the flipped positions, so a downstream stage
+        (stage_6b_hotflip_transfer.py) can replay the exact same attacked
+        input against a different target model without re-deriving it from
+        that model's own gradients.
+        """
         encoding = self.tokenizer(
             text, return_tensors='pt', truncation=True,
             max_length=Config.MAX_SEQ_LENGTH,
@@ -111,12 +119,21 @@ class HotFlipAttacker:
 
         degradation = (attacked_loss - clean_loss) / clean_loss if clean_loss else 0.0
 
-        return {
+        result = {
             'clean_loss': float(clean_loss),
             'attacked_loss': float(attacked_loss),
             'degradation': float(degradation),
             'success': bool(degradation > Config.ATTACK_SUCCESS_THRESHOLD),
         }
+        if return_ids:
+            result['orig_ids'] = input_ids[0].tolist()
+            result['flipped_ids'] = flipped_ids[0].tolist()
+            result['attention_mask'] = attention_mask[0].tolist()
+            result['positions_flipped'] = sorted({
+                pos.item() for pos in topk_positions
+                if pos.item() < input_ids.size(1) and attention_mask[0, pos.item()] == 1
+            })
+        return result
 
 
 def _attack_resumable(attacker, texts, jsonl_path, logger):

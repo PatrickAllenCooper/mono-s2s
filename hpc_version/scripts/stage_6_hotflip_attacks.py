@@ -166,7 +166,7 @@ class HotFlipT5Attack:
         
         return top_indices.cpu().numpy(), top_values.cpu().numpy()
     
-    def attack_single(self, text, summary, num_flips=5, beam_size=10):
+    def attack_single(self, text, summary, num_flips=5, beam_size=10, return_ids=False):
         """
         Attack a single example by flipping num_flips tokens.
         
@@ -175,9 +175,14 @@ class HotFlipT5Attack:
             summary: Target summary
             num_flips: Number of tokens to flip
             beam_size: Number of candidate replacements to try per position
+            return_ids: If True, also return the raw (unattacked, attacked)
+                input-id tensors and attention mask, so a downstream stage
+                (stage_6b_hotflip_transfer.py) can replay the exact attacked
+                input against a different target model without a
+                decode/re-encode round trip that could shift tokenization.
         
         Returns:
-            attacked_text, attack_info
+            attacked_text, attack_info[, ids_dict]
         """
         # Get gradients
         gradients, input_ids, attention_mask = self.get_embedding_gradients(text, summary)
@@ -230,6 +235,13 @@ class HotFlipT5Attack:
         attacked_text = self.tokenizer.decode(attacked_ids[0], skip_special_tokens=True)
         attacked_text = attacked_text.replace("summarize: ", "").strip()
         
+        if return_ids:
+            ids_dict = {
+                'orig_ids': input_ids[0].cpu().tolist(),
+                'attacked_ids': attacked_ids[0].cpu().tolist(),
+                'attention_mask': attention_mask[0].cpu().tolist(),
+            }
+            return attacked_text, flip_info, ids_dict
         return attacked_text, flip_info
     
     def evaluate_attack_batch(self, texts, summaries, num_flips=5):
@@ -327,8 +339,10 @@ def main():
         
         # Baseline T5
         logger.log("\n2. Loading Baseline T5...")
+        # Baseline is shared across attribution-ablation arms; always load it
+        # from the non-ablation checkpoint directory for this seed.
         baseline_checkpoint = os.path.join(
-            ExperimentConfig.CHECKPOINT_DIR, 'baseline_checkpoints', 'best_model.pt'
+            ExperimentConfig.BASELINE_CHECKPOINT_DIR, 'baseline_checkpoints', 'best_model.pt'
         )
         models['baseline_t5'], _ = load_model('baseline', checkpoint_path=baseline_checkpoint, device=device)
         

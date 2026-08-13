@@ -30,6 +30,7 @@ source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s
 # Set environment variables
 export PYTHONHASHSEED=42
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
+export T5_ABLATION_MODE=${T5_ABLATION_MODE:-nonneg}
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 

@@ -1,6 +1,6 @@
 # Mono-S2S Documentation
 
-**Last Updated:** 2026-03-28  
+**Last Updated:** 2026-08-13  
 **Documentation Type:** Comprehensive guidance for paper development and testing
 
 ---
@@ -95,6 +95,25 @@ The pipeline already computes these - just add to paper:
 3. Expand Methods section with complete implementation details
 
 **Everything else builds on these foundations.**
+
+---
+
+## Attribution Ablation, Transfer, and Order Preservation (2026-08)
+
+The method description in `paper/example_paper.tex` matches the implemented intervention: full-width elementwise-nonnegative FFN weights via softplus, with no probe-derived projection A and no bottleneck. Section 5 lemmas are stated on hidden coordinates directly. The existing 3-seed T5 UAT transfer matrix from `lambda_results/seed_*/uat_results.json` is in Results (seed 42; seeds 1337 and 2024 store matching entries).
+
+New pipeline stages, all inference-only on existing checkpoints except the ablation arms which retrain Stage 3:
+
+| Stage | Track | Purpose |
+|-------|-------|---------|
+| 5b | Pythia | Replay Stage-5 UAT triggers across models (2x2 NLL matrix) |
+| 6b | T5 and Pythia | HotFlip substitution transfer, random-flip control, optional query attack |
+| 8 | T5 | Per-layer Ah <= Ah' order-preservation fractions with bootstrap CIs |
+| Ablation | T5 | `T5_ABLATION_MODE=sign_frozen` or `abs_init_free`; namespaced `seed_{SEED}_{mode}` dirs |
+
+HotFlip-transfer, order-preservation, and ablation **numbers** are not yet in the manuscript. They are produced by the stages above on CURC and should be slotted into Results (alongside Tables 2 and 4 for ablation rows) when the corresponding JSON lands. Experimental protocols for all three are already in the paper (Sections "HotFlip Substitution Transfer", "End-to-End Order Preservation", "Attribution Ablations").
+
+Submission commands and resource tables live in `hpc_version/README.md` and `foundation_llm_experiments/CURC_EXECUTION_GUIDE.md`.
 
 ---
 
@@ -421,5 +440,5 @@ For questions about:
 
 ---
 
-**Last Updated:** 2026-03-28  
+**Last Updated:** 2026-08-13  
 **Status:** Production-ready documentation for ICML 2026 submission

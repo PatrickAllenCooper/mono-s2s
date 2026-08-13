@@ -377,7 +377,9 @@ Stage 7 writes to seed-namespaced paths:
 | 3: Monotonic Training | Yes | 80GB | 23:50:00 | ~32h (2 runs) | ~25GB |
 | 4: Evaluation | Yes | 80GB | 8:00:00 | ~8h | ~5GB |
 | 5: UAT Attacks | Yes | 80GB | 23:50:00 | ~24h/run (2+ runs) | ~2GB |
+| 5b: UAT Transfer Matrix | Yes | 80GB | 2:00:00 | ~1h | <1GB |
 | 6: HotFlip Attacks | Yes | 80GB | 4:00:00 | ~4h | ~2GB |
+| 6b: HotFlip Transfer + Controls | Yes | 80GB | 10:00:00 | ~6-8h | ~2GB |
 | 7: Aggregate | No | 16GB | 0:30:00 | ~30min | ~1GB |
 
 ### Total Resource Summary
@@ -608,6 +610,48 @@ grep -i "error\|failed\|exception" logs/job_2_baseline_JOBID.err
 # View full log
 less logs/job_2_baseline_JOBID.out
 ```
+
+---
+
+## Attack-Transfer Stages (5b, 6b)
+
+Two follow-up stages test whether an attack crafted against one model
+(baseline or monotonic) still works against the other, and whether the
+gradient-based attacks are doing anything a gradient-free search couldn't
+also do. Both depend only on artifacts already produced by Stages 5 and 6,
+so they can be submitted any time after those complete -- no retraining.
+
+**Stage 5b (`stage_5b_uat_transfer.py`)** loads the trigger already learned
+in Stage 5's `uat_results.json` for each model and replays it against the
+*other* model with no re-optimization, producing the 2x2 (crafted-on x
+evaluated-on) NLL-increase matrix. This is a pure evaluation pass, so it is
+fast (~1h) even though it loads both models in turn.
+
+**Stage 6b (`stage_6b_hotflip_transfer.py`)** re-runs HotFlip on each source
+model, persists the exact attacked token ids, then cross-evaluates them on
+both models. It also runs a random-substitution control at the same flip
+budget (10 tokens) with no model or gradient involved in choosing the flips,
+and an optional gradient-free query attack (greedy per-position search
+scored by target-model loss, budget-matched to HotFlip's candidate
+evaluations). All three sub-stages checkpoint to JSONL and resume
+automatically if a job times out.
+
+```bash
+# After stage_5_uat_complete.flag and stage_6_hotflip_complete.flag exist:
+sbatch jobs/job_5b_uat_transfer.sh
+sbatch jobs/job_6b_hotflip_transfer.sh
+
+# Skip the query-based control (most expensive sub-stage) if time-constrained:
+OVERRIDE_RUN_QUERY_ATTACK=0 sbatch jobs/job_6b_hotflip_transfer.sh
+
+# Per-seed / per-variant, matching the rest of the pipeline's env conventions:
+EXPERIMENT_SEED=1337 MONOTONIC_VARIANT=mlp_both sbatch jobs/job_5b_uat_transfer.sh
+EXPERIMENT_SEED=1337 MONOTONIC_VARIANT=mlp_both sbatch jobs/job_6b_hotflip_transfer.sh
+```
+
+Outputs land alongside the Stage 5/6 results:
+`$SCRATCH/foundation_llm_results_seed{SEED}/uat_transfer_results.json` and
+`hotflip_transfer_results.json`.
 
 ---
 
