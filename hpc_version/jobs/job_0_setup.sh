@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=mono_s2s_setup
-#SBATCH --partition=amilan
-#SBATCH --qos=normal
+#SBATCH --partition=acpu
+#SBATCH --qos=cpu-normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4

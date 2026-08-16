@@ -47,7 +47,8 @@ from configs.experiment_config import ExperimentConfig
 from utils.common_utils import (
     set_all_seeds, create_completion_flag, check_dependencies,
     save_json, StageLogger, worker_init_fn, get_generator,
-    make_model_monotonic
+    make_model_monotonic, training_autocast, apply_model_memory_settings,
+    optimizer_step_count, prune_epoch_checkpoints,
 )
 
 # Import transformers AFTER environment setup
@@ -86,8 +87,12 @@ class MonotonicT5Trainer:
             weight_decay=self.weight_decay
         )
         
-        # Scheduler (IDENTICAL to baseline)
-        total_steps = len(train_loader) * self.num_epochs
+        # Scheduler (one step per optimizer update, not per micro-batch)
+        total_steps = optimizer_step_count(
+            len(train_loader),
+            ExperimentConfig.GRADIENT_ACCUMULATION_STEPS,
+            self.num_epochs,
+        )
         warmup_steps = int(total_steps * self.warmup_ratio)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
@@ -170,6 +175,7 @@ class MonotonicT5Trainer:
         
         torch.save(save_dict, checkpoint_path)
         print(f"  ✓ Checkpoint saved: epoch_{epoch}.pt")
+        prune_epoch_checkpoints(self.checkpoint_dir)
         
         # Save best model
         if is_best:
@@ -191,45 +197,44 @@ class MonotonicT5Trainer:
         """Train for one epoch"""
         self.model.train()
         total_loss = 0
+        accum = max(1, ExperimentConfig.GRADIENT_ACCUMULATION_STEPS)
+        n_batches = len(self.train_loader)
+        self.optimizer.zero_grad()
         progress_bar = tqdm(self.train_loader, desc="Training Monotonic T5")
         
-        for batch in progress_bar:
+        for step, batch in enumerate(progress_bar):
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
             labels = batch['labels'].to(self.device)
             
-            # Forward pass
-            outputs = self.model(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=labels
-            )
-            loss = outputs.loss
+            with training_autocast(self.device):
+                outputs = self.model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    labels=labels
+                )
+                loss = outputs.loss / accum
             
-            # Backward pass
             loss.backward()
             
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), 
-                max_norm=self.max_grad_norm
-            )
+            if ((step + 1) % accum == 0) or (step + 1 == n_batches):
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), 
+                    max_norm=self.max_grad_norm
+                )
+                self.optimizer.step()
+                self.scheduler.step()
+                self.optimizer.zero_grad()
             
-            # Optimizer step
-            self.optimizer.step()
-            self.scheduler.step()
-            self.optimizer.zero_grad()
-            
-            # Note: No manual weight constraints needed!
-            # W = softplus(V) is always ≥ 0 automatically
-            
-            total_loss += loss.item()
+            # W = softplus(V) is always >= 0 automatically
+            unscaled = loss.item() * accum
+            total_loss += unscaled
             progress_bar.set_postfix({
-                'loss': f'{loss.item():.4f}',
+                'loss': f'{unscaled:.4f}',
                 'lr': f'{self.scheduler.get_last_lr()[0]:.2e}'
             })
         
-        avg_loss = total_loss / len(self.train_loader)
+        avg_loss = total_loss / n_batches
         return avg_loss
     
     def validate(self):
@@ -243,11 +248,12 @@ class MonotonicT5Trainer:
                 attention_mask = batch['attention_mask'].to(self.device)
                 labels = batch['labels'].to(self.device)
                 
-                outputs = self.model(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    labels=labels
-                )
+                with training_autocast(self.device):
+                    outputs = self.model(
+                        input_ids=input_ids,
+                        attention_mask=attention_mask,
+                        labels=labels
+                    )
                 
                 total_loss += outputs.loss.item()
         
@@ -390,9 +396,13 @@ def main():
         
         # Initialize model
         logger.log("Initializing monotonic model (T5 with W≥0 FFN constraints)...")
+        load_kwargs = {}
+        if ExperimentConfig.USE_BF16 and device.type == "cuda":
+            load_kwargs["torch_dtype"] = torch.bfloat16
         model = T5ForConditionalGeneration.from_pretrained(
-            ExperimentConfig.MODEL_NAME
+            ExperimentConfig.MODEL_NAME, **load_kwargs
         ).to(device)
+        apply_model_memory_settings(model)
         
         # Verify T5 architecture
         assert model.config.model_type == "t5", \

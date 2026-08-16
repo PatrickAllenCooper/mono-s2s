@@ -3,7 +3,7 @@
 **Target Cluster:** CURC Alpine (University of Colorado Boulder)  
 **Model:** Pythia-1.4B (EleutherAI)  
 **Total Runtime:** ~60-70 hours per seed  
-**GPU Required:** 1x A100 (40GB)
+**GPU Required:** 1x A100 (40/80GB) for Pythia-1.4B; H200 (141GB) for 2.8B/6.9B
 
 ---
 
@@ -33,6 +33,26 @@ cd mono-s2s/foundation_llm_experiments
 ./run_all.sh
 ```
 
+**Scale-up and order preservation (preferred for new runs):**
+
+```bash
+cd /projects/$USER/mono-s2s/foundation_llm_experiments
+chmod +x jobs/*.sh
+
+# Existing 1.4B checkpoints: order preservation only
+sbatch --export=ALL,EXPERIMENT_SEED=42,MONOTONIC_VARIANT=mlp_both jobs/job_11_order_preservation.sh
+
+# Pythia-2.8B (3 seeds) then 6.9B screen on H200 (needs mono_s2s_cu128)
+./jobs/submit_scale.sh
+```
+
+Confirm partition names with `sinfo`. Prune large epoch checkpoints:
+
+```bash
+python scripts/prune_checkpoints.py --dir $SCRATCH/foundation_llm_work_seed42/checkpoints/baseline_checkpoints --keep 1
+curc-quota
+```
+
 **That's literally it!** The `run_all.sh` script automatically:
 
 **First-time setup (if needed):**
@@ -40,7 +60,7 @@ cd mono-s2s/foundation_llm_experiments
 - ✓ Runs bootstrap if not found
 - ✓ Installs Miniconda to `/projects` (avoids home quota issues)
 - ✓ Creates Python 3.10 environment
-- ✓ Installs PyTorch + CUDA 11.8
+- ✓ Installs PyTorch + CUDA 11.8 (A100). For H200 / RTX Pro 6000 create `mono_s2s_cu128` from `environment_cu128.yml` (pip cu128 index).
 - ✓ Installs all dependencies
 - ✓ Sets up HuggingFace cache in `$SCRATCH`
 

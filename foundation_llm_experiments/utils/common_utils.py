@@ -17,6 +17,37 @@ import torch.nn.functional as F
 from typing import List, Dict, Tuple, Optional
 import torch.nn.utils.parametrize as P
 
+
+def optimizer_step_count(num_batches, accum_steps, num_epochs):
+    accum = max(1, int(accum_steps))
+    steps_per_epoch = (int(num_batches) + accum - 1) // accum
+    return steps_per_epoch * int(num_epochs)
+
+
+def prune_epoch_checkpoints(checkpoint_dir, keep_last_n=None):
+    if keep_last_n is None:
+        keep_last_n = getattr(Config, "KEEP_LAST_N_CHECKPOINTS", 1)
+    if not os.path.isdir(checkpoint_dir):
+        return []
+    epoch_files = []
+    for name in os.listdir(checkpoint_dir):
+        if name.startswith("checkpoint_epoch_") and name.endswith(".pt"):
+            try:
+                epoch = int(name.replace("checkpoint_epoch_", "").replace(".pt", ""))
+            except ValueError:
+                continue
+            epoch_files.append((epoch, os.path.join(checkpoint_dir, name)))
+    epoch_files.sort(key=lambda x: x[0])
+    removed = []
+    if keep_last_n >= 0 and len(epoch_files) > keep_last_n:
+        for _, path in epoch_files[:-keep_last_n]:
+            try:
+                os.remove(path)
+                removed.append(path)
+            except OSError:
+                continue
+    return removed
+
 # Add configs to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from configs.experiment_config import FoundationExperimentConfig as Config

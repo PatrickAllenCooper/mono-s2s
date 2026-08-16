@@ -21,6 +21,7 @@ from scipy import stats
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from configs.experiment_config import ExperimentConfig
+from utils.stats_utils import paired_t_test, bonferroni_correct
 
 
 def load_seed_results(seed: int, scratch_dir: str) -> Dict[str, Any]:
@@ -107,25 +108,8 @@ def compute_cross_seed_stats(values: List[float]) -> Dict[str, float]:
 
 
 def paired_t_test_across_seeds(values_a: List[float], values_b: List[float]) -> Dict[str, float]:
-    """Perform paired t-test across seeds."""
-    if len(values_a) != len(values_b) or len(values_a) < 2:
-        return {'t_stat': np.nan, 'p_value': np.nan, 'cohens_d': np.nan}
-    
-    arr_a = np.array(values_a)
-    arr_b = np.array(values_b)
-    
-    # Paired t-test
-    t_stat, p_value = stats.ttest_rel(arr_a, arr_b)
-    
-    # Cohen's d for paired samples
-    diff = arr_a - arr_b
-    cohens_d = np.mean(diff) / np.std(diff, ddof=1) if np.std(diff) > 0 else 0.0
-    
-    return {
-        't_stat': t_stat,
-        'p_value': p_value,
-        'cohens_d': cohens_d,
-    }
+    """Perform paired t-test across seeds (wrapper around stats_utils)."""
+    return paired_t_test(values_a, values_b)
 
 
 def aggregate_results(seeds: List[int], scratch_dir: str) -> Dict[str, Any]:
@@ -242,6 +226,42 @@ def aggregate_results(seeds: List[int], scratch_dir: str) -> Dict[str, Any]:
     aggregated['statistical_tests']['hotflip_baseline_vs_monotonic'] = paired_t_test_across_seeds(
         baseline_hotflip, monotonic_hotflip
     )
+
+    # Additional seed-level comparisons so Bonferroni has a real family
+    baseline_rouge1, monotonic_rouge1 = [], []
+    baseline_rouge2, monotonic_rouge2 = [], []
+    for result in all_results:
+        try:
+            eval_data = result['evaluation']
+            baseline_rouge1.append(eval_data['baseline']['cnn_dailymail']['rouge1']['mean'])
+            monotonic_rouge1.append(eval_data['monotonic']['cnn_dailymail']['rouge1']['mean'])
+            baseline_rouge2.append(eval_data['baseline']['cnn_dailymail']['rouge2']['mean'])
+            monotonic_rouge2.append(eval_data['monotonic']['cnn_dailymail']['rouge2']['mean'])
+        except (KeyError, TypeError):
+            continue
+    if baseline_rouge1:
+        aggregated['statistical_tests']['rouge1_baseline_vs_monotonic'] = paired_t_test_across_seeds(
+            baseline_rouge1, monotonic_rouge1
+        )
+    if baseline_rouge2:
+        aggregated['statistical_tests']['rouge2_baseline_vs_monotonic'] = paired_t_test_across_seeds(
+            baseline_rouge2, monotonic_rouge2
+        )
+
+    baseline_uat, monotonic_uat = [], []
+    for result in all_results:
+        try:
+            if result['uat']:
+                baseline_uat.append(result['uat']['baseline']['success_rate'])
+                monotonic_uat.append(result['uat']['monotonic']['success_rate'])
+        except (KeyError, TypeError):
+            continue
+    if baseline_uat:
+        aggregated['statistical_tests']['uat_baseline_vs_monotonic'] = paired_t_test_across_seeds(
+            baseline_uat, monotonic_uat
+        )
+
+    aggregated['statistical_tests'] = bonferroni_correct(aggregated['statistical_tests'])
     
     return aggregated
 
@@ -290,13 +310,21 @@ def generate_summary_text(aggregated: Dict[str, Any]) -> str:
     
     try:
         rougeL_test = aggregated['statistical_tests']['rougeL_baseline_vs_monotonic']
-        lines.append(f"  ROUGE-L: t={rougeL_test['t_stat']:.3f}, p={rougeL_test['p_value']:.4f}, d={rougeL_test['cohens_d']:.3f}")
+        p_b = rougeL_test.get('p_value_bonferroni', rougeL_test['p_value'])
+        lines.append(
+            f"  ROUGE-L: t={rougeL_test['t_stat']:.3f}, p={rougeL_test['p_value']:.4f}, "
+            f"p_bonf={p_b:.4f}, d={rougeL_test['cohens_d']:.3f}"
+        )
     except (KeyError, TypeError):
         lines.append("  ROUGE-L: N/A")
     
     try:
         hotflip_test = aggregated['statistical_tests']['hotflip_baseline_vs_monotonic']
-        lines.append(f"  HotFlip: t={hotflip_test['t_stat']:.3f}, p={hotflip_test['p_value']:.4f}, d={hotflip_test['cohens_d']:.3f}")
+        p_b = hotflip_test.get('p_value_bonferroni', hotflip_test['p_value'])
+        lines.append(
+            f"  HotFlip: t={hotflip_test['t_stat']:.3f}, p={hotflip_test['p_value']:.4f}, "
+            f"p_bonf={p_b:.4f}, d={hotflip_test['cohens_d']:.3f}"
+        )
     except (KeyError, TypeError):
         lines.append("  HotFlip: N/A")
     

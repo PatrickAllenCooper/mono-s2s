@@ -18,6 +18,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from contextlib import nullcontext
 from typing import List, Dict, Tuple, Optional
 import torch.nn.utils.parametrize as P
 
@@ -80,6 +81,64 @@ def get_generator(device='cpu', seed=None):
     generator = torch.Generator(device=device)
     generator.manual_seed(seed)
     return generator
+
+
+def training_autocast(device, use_bf16=None):
+    """bf16 autocast on CUDA when the size-tier preset (or override) requests it."""
+    if use_bf16 is None:
+        use_bf16 = getattr(ExperimentConfig, "USE_BF16", False)
+    device_type = getattr(device, "type", str(device))
+    if use_bf16 and str(device_type).startswith("cuda"):
+        return torch.autocast(device_type="cuda", dtype=torch.bfloat16)
+    return nullcontext()
+
+
+def apply_model_memory_settings(model, use_grad_checkpointing=None):
+    """Enable gradient checkpointing for large T5 size tiers."""
+    if use_grad_checkpointing is None:
+        use_grad_checkpointing = getattr(ExperimentConfig, "USE_GRADIENT_CHECKPOINTING", False)
+    if use_grad_checkpointing and hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
+        if hasattr(model, "config") and hasattr(model.config, "use_cache"):
+            model.config.use_cache = False
+    return model
+
+
+def optimizer_step_count(num_batches, accum_steps, num_epochs):
+    """Scheduler length: one step per optimizer update, not per micro-batch."""
+    accum = max(1, int(accum_steps))
+    steps_per_epoch = (int(num_batches) + accum - 1) // accum
+    return steps_per_epoch * int(num_epochs)
+
+
+def prune_epoch_checkpoints(checkpoint_dir, keep_last_n=None, best_name="best_model.pt"):
+    """
+    Keep best_model.pt, any rolling step checkpoint, and the newest N
+    epoch checkpoints. Deletes older checkpoint_epoch_*.pt files so
+    large-model runs do not fill scratch.
+    """
+    if keep_last_n is None:
+        keep_last_n = getattr(ExperimentConfig, "KEEP_LAST_N_CHECKPOINTS", 1)
+    if not os.path.isdir(checkpoint_dir):
+        return []
+    epoch_files = []
+    for name in os.listdir(checkpoint_dir):
+        if name.startswith("checkpoint_epoch_") and name.endswith(".pt"):
+            try:
+                epoch = int(name.replace("checkpoint_epoch_", "").replace(".pt", ""))
+            except ValueError:
+                continue
+            epoch_files.append((epoch, os.path.join(checkpoint_dir, name)))
+    epoch_files.sort(key=lambda x: x[0])
+    removed = []
+    if keep_last_n >= 0 and len(epoch_files) > keep_last_n:
+        for _, path in epoch_files[:-keep_last_n]:
+            try:
+                os.remove(path)
+                removed.append(path)
+            except OSError:
+                continue
+    return removed
 
 
 def worker_init_fn(worker_id):
@@ -418,11 +477,15 @@ def load_model(model_type, checkpoint_path=None, device='cuda', ablation_mode=No
         model, is_pretrained_only
     """
     from transformers import T5ForConditionalGeneration
-    
+
     print(f"\nLoading {model_type} model...")
-    
-    # Load base model
-    model = T5ForConditionalGeneration.from_pretrained(ExperimentConfig.MODEL_NAME).to(device)
+
+    load_kwargs = {}
+    if getattr(ExperimentConfig, "USE_BF16", False) and str(device).startswith("cuda"):
+        load_kwargs["torch_dtype"] = torch.bfloat16
+    model = T5ForConditionalGeneration.from_pretrained(
+        ExperimentConfig.MODEL_NAME, **load_kwargs
+    ).to(device)
     
     # Verify T5 architecture
     assert model.config.model_type == "t5", \
@@ -810,6 +873,7 @@ def save_checkpoint(model, optimizer, scheduler, epoch, val_loss, is_best,
     }
     torch.save(save_dict, checkpoint_path)
     print(f"  ✓ Checkpoint saved: epoch_{epoch}.pt")
+    prune_epoch_checkpoints(checkpoint_dir)
     
     # Save best model
     if is_best:

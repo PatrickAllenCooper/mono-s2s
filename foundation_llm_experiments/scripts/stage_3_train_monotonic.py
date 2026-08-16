@@ -32,7 +32,8 @@ from configs.experiment_config import FoundationExperimentConfig as Config
 from utils.common_utils import (
     set_all_seeds, create_completion_flag, save_json,
     StageLogger, check_dependencies, get_generator, worker_init_fn,
-    LanguageModelingDataset, compute_perplexity, make_model_monotonic
+    LanguageModelingDataset, compute_perplexity, make_model_monotonic,
+    optimizer_step_count, prune_epoch_checkpoints,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
@@ -72,7 +73,9 @@ class MonotonicTrainer:
             weight_decay=self.weight_decay,
         )
 
-        total_steps = len(train_loader) * self.num_epochs
+        total_steps = optimizer_step_count(
+            len(train_loader), Config.GRADIENT_ACCUMULATION_STEPS, self.num_epochs,
+        )
         warmup_steps = int(total_steps * self.warmup_ratio)
         self.scheduler = get_linear_schedule_with_warmup(
             self.optimizer,
@@ -126,6 +129,7 @@ class MonotonicTrainer:
         path = self._epoch_ckpt_path(epoch)
         torch.save(self._build_save_dict(epoch, 0, val_ppl), path)
         print(f"  Checkpoint saved: checkpoint_epoch_{epoch}.pt")
+        prune_epoch_checkpoints(self.checkpoint_dir)
 
         if is_best:
             best_path = os.path.join(self.checkpoint_dir, 'best_model.pt')
@@ -224,27 +228,29 @@ class MonotonicTrainer:
             labels = input_ids.clone()
             labels[attention_mask == 0] = -100
 
+            accum = max(1, Config.GRADIENT_ACCUMULATION_STEPS)
             outputs = self.model(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
                 labels=labels,
             )
-            loss = outputs.loss
+            loss = outputs.loss / accum
             loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
-            self.optimizer.step()
-            self.scheduler.step()
-            self.optimizer.zero_grad()
+            n_batches = len(self.train_loader)
+            if ((step + 1) % accum == 0) or (step + 1 == n_batches):
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+                self.optimizer.step()
+                self.scheduler.step()
+                self.optimizer.zero_grad()
 
-            # W = softplus(V) >= 0 is maintained automatically; no projection needed.
-
-            total_loss += loss.item()
+            unscaled = loss.item() * accum
+            total_loss += unscaled
             steps_this_epoch += 1
             self.global_step += 1
 
             progress_bar.set_postfix({
-                'loss': f'{loss.item():.4f}',
+                'loss': f'{unscaled:.4f}',
                 'lr': f'{self.scheduler.get_last_lr()[0]:.2e}',
             })
             progress_bar.update(1)

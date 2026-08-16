@@ -50,6 +50,7 @@ from utils.common_utils import (
     save_json, StageLogger, load_model, generate_summary_fixed_params,
     compute_rouge_with_ci, compute_length_statistics, compute_brevity_penalty
 )
+from utils.stats_utils import extract_metric_vectors, per_example_paired_tests
 
 # Import transformers AFTER environment setup
 from transformers import T5Tokenizer
@@ -243,6 +244,25 @@ def main():
                 )
                 
                 results[dataset_key][model_key] = eval_results
+
+            if 'baseline_t5' in results[dataset_key] and 'monotonic_t5' in results[dataset_key]:
+                metrics = ExperimentConfig.ROUGE_METRICS
+                vec_b = extract_metric_vectors(
+                    results[dataset_key]['baseline_t5']['rouge_all_samples'], metrics
+                )
+                vec_m = extract_metric_vectors(
+                    results[dataset_key]['monotonic_t5']['rouge_all_samples'], metrics
+                )
+                results[dataset_key]['paired_tests_baseline_vs_monotonic'] = (
+                    per_example_paired_tests(vec_b, vec_m)
+                )
+                logger.log("  Per-example paired t-tests (baseline vs monotonic, Bonferroni):")
+                for metric, test in results[dataset_key]['paired_tests_baseline_vs_monotonic'].items():
+                    logger.log(
+                        f"    {metric}: t={test['t_stat']:.3f}, "
+                        f"p={test['p_value']:.4g}, p_bonf={test['p_value_bonferroni']:.4g}, "
+                        f"d={test['cohens_d']:.3f}"
+                    )
         
         # Save comprehensive results
         logger.log("\n" + "="*80)

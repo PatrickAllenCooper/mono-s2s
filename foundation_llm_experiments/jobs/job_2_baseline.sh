@@ -51,6 +51,7 @@ export CUBLAS_WORKSPACE_CONFIG=:16:8
 export TOKENIZERS_PARALLELISM=false
 export CUDA_LAUNCH_BLOCKING=1
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
+export PYTHIA_MODEL_NAME="${PYTHIA_MODEL_NAME:-EleutherAI/pythia-1.4b}"
 
 # Set up paths (with fallbacks)
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}

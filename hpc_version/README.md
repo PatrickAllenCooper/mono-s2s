@@ -51,8 +51,14 @@ cd /projects/$USER
 git clone https://github.com/PatrickAllenCooper/mono-s2s.git
 cd mono-s2s/hpc_version
 
-# PyTorch (prefer pip on Alpine to avoid conda/MKL conflicts)
+# PyTorch for A100 (existing mono_s2s env)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Separate env for H200 / RTX Pro 6000 (Blackwell needs CUDA 12.8 wheels)
+conda create -n mono_s2s_cu128 python=3.10 -y
+conda activate mono_s2s_cu128
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# See ../environment_cu128.yml
 
 # Other dependencies
 pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf
@@ -79,12 +85,25 @@ SLURM_PARTITION = "aa100"  # For A100 GPUs on Alpine
 
 ### Run
 
+Prefer `jobs/submit_pipeline.sh`, which overrides stale job-script headers with the current CURC names (`acpu` / `cpu-normal` for CPU stages; `aa100` / `gpu-normal` / `gpu:a100-40gb:1` for A100). Confirm with `sinfo` if a name is rejected.
+
 ```bash
 cd /projects/$USER/mono-s2s/hpc_version
-conda activate mono_s2s
+chmod +x jobs/*.sh
+./jobs/submit_pipeline.sh                    # T5-small, seed 42, full test sets
+./jobs/submit_five_seeds.sh                  # seeds 42 1337 2024 8888 12345
+./jobs/submit_ablations.sh                   # sign_frozen and abs_init_free
+CURC_PARTITION=artxpro6000 ./jobs/submit_scale.sh   # t5-base then t5-large
 
-./run_all.sh          # Default seed (42)
-./run_all.sh 1337     # Custom seed
+# Size / env knobs
+T5_MODEL_NAME=t5-large USE_FULL_TEST_SETS=1 CONDA_ENV=mono_s2s_cu128 \
+  CURC_PARTITION=artxpro6000 ./jobs/submit_pipeline.sh
+```
+
+Check `/projects` quota before large-model runs (`curc-quota`). Epoch checkpoints are pruned to the newest file plus `best_model.pt`. Manual prune:
+
+```bash
+python scripts/prune_checkpoints.py --dir $SCRATCH/mono_s2s_work/checkpoints/seed_42/baseline_checkpoints --keep 1
 ```
 
 ### Monitor

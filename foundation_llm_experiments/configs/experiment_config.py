@@ -31,6 +31,9 @@ class FoundationExperimentConfig:
     )
     
     _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
+    MODEL_NAME = os.environ.get("PYTHIA_MODEL_NAME", "EleutherAI/pythia-1.4b")
+    _MODEL_SLUG = MODEL_NAME.split("/")[-1].replace(".", "_")
+    _SIZE_SUFFIX = "" if _MODEL_SLUG == "pythia-1_4b" else f"_{_MODEL_SLUG}"
     
     if _ON_CLOUD:
         # Cloud VM (Azure, Lambda, etc): use env vars from .azure_env or .lambda_env
@@ -45,35 +48,47 @@ class FoundationExperimentConfig:
         
         SCRATCH_DIR = os.path.dirname(_BASE)
         PROJECT_DIR = SCRATCH_DIR
-        WORK_DIR = os.environ.get("LAMBDA_SEED_WORK", f"{_BASE}{_SEED_SUFFIX}")
+        WORK_DIR = os.environ.get("LAMBDA_SEED_WORK", f"{_BASE}{_SEED_SUFFIX}{_SIZE_SUFFIX}")
         RESULTS_DIR = os.environ.get("LAMBDA_SEED_RESULTS",
-                      os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}"))
+                      os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}{_SIZE_SUFFIX}"))
         DATA_CACHE_DIR = os.environ.get("AZURE_CACHE",
                          os.environ.get("LAMBDA_CACHE",
                          os.path.join(SCRATCH_DIR, "foundation_llm_cache")))
     else:
         # CURC Alpine (or any SLURM cluster): use $SCRATCH with seed-namespaced dirs
-        WORK_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_work{_SEED_SUFFIX}")
-        RESULTS_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}")
+        WORK_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_work{_SEED_SUFFIX}{_SIZE_SUFFIX}")
+        RESULTS_DIR = os.path.join(SCRATCH_DIR, f"foundation_llm_results{_SEED_SUFFIX}{_SIZE_SUFFIX}")
         DATA_CACHE_DIR = os.path.join(SCRATCH_DIR, "foundation_llm_data_cache")
     
     CHECKPOINT_DIR = os.path.join(WORK_DIR, "checkpoints")
     # Seed-namespaced so multi-seed Stage 7 jobs do not overwrite each other.
-    FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, f"foundation_llm_final_results{_SEED_SUFFIX}")
+    FINAL_RESULTS_DIR = os.path.join(PROJECT_DIR, f"foundation_llm_final_results{_SEED_SUFFIX}{_SIZE_SUFFIX}")
     
     # ======================================================================
     # MODEL CONFIGURATION
     # ======================================================================
     
-    # Foundation model selection
-    MODEL_NAME = "EleutherAI/pythia-1.4b"  # 1.4B parameters, fits A100
     MODEL_REVISION = "main"  # Use latest checkpoint
-    
-    # Model architecture info
-    HIDDEN_SIZE = 2048
-    NUM_LAYERS = 24
-    NUM_ATTENTION_HEADS = 16
-    FFN_INTERMEDIATE_SIZE = 8192  # 4x hidden size
+
+    _PYTHIA_ARCH = {
+        "EleutherAI/pythia-1.4b": {
+            "HIDDEN_SIZE": 2048, "NUM_LAYERS": 24,
+            "NUM_ATTENTION_HEADS": 16, "FFN_INTERMEDIATE_SIZE": 8192,
+        },
+        "EleutherAI/pythia-2.8b": {
+            "HIDDEN_SIZE": 2560, "NUM_LAYERS": 32,
+            "NUM_ATTENTION_HEADS": 32, "FFN_INTERMEDIATE_SIZE": 10240,
+        },
+        "EleutherAI/pythia-6.9b": {
+            "HIDDEN_SIZE": 4096, "NUM_LAYERS": 32,
+            "NUM_ATTENTION_HEADS": 32, "FFN_INTERMEDIATE_SIZE": 16384,
+        },
+    }
+    _ARCH = _PYTHIA_ARCH.get(MODEL_NAME, _PYTHIA_ARCH["EleutherAI/pythia-1.4b"])
+    HIDDEN_SIZE = _ARCH["HIDDEN_SIZE"]
+    NUM_LAYERS = _ARCH["NUM_LAYERS"]
+    NUM_ATTENTION_HEADS = _ARCH["NUM_ATTENTION_HEADS"]
+    FFN_INTERMEDIATE_SIZE = _ARCH["FFN_INTERMEDIATE_SIZE"]
     
     # Estimated FFN parameters: ~560M (40% of 1.4B total)
     # FFN_PARAMS = 2 * HIDDEN_SIZE * FFN_INTERMEDIATE_SIZE * NUM_LAYERS
@@ -139,9 +154,40 @@ class FoundationExperimentConfig:
     BATCH_SIZE = 4 if _GPU_MEM_GB < 40 else 8
     GRADIENT_ACCUMULATION_STEPS = 8 if _GPU_MEM_GB < 40 else 4  # Effective batch = 32
     MAX_GRAD_NORM = 1.0
+    USE_BF16 = True
+    USE_GRADIENT_CHECKPOINTING = True
+
+    _PYTHIA_SIZE_TIERS = {
+        "EleutherAI/pythia-1.4b": {},
+        "EleutherAI/pythia-2.8b": {
+            "BATCH_SIZE": 2,
+            "GRADIENT_ACCUMULATION_STEPS": 8,
+            "EVAL_BATCH_SIZE": 1,
+            "MAX_SEQ_LENGTH": 1024,
+        },
+        "EleutherAI/pythia-6.9b": {
+            "BATCH_SIZE": 1,
+            "GRADIENT_ACCUMULATION_STEPS": 16,
+            "EVAL_BATCH_SIZE": 1,
+            "MAX_SEQ_LENGTH": 1024,
+        },
+    }
+    _PYTHIA_TIER = _PYTHIA_SIZE_TIERS.get(MODEL_NAME, {})
+    if "BATCH_SIZE" in _PYTHIA_TIER:
+        BATCH_SIZE = _PYTHIA_TIER["BATCH_SIZE"]
+    if "GRADIENT_ACCUMULATION_STEPS" in _PYTHIA_TIER:
+        GRADIENT_ACCUMULATION_STEPS = _PYTHIA_TIER["GRADIENT_ACCUMULATION_STEPS"]
+
+    BATCH_SIZE = _env_int.__func__("OVERRIDE_BATCH_SIZE", BATCH_SIZE)
+    GRADIENT_ACCUMULATION_STEPS = _env_int.__func__(
+        "OVERRIDE_GRAD_ACCUM", GRADIENT_ACCUMULATION_STEPS
+    )
 
     # Sequence length
-    MAX_SEQ_LENGTH = _env_int.__func__("OVERRIDE_MAX_SEQ_LENGTH", 2048)  # Pythia's context window
+    MAX_SEQ_LENGTH = _env_int.__func__(
+        "OVERRIDE_MAX_SEQ_LENGTH",
+        _PYTHIA_TIER.get("MAX_SEQ_LENGTH", 2048),
+    )
     
     # ======================================================================
     # EVALUATION CONFIGURATION
@@ -152,6 +198,9 @@ class FoundationExperimentConfig:
     #   batch=4 -> ~0.82GB  (safe for A10 24GB)
     #   batch=2 -> ~0.41GB  (very safe for A10 24GB)
     EVAL_BATCH_SIZE = 2 if _GPU_MEM_GB < 40 else 4
+    if "EVAL_BATCH_SIZE" in _PYTHIA_TIER:
+        EVAL_BATCH_SIZE = _PYTHIA_TIER["EVAL_BATCH_SIZE"]
+    EVAL_BATCH_SIZE = _env_int.__func__("OVERRIDE_EVAL_BATCH_SIZE", EVAL_BATCH_SIZE)
     
     # Evaluation benchmarks
     EVAL_BENCHMARKS = [
@@ -256,6 +305,7 @@ class FoundationExperimentConfig:
     TIME_HOTFLIP = "04:00:00"         # 4 hours (HotFlip attacks)
     TIME_HOTFLIP_TRANSFER = "10:00:00"  # 10 hours (re-attack both models + cross-eval + controls)
     TIME_AGGREGATE = "00:30:00"       # 30 min (aggregate results)
+    TIME_ORDER_PRESERVATION = "04:00:00"
     
     # ======================================================================
     # LOGGING & CHECKPOINTING (CRITICAL FOR RESUME)

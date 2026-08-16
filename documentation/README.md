@@ -1,6 +1,6 @@
 # Mono-S2S Documentation
 
-**Last Updated:** 2026-08-13  
+**Last Updated:** 2026-08-16  
 **Documentation Type:** Comprehensive guidance for paper development and testing
 
 ---
@@ -11,6 +11,59 @@ This directory contains all documentation for the Mono-S2S project, including:
 - ICML 2025 paper draft and supporting materials
 - Testing infrastructure documentation
 - Paper development guidance and recommendations
+
+---
+
+## Claim-to-Evidence Matrix (2026-08-16)
+
+Every empirical statement in `paper/example_paper.tex` is classified against code and artifacts. Status values: **exists** (JSON on disk), **in-flight** (CURC jobs submitted), **ready** (code can produce it; run not finished), **text-fixed** (manuscript no longer overclaims).
+
+| Claim (paper location) | Required evidence | Status |
+|------------------------|-------------------|--------|
+| T5-small ROUGE on CNN/DM and XSUM (Tables, n=200, seed 42) | `evaluation_results.json` seed 42 | exists (subset) |
+| Full CNN/DM 11,490 / XSUM 11,334 / SAMSum 819 | `USE_FULL_TEST_SETS=1` Stage 4 | ready (default now on) |
+| Five T5 seeds 42, 1337, 2024, 8888, 12345 | Stages 2-8 per seed | ready (`jobs/submit_five_seeds.sh`); main tables still seed 42 |
+| Paired t-tests, Bonferroni, Cohen's d, 1,000-resample bootstrap | `utils/stats_utils.py`, Stage 4, `aggregate_multi_seed.py` | ready (implemented and unit-tested) |
+| HotFlip 63% vs 19% success, Cohen's d > 0.8 | `hotflip_results.json` seed 42 | exists (n=100); multi-seed + full-test pending |
+| T5 UAT 3x3 transfer matrix | `uat_results.json` | exists for seed 42 |
+| T5 HotFlip transfer + random/query controls | Stage 6b | in-flight / ready |
+| End-to-end order preservation (T5 encoder) | Stage 8 `order_preservation_results.json` | in-flight / ready |
+| Sign-frozen and init-disruption ablations | `T5_ABLATION_MODE=sign_frozen` / `abs_init_free` | ready (`jobs/submit_ablations.sh`) |
+| Pythia-1.4B MLP-both 3-seed PPL / HotFlip / UAT | foundation `*_results.json` seeds 42/1337/2024 | exists |
+| Pythia UAT and HotFlip transfer | Stages 5b / 6b | seed 42 exists; 1337/2024 in-flight |
+| Pythia order preservation | Stage 11 | ready (`job_11_order_preservation.sh`) |
+| T5-base / T5-large / Pythia-2.8B / 6.9B | size-tier knobs + submit_scale.sh | ready (no numbers until JSON lands) |
+| Hardware: A100 only, PyTorch 2.0.1 | appendix | text-fixed (A100 + H200 + RTX Pro 6000; cu118 and cu128 envs) |
+
+Do not insert scale-up or five-seed means into the manuscript until the corresponding JSON exists. The paper now states that the printed T5 tables are seed 42 / n=200 and that the five-seed full-test and scale-up arms are the validation protocol.
+
+**CURC commands (after `git pull` on Alpine):**
+
+```bash
+# CUDA 12.8 env (required for H200 and RTX Pro 6000)
+conda create -n mono_s2s_cu128 python=3.10 -y
+conda activate mono_s2s_cu128
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf matplotlib
+
+# T5 five-seed full-test validation (A100)
+cd /projects/$USER/mono-s2s/hpc_version
+chmod +x jobs/*.sh
+./jobs/submit_five_seeds.sh
+
+# Attribution ablations
+./jobs/submit_ablations.sh
+
+# T5-base / t5-large on RTX Pro 6000
+CURC_PARTITION=artxpro6000 ./jobs/submit_scale.sh
+
+# Pythia-2.8B (3 seeds) + 6.9B screen on H200
+cd /projects/$USER/mono-s2s/foundation_llm_experiments
+chmod +x jobs/*.sh
+./jobs/submit_scale.sh
+```
+
+Check `sinfo` if a partition or gres name is rejected. Run `curc-quota` before large-model training. Archive only JSON results to `/projects`; prune epoch checkpoints with `scripts/prune_checkpoints.py`.
 
 ---
 
@@ -35,7 +88,7 @@ This directory contains all documentation for the Mono-S2S project, including:
 ### Critical Fixes Already Implemented
 
 1. **Fair Comparison** - Both models train 7 epochs (was 5 vs 7)
-2. **Adequate Sample Size** - Full test sets enabled (11,490 examples vs 200)
+2. **Adequate Sample Size** - `USE_FULL_TEST_SETS` now defaults to on (11,490 CNN/DM examples). Printed tables are still the n=200 subset until those jobs finish.
 3. **Timestamp Labeling** - All results include run metadata
 4. **Analysis Tracking** - Gradient norms, timing, memory tracking enabled
 
@@ -109,7 +162,9 @@ New pipeline stages, all inference-only on existing checkpoints except the ablat
 | 5b | Pythia | Replay Stage-5 UAT triggers across models (2x2 NLL matrix) |
 | 6b | T5 and Pythia | HotFlip substitution transfer, random-flip control, optional query attack |
 | 8 | T5 | Per-layer Ah <= Ah' order-preservation fractions with bootstrap CIs |
+| 11 | Pythia | Same probe math on decoder residual streams (last-token primary) |
 | Ablation | T5 | `T5_ABLATION_MODE=sign_frozen` or `abs_init_free`; namespaced `seed_{SEED}_{mode}` dirs |
+| Scale | both | `T5_MODEL_NAME` / `PYTHIA_MODEL_NAME` size tiers; `jobs/submit_scale.sh` |
 
 HotFlip-transfer, order-preservation, and ablation **numbers** are not yet in the manuscript. They are produced by the stages above on CURC and should be slotted into Results (alongside Tables 2 and 4 for ablation rows) when the corresponding JSON lands. Experimental protocols for all three are already in the paper (Sections "HotFlip Substitution Transfer", "End-to-End Order Preservation", "Attribution Ablations").
 
@@ -287,7 +342,7 @@ WARMUP_RATIO = 0.10               # Baseline
 MONOTONIC_WARMUP_RATIO = 0.15     # Monotonic (softplus stability)
 
 # Evaluation
-USE_FULL_TEST_SETS = True         # Full evaluation (11,490 examples)
+USE_FULL_TEST_SETS = True         # Default on; override with USE_FULL_TEST_SETS=0
 TRIGGER_EVAL_SIZE_FULL = 1500     # Attack evaluation sample size
 
 # Analysis Tracking
@@ -440,5 +495,5 @@ For questions about:
 
 ---
 
-**Last Updated:** 2026-08-13  
-**Status:** Production-ready documentation for ICML 2026 submission
+**Last Updated:** 2026-08-16  
+**Status:** Validation and scale-up protocol in place; insert new JSON into the paper as CURC jobs finish

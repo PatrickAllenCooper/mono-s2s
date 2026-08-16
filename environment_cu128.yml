@@ -1,0 +1,29 @@
+# CUDA 12.8 environment for CURC H200 and RTX Pro 6000 nodes.
+# A100 jobs can keep the existing mono_s2s env (cu118).
+#
+#   conda create -n mono_s2s_cu128 python=3.10 -y
+#   conda activate mono_s2s_cu128
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+#   pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf matplotlib
+#
+# Confirm: python -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_capability())"
+name: mono_s2s_cu128
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu128
+      - torch
+      - torchvision
+      - torchaudio
+      - transformers
+      - datasets
+      - rouge-score
+      - scipy
+      - pandas
+      - tqdm
+      - sentencepiece
+      - protobuf
+      - matplotlib

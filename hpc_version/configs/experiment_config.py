@@ -35,7 +35,45 @@ class ExperimentConfig:
     # the same seed.
     T5_ABLATION_MODE = os.environ.get("T5_ABLATION_MODE", "nonneg")
     _ABLATION_SUFFIX = "" if T5_ABLATION_MODE == "nonneg" else f"_{T5_ABLATION_MODE}"
-    SEED_TAG = f"{CURRENT_SEED}{_ABLATION_SUFFIX}"
+
+    # Model-size knob. t5-small keeps the historical seed_{N} path so
+    # in-flight CURC jobs are not redirected. Larger models are namespaced.
+    MODEL_NAME = os.environ.get("T5_MODEL_NAME", os.environ.get("MODEL_NAME", "t5-small"))
+    _MODEL_SLUG = MODEL_NAME.replace("/", "-")
+    _SIZE_SUFFIX = "" if MODEL_NAME == "t5-small" else f"_{_MODEL_SLUG}"
+    SEED_TAG = f"{CURRENT_SEED}{_ABLATION_SUFFIX}{_SIZE_SUFFIX}"
+
+    _T5_SIZE_TIERS = {
+        "t5-small": {
+            "BATCH_SIZE": 4,
+            "GRADIENT_ACCUMULATION_STEPS": 1,
+            "EVAL_BATCH_SIZE": 8,
+            "USE_BF16": False,
+            "USE_GRADIENT_CHECKPOINTING": False,
+        },
+        "t5-base": {
+            "BATCH_SIZE": 4,
+            "GRADIENT_ACCUMULATION_STEPS": 2,
+            "EVAL_BATCH_SIZE": 4,
+            "USE_BF16": True,
+            "USE_GRADIENT_CHECKPOINTING": False,
+        },
+        "t5-large": {
+            "BATCH_SIZE": 2,
+            "GRADIENT_ACCUMULATION_STEPS": 4,
+            "EVAL_BATCH_SIZE": 2,
+            "USE_BF16": True,
+            "USE_GRADIENT_CHECKPOINTING": True,
+        },
+        "t5-3b": {
+            "BATCH_SIZE": 1,
+            "GRADIENT_ACCUMULATION_STEPS": 8,
+            "EVAL_BATCH_SIZE": 1,
+            "USE_BF16": True,
+            "USE_GRADIENT_CHECKPOINTING": True,
+        },
+    }
+    _TIER = _T5_SIZE_TIERS.get(MODEL_NAME, _T5_SIZE_TIERS["t5-small"])
     
     # ======================================================================
     # PATHS (CUSTOMIZE FOR YOUR HPC ENVIRONMENT)
@@ -73,7 +111,9 @@ class ExperimentConfig:
     # used by the main ("nonneg") run for that seed. BASELINE_CHECKPOINT_DIR
     # therefore always points at the non-ablation directory for CURRENT_SEED,
     # while CHECKPOINT_DIR (used for the monotonic model) is ablation-specific.
-    BASELINE_CHECKPOINT_DIR = os.path.join(_BASE_CHECKPOINT_DIR, f"seed_{CURRENT_SEED}")
+    BASELINE_CHECKPOINT_DIR = os.path.join(
+        _BASE_CHECKPOINT_DIR, f"seed_{CURRENT_SEED}{_SIZE_SUFFIX}"
+    )
     
     DATA_CACHE_DIR = os.path.join(WORK_DIR, "data_cache")  # Shared across seeds
     
@@ -86,22 +126,26 @@ class ExperimentConfig:
     FINAL_RESULTS_DIR = os.path.join(_BASE_FINAL_RESULTS_DIR, f"seed_{SEED_TAG}")
     
     # ======================================================================
-    # MODEL CONFIGURATION
-    # ======================================================================
-    
-    MODEL_NAME = "t5-small"  # Guaranteed T5 checkpoint (t5-base, t5-large also work)
-    
-    # ======================================================================
     # TRAINING HYPERPARAMETERS (IDENTICAL for baseline and monotonic)
+    # Size-tier presets apply unless an OVERRIDE_* env var is set.
     # ======================================================================
     
     LEARNING_RATE = 5e-5  # Increased from 3e-5 for better convergence
     WEIGHT_DECAY = 0.01
     NUM_EPOCHS = 7  # FAIR COMPARISON: Both models train for same epochs
-    BATCH_SIZE = 4
-    GRADIENT_ACCUMULATION_STEPS = 1
+    BATCH_SIZE = int(os.environ.get("OVERRIDE_BATCH_SIZE", str(_TIER["BATCH_SIZE"])))
+    GRADIENT_ACCUMULATION_STEPS = int(
+        os.environ.get("OVERRIDE_GRAD_ACCUM", str(_TIER["GRADIENT_ACCUMULATION_STEPS"]))
+    )
     MAX_GRAD_NORM = 1.0
     WARMUP_RATIO = 0.1  # Baseline warmup
+    USE_BF16 = os.environ.get(
+        "OVERRIDE_USE_BF16", "1" if _TIER["USE_BF16"] else "0"
+    ).lower() not in ("0", "false", "no")
+    USE_GRADIENT_CHECKPOINTING = os.environ.get(
+        "OVERRIDE_GRAD_CHECKPOINT", "1" if _TIER["USE_GRADIENT_CHECKPOINTING"] else "0"
+    ).lower() not in ("0", "false", "no")
+    KEEP_LAST_N_CHECKPOINTS = int(os.environ.get("KEEP_LAST_N_CHECKPOINTS", "1"))
     
     # ======================================================================
     # MONOTONIC-SPECIFIC HYPERPARAMETERS
@@ -182,8 +226,10 @@ class ExperimentConfig:
     # Previous: USE_FULL_TEST_SETS = False (only 200 samples - TOO SMALL)
     # Issue: n=200 insufficient for reliable ROUGE, bootstrap CIs, significance tests
     # FIX: Use full test sets (CNN/DM has 11,490 test examples)
-    USE_FULL_TEST_SETS = False  # QUICK MODE for 24h deadline: 200 samples (~2-3h eval) vs 11,490 samples (~17h eval)
-    EVAL_BATCH_SIZE = 8
+    USE_FULL_TEST_SETS = os.environ.get("USE_FULL_TEST_SETS", "1").lower() not in (
+        "0", "false", "no"
+    )
+    EVAL_BATCH_SIZE = int(os.environ.get("OVERRIDE_EVAL_BATCH_SIZE", str(_TIER["EVAL_BATCH_SIZE"])))
     
     # Quick testing sizes (when USE_FULL_TEST_SETS=False) - FOR DEBUGGING ONLY
     QUICK_TEST_SIZE = 200
@@ -248,6 +294,7 @@ class ExperimentConfig:
     TIME_HOTFLIP = "02:00:00"    # 2 hours
     TIME_HOTFLIP_TRANSFER = "04:00:00"  # 4 hours (re-attack both models + cross-eval + controls)
     TIME_AGGREGATE = "00:15:00"  # 15 minutes
+    TIME_ORDER_PRESERVATION = "02:00:00"
     
     # ======================================================================
     # LOGGING & CHECKPOINTING
