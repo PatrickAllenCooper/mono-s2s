@@ -3,7 +3,7 @@
 **Target Cluster:** CURC Alpine (University of Colorado Boulder)  
 **Model:** Pythia-1.4B (EleutherAI)  
 **Total Runtime:** ~60-70 hours per seed  
-**GPU Required:** 1x A100 (40/80GB) for Pythia-1.4B; H200 (141GB) for 2.8B/6.9B
+**GPU Required:** 1x A100 (40/80GB) for Pythia-1.4B; H200 (141GB) for Pythia-2.8B/6.9B and Llama 3.2/3.1
 
 ---
 
@@ -44,6 +44,13 @@ sbatch --export=ALL,EXPERIMENT_SEED=42,MONOTONIC_VARIANT=mlp_both jobs/job_11_or
 
 # Pythia-2.8B (3 seeds) then 6.9B screen on H200 (needs mono_s2s_cu128)
 ./jobs/submit_scale.sh
+
+# Llama 3 route on H200 (gated-updown). Requires HF license + token first.
+# 1. Accept licenses on huggingface.co for
+#    meta-llama/Llama-3.2-1B, meta-llama/Llama-3.2-3B, meta-llama/Llama-3.1-8B
+# 2. Create a read-scoped token (Settings > Access Tokens)
+# 3. export HF_TOKEN=hf_...   (add to ~/.bashrc so later shells keep it)
+./jobs/submit_llama.sh
 ```
 
 Confirm partition names with `sinfo`. Prune large epoch checkpoints:
@@ -79,9 +86,10 @@ curc-quota
 
 ### Required
 
-- **CURC Alpine account** with access to `aa100` partition (A100 GPUs)
-- **Allocation hours:** ~70 GPU-hours per seed
+- **CURC Alpine account** with access to `aa100` (A100) and `ah200` (H200) partitions
+- **Allocation hours:** ~70 GPU-hours per seed (more for 3B/8B Llama)
 - **Internet access** on login node (for downloading model/data)
+- **Llama route only:** accept the meta-llama licenses on huggingface.co and `export HF_TOKEN=hf_...` (read-scoped). `submit_llama.sh` and `submit_pipeline.sh` exit immediately if the token is missing.
 
 ### Important Notes
 

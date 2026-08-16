@@ -25,13 +25,16 @@ module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
 CONDA_BASE="/projects/$USER/miniconda3"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s2s || {
-    echo "ERROR: Failed to activate conda environment 'mono_s2s'"
+CONDA_ENV="${CONDA_ENV:-mono_s2s}"
+source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$CONDA_ENV" || {
+    echo "ERROR: Failed to activate conda environment '$CONDA_ENV'"
     exit 1
 }
 
 export PYTHONHASHSEED=${EXPERIMENT_SEED:-42}
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
+export FOUNDATION_MODEL_NAME="${FOUNDATION_MODEL_NAME:-${PYTHIA_MODEL_NAME:-EleutherAI/pythia-1.4b}}"
+export PYTHIA_MODEL_NAME="${PYTHIA_MODEL_NAME:-$FOUNDATION_MODEL_NAME}"
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
 export HF_HOME="$SCRATCH/huggingface_cache"

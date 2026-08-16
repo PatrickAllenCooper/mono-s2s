@@ -14,7 +14,7 @@ This directory contains experiments applying monotonicity constraints to general
 
 ## Model Selection
 
-**Selected Model:** Pythia-1.4B (EleutherAI)
+**Selected Model:** Pythia-1.4B (EleutherAI), with a second scale-up route on Llama 3 (1B / 3B / 8B)
 
 **Rationale:**
 - Size: 1.4B parameters fits comfortably on single A100 (40GB)
@@ -22,6 +22,7 @@ This directory contains experiments applying monotonicity constraints to general
 - Architecture: Standard decoder-only transformer (generalizes beyond T5)
 - Performance: Strong baseline on diverse benchmarks
 - FFN Parameters: ~560M parameters (40% of total) - substantial constraint surface
+- Llama 3 route: better-known name, SwiGLU gated FFN (`gated_updown` / `gated_all`). Submit with `./jobs/submit_llama.sh` after setting `HF_TOKEN`. Qwen2.5-1.5B/7B share the same code path as a license-free fallback.
 
 **Alternative Models Considered:**
 - GPT-2 Large (774M): Older architecture, less capable

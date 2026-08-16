@@ -33,6 +33,7 @@ Every empirical statement in `paper/example_paper.tex` is classified against cod
 | Pythia UAT and HotFlip transfer | Stages 5b / 6b | seed 42 exists; 1337/2024 in-flight |
 | Pythia order preservation | Stage 11 | ready (`job_11_order_preservation.sh`) |
 | T5-base / T5-large / Pythia-2.8B / 6.9B | size-tier knobs + submit_scale.sh | ready (no numbers until JSON lands) |
+| Llama-3.2-1B / 3.2-3B (3 seeds) + Llama-3.1-8B screen | gated_updown / gated_all + submit_llama.sh | ready (needs HF_TOKEN; no numbers until JSON lands) |
 | Hardware: A100 only, PyTorch 2.0.1 | appendix | text-fixed (A100 + H200 + RTX Pro 6000; cu118 and cu128 envs) |
 
 Do not insert scale-up or five-seed means into the manuscript until the corresponding JSON exists. The paper now states that the printed T5 tables are seed 42 / n=200 and that the five-seed full-test and scale-up arms are the validation protocol.
@@ -61,6 +62,10 @@ CURC_PARTITION=artxpro6000 ./jobs/submit_scale.sh
 cd /projects/$USER/mono-s2s/foundation_llm_experiments
 chmod +x jobs/*.sh
 ./jobs/submit_scale.sh
+
+# Llama 3.2-1B/3B (3 seeds) + 3.1-8B screen on H200 (gated-updown)
+# Accept the meta-llama licenses, then: export HF_TOKEN=hf_...
+./jobs/submit_llama.sh
 ```
 
 Check `sinfo` if a partition or gres name is rejected. Run `curc-quota` before large-model training. Archive only JSON results to `/projects`; prune epoch checkpoints with `scripts/prune_checkpoints.py`.
@@ -496,4 +501,4 @@ For questions about:
 ---
 
 **Last Updated:** 2026-08-16  
-**Status:** Validation and scale-up protocol in place; insert new JSON into the paper as CURC jobs finish
+**Status:** Validation and scale-up protocol in place, including a Llama 3 gated-FFN route; insert new JSON into the paper as CURC jobs finish

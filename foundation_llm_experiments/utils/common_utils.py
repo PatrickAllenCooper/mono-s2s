@@ -109,6 +109,10 @@ def worker_init_fn(worker_id):
 # "mlp_both"        - full MLP sublayer: input + output projections.
 # "mlp_in_attn_out" - MLP input + attention output projection (closes the
 #                     attention-routing leak path observed in HotFlip results).
+# "gated_updown"    - Llama/Qwen SwiGLU: constrain up_proj + down_proj, leave
+#                     gate_proj free (empirical stress test; SiLU is not
+#                     monotone, so the FFN lemma does not apply as written).
+# "gated_all"       - constrain gate_proj, up_proj, and down_proj.
 MONOTONIC_VARIANT_PATTERNS = {
     "mlp_in": [
         "dense_h_to_4h", "c_fc", "fc_in",
@@ -124,6 +128,12 @@ MONOTONIC_VARIANT_PATTERNS = {
         "attention.dense",
         # GPT-2 / GPTNeo style
         "attn.c_proj",
+    ],
+    "gated_updown": [
+        "up_proj", "down_proj",
+    ],
+    "gated_all": [
+        "gate_proj", "up_proj", "down_proj",
     ],
 }
 
@@ -161,6 +171,11 @@ def make_model_monotonic(model, variant=None):
       - dense_h_to_4h  : MLP input projection  (d_model -> 4*d_model)
       - dense_4h_to_h  : MLP output projection (4*d_model -> d_model)
       - attention.dense: attention output projection (d_model -> d_model)
+
+    For Llama / Qwen2 SwiGLU MLP:
+      - gate_proj : gating branch (d_model -> intermediate)
+      - up_proj   : value branch  (d_model -> intermediate)
+      - down_proj : output projection (intermediate -> d_model)
     """
     if variant is None:
         variant = os.environ.get("MONOTONIC_VARIANT", "mlp_in")
@@ -196,8 +211,14 @@ def make_model_monotonic(model, variant=None):
     unconstrained = []
     if "attention.dense" not in patterns and "attn.c_proj" not in patterns:
         unconstrained.append("attention")
-    if "dense_4h_to_h" not in patterns and "fc_out" not in patterns:
+    if (
+        "dense_4h_to_h" not in patterns
+        and "fc_out" not in patterns
+        and "down_proj" not in patterns
+    ):
         unconstrained.append("MLP output projection")
+    if variant.startswith("gated") and "gate_proj" not in patterns:
+        unconstrained.append("gate_proj")
     if unconstrained:
         print(f"  Note: {', '.join(unconstrained)} unconstrained")
 

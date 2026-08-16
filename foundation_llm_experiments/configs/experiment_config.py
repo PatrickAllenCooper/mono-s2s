@@ -31,7 +31,11 @@ class FoundationExperimentConfig:
     )
     
     _SEED_SUFFIX = f"_seed{os.environ.get('EXPERIMENT_SEED', '42')}"
-    MODEL_NAME = os.environ.get("PYTHIA_MODEL_NAME", "EleutherAI/pythia-1.4b")
+    MODEL_NAME = (
+        os.environ.get("FOUNDATION_MODEL_NAME")
+        or os.environ.get("PYTHIA_MODEL_NAME")
+        or "EleutherAI/pythia-1.4b"
+    )
     _MODEL_SLUG = MODEL_NAME.split("/")[-1].replace(".", "_")
     _SIZE_SUFFIX = "" if _MODEL_SLUG == "pythia-1_4b" else f"_{_MODEL_SLUG}"
     
@@ -70,6 +74,12 @@ class FoundationExperimentConfig:
     
     MODEL_REVISION = "main"  # Use latest checkpoint
 
+    # Architecture tables verified against HuggingFace config.json:
+    # Llama-3.2-1B hidden=2048 layers=16 heads=32 intermediate=8192
+    # Llama-3.2-3B hidden=3072 layers=28 heads=24 intermediate=8192
+    # Llama-3.1-8B hidden=4096 layers=32 heads=32 intermediate=14336
+    # Qwen2.5-1.5B hidden=1536 layers=28 heads=12 intermediate=8960
+    # Qwen2.5-7B   hidden=3584 layers=28 heads=28 intermediate=18944
     _PYTHIA_ARCH = {
         "EleutherAI/pythia-1.4b": {
             "HIDDEN_SIZE": 2048, "NUM_LAYERS": 24,
@@ -83,8 +93,29 @@ class FoundationExperimentConfig:
             "HIDDEN_SIZE": 4096, "NUM_LAYERS": 32,
             "NUM_ATTENTION_HEADS": 32, "FFN_INTERMEDIATE_SIZE": 16384,
         },
+        "meta-llama/Llama-3.2-1B": {
+            "HIDDEN_SIZE": 2048, "NUM_LAYERS": 16,
+            "NUM_ATTENTION_HEADS": 32, "FFN_INTERMEDIATE_SIZE": 8192,
+        },
+        "meta-llama/Llama-3.2-3B": {
+            "HIDDEN_SIZE": 3072, "NUM_LAYERS": 28,
+            "NUM_ATTENTION_HEADS": 24, "FFN_INTERMEDIATE_SIZE": 8192,
+        },
+        "meta-llama/Llama-3.1-8B": {
+            "HIDDEN_SIZE": 4096, "NUM_LAYERS": 32,
+            "NUM_ATTENTION_HEADS": 32, "FFN_INTERMEDIATE_SIZE": 14336,
+        },
+        "Qwen/Qwen2.5-1.5B": {
+            "HIDDEN_SIZE": 1536, "NUM_LAYERS": 28,
+            "NUM_ATTENTION_HEADS": 12, "FFN_INTERMEDIATE_SIZE": 8960,
+        },
+        "Qwen/Qwen2.5-7B": {
+            "HIDDEN_SIZE": 3584, "NUM_LAYERS": 28,
+            "NUM_ATTENTION_HEADS": 28, "FFN_INTERMEDIATE_SIZE": 18944,
+        },
     }
-    _ARCH = _PYTHIA_ARCH.get(MODEL_NAME, _PYTHIA_ARCH["EleutherAI/pythia-1.4b"])
+    _MODEL_ARCH = _PYTHIA_ARCH
+    _ARCH = _MODEL_ARCH.get(MODEL_NAME, _MODEL_ARCH["EleutherAI/pythia-1.4b"])
     HIDDEN_SIZE = _ARCH["HIDDEN_SIZE"]
     NUM_LAYERS = _ARCH["NUM_LAYERS"]
     NUM_ATTENTION_HEADS = _ARCH["NUM_ATTENTION_HEADS"]
@@ -114,7 +145,7 @@ class FoundationExperimentConfig:
 
     # Which monotonic variant to apply.  See MONOTONIC_VARIANT_PATTERNS in
     # common_utils.py.  Recognised values: "mlp_in", "mlp_both",
-    # "mlp_in_attn_out".
+    # "mlp_in_attn_out", "gated_updown", "gated_all".
     MONOTONIC_VARIANT: str = _env_str.__func__("MONOTONIC_VARIANT", "mlp_in")
 
     # ======================================================================
@@ -166,6 +197,34 @@ class FoundationExperimentConfig:
             "MAX_SEQ_LENGTH": 1024,
         },
         "EleutherAI/pythia-6.9b": {
+            "BATCH_SIZE": 1,
+            "GRADIENT_ACCUMULATION_STEPS": 16,
+            "EVAL_BATCH_SIZE": 1,
+            "MAX_SEQ_LENGTH": 1024,
+        },
+        "meta-llama/Llama-3.2-1B": {
+            "BATCH_SIZE": 4,
+            "GRADIENT_ACCUMULATION_STEPS": 4,
+            "EVAL_BATCH_SIZE": 2,
+        },
+        "meta-llama/Llama-3.2-3B": {
+            "BATCH_SIZE": 2,
+            "GRADIENT_ACCUMULATION_STEPS": 8,
+            "EVAL_BATCH_SIZE": 1,
+            "MAX_SEQ_LENGTH": 1024,
+        },
+        "meta-llama/Llama-3.1-8B": {
+            "BATCH_SIZE": 1,
+            "GRADIENT_ACCUMULATION_STEPS": 16,
+            "EVAL_BATCH_SIZE": 1,
+            "MAX_SEQ_LENGTH": 1024,
+        },
+        "Qwen/Qwen2.5-1.5B": {
+            "BATCH_SIZE": 4,
+            "GRADIENT_ACCUMULATION_STEPS": 4,
+            "EVAL_BATCH_SIZE": 2,
+        },
+        "Qwen/Qwen2.5-7B": {
             "BATCH_SIZE": 1,
             "GRADIENT_ACCUMULATION_STEPS": 16,
             "EVAL_BATCH_SIZE": 1,

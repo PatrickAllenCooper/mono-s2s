@@ -43,7 +43,8 @@ module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
 CONDA_BASE="/projects/$USER/miniconda3"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s2s || {
+CONDA_ENV="${CONDA_ENV:-mono_s2s}"
+source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$CONDA_ENV" || {
     echo "ERROR: Failed to activate conda env. Run bootstrap_curc.sh."
     exit 1
 }

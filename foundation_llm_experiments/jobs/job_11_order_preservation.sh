@@ -26,7 +26,8 @@ source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$COND
 
 export PYTHONHASHSEED=${EXPERIMENT_SEED:-42}
 export EXPERIMENT_SEED=${EXPERIMENT_SEED:-42}
-export PYTHIA_MODEL_NAME="${PYTHIA_MODEL_NAME:-EleutherAI/pythia-1.4b}"
+export FOUNDATION_MODEL_NAME="${FOUNDATION_MODEL_NAME:-${PYTHIA_MODEL_NAME:-EleutherAI/pythia-1.4b}}"
+export PYTHIA_MODEL_NAME="${PYTHIA_MODEL_NAME:-$FOUNDATION_MODEL_NAME}"
 export MONOTONIC_VARIANT="${MONOTONIC_VARIANT:-mlp_both}"
 export SCRATCH=${SCRATCH:-/scratch/alpine/$USER}
 export PROJECT=${PROJECT:-/projects/$USER}
@@ -40,7 +41,7 @@ export TOKENIZERS_PARALLELISM=false
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || exit 1
 
-echo "Seed=$EXPERIMENT_SEED model=$PYTHIA_MODEL_NAME variant=$MONOTONIC_VARIANT"
+echo "Seed=$EXPERIMENT_SEED model=$FOUNDATION_MODEL_NAME variant=$MONOTONIC_VARIANT"
 python stage_11_order_preservation.py
 EXIT_CODE=$?
 
