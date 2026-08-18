@@ -32,16 +32,8 @@ module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
 # Activate conda environment (installed to /projects)
-CONDA_BASE="/projects/$USER/miniconda3"
 CONDA_ENV="${CONDA_ENV:-mono_s2s}"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$CONDA_ENV" || {
-    echo "ERROR: Failed to activate conda environment '$CONDA_ENV'"
-    echo "Please ensure conda environment exists:"
-    echo "  conda create -n $CONDA_ENV python=3.10"
-    echo "  conda activate $CONDA_ENV"
-    echo "  pip install -r requirements.txt"
-    exit 1
-}
+source "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh"
 
 # Reduce CUDA memory fragmentation (helps when eval follows a full training epoch)
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True

@@ -41,9 +41,9 @@ Do not insert scale-up or five-seed means into the manuscript until the correspo
 **CURC commands (after `git pull` on Alpine):**
 
 ```bash
-# CUDA 12.8 env (required for H200 and RTX Pro 6000)
-conda create -n mono_s2s_cu128 python=3.10 -y
-conda activate mono_s2s_cu128
+# CUDA 12.8 env is already at:
+#   /projects/$USER/software/anaconda/envs/mono_s2s_cu128
+# Job scripts search both that tree and miniconda3. Do not recreate it in miniconda3.
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf matplotlib
 

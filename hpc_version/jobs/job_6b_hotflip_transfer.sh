@@ -29,8 +29,8 @@ echo "=========================================="
 module purge 2>/dev/null || true
 module load cuda 2>/dev/null || true
 
-CONDA_BASE="/projects/$USER/miniconda3"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate mono_s2s
+CONDA_ENV="${CONDA_ENV:-mono_s2s}"
+source "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh"
 
 export PYTHONHASHSEED=42
 export CUBLAS_WORKSPACE_CONFIG=:16:8

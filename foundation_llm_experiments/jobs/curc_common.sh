@@ -1,12 +1,14 @@
 #!/bin/bash
 # Shared CURC environment for foundation-model jobs. Source after the SBATCH header.
 
-CONDA_BASE="${CONDA_BASE:-/projects/$USER/miniconda3}"
 CONDA_ENV="${CONDA_ENV:-mono_s2s}"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$CONDA_ENV" || {
-    echo "ERROR: Failed to activate conda environment '$CONDA_ENV'"
-    exit 1
-}
+if [ -f "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh" ]; then
+    source "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh"
+elif [ -f "${SLURM_SUBMIT_DIR}/activate_conda.sh" ]; then
+    source "${SLURM_SUBMIT_DIR}/activate_conda.sh"
+else
+    source "$(dirname "$0")/activate_conda.sh"
+fi
 
 export PYTHONHASHSEED="${EXPERIMENT_SEED:-42}"
 export CUBLAS_WORKSPACE_CONFIG=:16:8

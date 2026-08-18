@@ -2,9 +2,14 @@
 # Shared CURC environment for T5 jobs. Source after the SBATCH header.
 # Partition / gres are chosen at sbatch time (see submit_pipeline.sh).
 
-CONDA_BASE="${CONDA_BASE:-/projects/$USER/miniconda3}"
 CONDA_ENV="${CONDA_ENV:-mono_s2s}"
-source "$CONDA_BASE/etc/profile.d/conda.sh" 2>/dev/null && conda activate "$CONDA_ENV"
+if [ -f "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh" ]; then
+    source "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh"
+elif [ -f "${SLURM_SUBMIT_DIR}/activate_conda.sh" ]; then
+    source "${SLURM_SUBMIT_DIR}/activate_conda.sh"
+else
+    source "$(dirname "$0")/activate_conda.sh"
+fi
 
 export PYTHONHASHSEED="${EXPERIMENT_SEED:-42}"
 export CUBLAS_WORKSPACE_CONFIG=:16:8

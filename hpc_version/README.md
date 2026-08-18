@@ -56,6 +56,8 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 # Separate env for H200 / RTX Pro 6000 (Blackwell needs CUDA 12.8 wheels)
 conda create -n mono_s2s_cu128 python=3.10 -y
+# On CURC this env is at /projects/$USER/software/anaconda (not miniconda3).
+# Job scripts search both roots when CONDA_ENV=mono_s2s_cu128.
 conda activate mono_s2s_cu128
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 # See ../environment_cu128.yml

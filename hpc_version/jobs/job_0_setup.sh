@@ -29,13 +29,8 @@ module load cuda 2>/dev/null || true
 
 # Activate conda environment (installed to /projects, not $HOME)
 # This gives us Python 3.10+ (system Python 3.6.8 is too old)
-CONDA_BASE="/projects/$USER/miniconda3"
-if [ -f "$CONDA_BASE/etc/profile.d/conda.sh" ]; then
-    source "$CONDA_BASE/etc/profile.d/conda.sh"
-    conda activate mono_s2s
-else
-    echo "Warning: Conda not found at $CONDA_BASE"
-fi
+CONDA_ENV="${CONDA_ENV:-mono_s2s}"
+source "${SLURM_SUBMIT_DIR}/jobs/activate_conda.sh"
 
 # Set environment variables for determinism (BEFORE running Python)
 export PYTHONHASHSEED=42
