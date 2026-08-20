@@ -44,7 +44,7 @@ sbatch --export=ALL,EXPERIMENT_SEED=42,MONOTONIC_VARIANT=mlp_both jobs/job_11_or
 
 # Pythia-2.8B (3 seeds) then 6.9B screen on H200
 # mono_s2s_cu128 lives at /projects/$USER/software/anaconda/envs/mono_s2s_cu128
-# (not miniconda3). Job scripts now search both conda roots.
+# conda.sh comes from `module load anaconda` (/curc/sw/anaconda3), not that prefix.
 ./jobs/submit_scale.sh
 
 # Llama 3 route on H200 (gated-updown). Requires HF license + token first.
