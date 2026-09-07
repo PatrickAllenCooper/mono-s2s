@@ -47,15 +47,21 @@ export PYTHONUNBUFFERED=1
 
 mkdir -p "$HF_DATASETS_CACHE" "$TRANSFORMERS_CACHE"
 
-# Early-exit if this stage already completed (continuation job safety check).
-_WORK_DIR="${LAMBDA_SEED_WORK:-/scratch/alpine/${USER}/foundation_llm_work_seed${EXPERIMENT_SEED}}"
-if [ -f "${_WORK_DIR}/stage_6b_hotflip_transfer_complete.flag" ]; then
-    echo "Stage 6b already complete for seed ${EXPERIMENT_SEED}. Nothing to do."
-    exit 0
-fi
-
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || exit 1
+
+# Early-exit if this stage already completed (continuation job safety check).
+# Delegates to Config.WORK_DIR (seed+model-size namespaced) via Python instead
+# of re-deriving the path in bash -- see job_3_monotonic.sh for why.
+if python -c "
+import sys
+sys.path.insert(0, '..')
+from utils.common_utils import check_completion_flag
+sys.exit(0 if check_completion_flag('stage_6b_hotflip_transfer') else 1)
+"; then
+    echo "Stage 6b already complete for seed ${EXPERIMENT_SEED} model ${FOUNDATION_MODEL_NAME}. Nothing to do."
+    exit 0
+fi
 
 echo ""
 echo "Running HotFlip transfer + controls (variant=$MONOTONIC_VARIANT, query_attack=$OVERRIDE_RUN_QUERY_ATTACK)..."

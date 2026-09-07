@@ -67,21 +67,28 @@ nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>/dev/null
 echo "Monotonic variant: $MONOTONIC_VARIANT"
 echo ""
 
-# Early-exit if this stage already completed (continuation job safety check).
-# When a pre-queued continuation runs after the primary job already finished
-# within its wall time, we skip all work and exit 0 immediately.
-_WORK_DIR="${LAMBDA_SEED_WORK:-/scratch/alpine/${USER}/foundation_llm_work_seed${EXPERIMENT_SEED}}"
-if [ -f "${_WORK_DIR}/stage_3_train_monotonic_complete.flag" ]; then
-    echo "Stage 3 already complete for seed ${EXPERIMENT_SEED}. Nothing to do."
-    exit 0
-fi
-
 # Navigate to scripts directory
 cd $SLURM_SUBMIT_DIR || cd "$(dirname "$0")/.."
 cd scripts || {
     echo "ERROR: Cannot find scripts directory"
     exit 1
 }
+
+# Early-exit if this stage already completed (continuation job safety check).
+# When a pre-queued continuation runs after the primary job already finished
+# within its wall time, we skip all work and exit 0 immediately. Delegates to
+# Config.WORK_DIR (seed+model-size namespaced) instead of re-deriving the path
+# in bash, which had drifted out of sync with experiment_config.py's
+# _SIZE_SUFFIX and caused false-positive skips for non-default model sizes.
+if python -c "
+import sys
+sys.path.insert(0, '..')
+from utils.common_utils import check_completion_flag
+sys.exit(0 if check_completion_flag('stage_3_train_monotonic') else 1)
+"; then
+    echo "Stage 3 already complete for seed ${EXPERIMENT_SEED} model ${FOUNDATION_MODEL_NAME}. Nothing to do."
+    exit 0
+fi
 
 echo "Training MONOTONIC Pythia-1.4B (W≥0 constraints on FFN)..."
 echo "This model has softplus-parametrized weights in feed-forward layers"
