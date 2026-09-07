@@ -7,7 +7,7 @@
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
-#SBATCH --time=48:00:00
+#SBATCH --time=23:50:00
 #SBATCH --output=logs/job_4_evaluate_%j.out
 #SBATCH --error=logs/job_4_evaluate_%j.err
 
@@ -45,6 +45,12 @@ export HF_HOME="$SCRATCH/hf_cache"
 export HF_DATASETS_CACHE="$SCRATCH/hf_cache/datasets"
 export TRANSFORMERS_CACHE="$SCRATCH/hf_cache/transformers"
 
+# Optional: restrict this job to a subset of datasets (comma-separated,
+# e.g. "cnn_dm" or "xsum,samsum"). Used to shard USE_FULL_TEST_SETS=1 eval
+# across parallel jobs so each stays under the 24h gpu-normal QoS ceiling --
+# see stage_4_evaluate.py and stage_4_merge_shards.py / job_4_merge.sh.
+export EVAL_DATASET_FILTER="${EVAL_DATASET_FILTER:-}"
+
 # Print GPU info
 echo "GPU Information:"
 nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
@@ -53,7 +59,11 @@ echo ""
 # Navigate and run
 cd $SLURM_SUBMIT_DIR/scripts
 
-echo "Evaluating ALL THREE models on all test datasets..."
+if [ -n "$EVAL_DATASET_FILTER" ]; then
+    echo "Evaluating ALL THREE models on dataset shard: $EVAL_DATASET_FILTER"
+else
+    echo "Evaluating ALL THREE models on all test datasets..."
+fi
 echo "Models: Standard T5, Baseline T5, Monotonic T5"
 echo "Datasets: CNN/DailyMail, XSUM, SAMSum"
 echo "Includes: Bootstrap 95% CIs, length statistics, brevity penalty"

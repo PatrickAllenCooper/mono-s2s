@@ -122,10 +122,50 @@ def evaluate_model_on_dataset(model, model_name, texts, references,
     }
 
 
+ALL_DATASETS = [
+    ('cnn_dm', 'CNN/DailyMail'),
+    ('xsum', 'XSUM'),
+    ('samsum', 'SAMSum'),
+]
+
+
+def _resolve_dataset_shard():
+    """
+    Optionally restrict evaluation to a subset of datasets, so a single
+    USE_FULL_TEST_SETS=1 run (which can take ~4-5h per model per dataset,
+    i.e. ~40h+ for all 3 datasets x 3 models -- longer than CURC's 24h
+    gpu-normal QoS ceiling) can be split into independent per-dataset SLURM
+    jobs. Unset (the default) evaluates all three datasets exactly as
+    before, writing the same 'evaluation_results.json' / 'stage_4_evaluate'
+    flag as always -- this path is unchanged from prior behavior.
+
+    Set EVAL_DATASET_FILTER to a comma-separated subset of
+    {cnn_dm, xsum, samsum} to evaluate only those datasets, saving to
+    'evaluation_results_<shard>.json' and flag 'stage_4_evaluate_<shard>'
+    instead. Combine the shards back into the canonical
+    evaluation_results.json with stage_4_merge_shards.py before Stage 5/6/7.
+    """
+    raw = os.environ.get("EVAL_DATASET_FILTER", "").strip()
+    if not raw:
+        return ALL_DATASETS, None
+    keys = [k.strip() for k in raw.split(",") if k.strip()]
+    valid_keys = {k for k, _ in ALL_DATASETS}
+    unknown = [k for k in keys if k not in valid_keys]
+    if unknown:
+        raise ValueError(f"EVAL_DATASET_FILTER has unknown dataset(s): {unknown}")
+    shard_suffix = "_".join(keys)
+    filtered = [(k, name) for k, name in ALL_DATASETS if k in keys]
+    return filtered, shard_suffix
+
+
 def main():
     """Run comprehensive evaluation"""
-    logger = StageLogger("stage_4_evaluate")
-    
+    dataset_list, shard_suffix = _resolve_dataset_shard()
+    stage_name = "stage_4_evaluate" if shard_suffix is None else f"stage_4_evaluate_{shard_suffix}"
+    logger = StageLogger(stage_name)
+    if shard_suffix is not None:
+        logger.log(f"EVAL_DATASET_FILTER active -- evaluating only: {[k for k, _ in dataset_list]}")
+
     try:
         # Check dependencies
         logger.log("Checking dependencies...")
@@ -212,11 +252,7 @@ def main():
         results = {}
         
         # Evaluate on each dataset
-        for dataset_key, dataset_name in [
-            ('cnn_dm', 'CNN/DailyMail'),
-            ('xsum', 'XSUM'),
-            ('samsum', 'SAMSum')
-        ]:
+        for dataset_key, dataset_name in dataset_list:
             logger.log("\n" + "="*80)
             logger.log(f"DATASET: {dataset_name}")
             logger.log("="*80)
@@ -300,10 +336,15 @@ def main():
             }
         }
         
-        # Save to file
+        # Save to file (shard-suffixed when EVAL_DATASET_FILTER is set; see
+        # stage_4_merge_shards.py for combining shards into the canonical name)
+        results_filename = (
+            'evaluation_results.json' if shard_suffix is None
+            else f'evaluation_results_{shard_suffix}.json'
+        )
         results_file = os.path.join(
             ExperimentConfig.RESULTS_DIR,
-            'evaluation_results.json'
+            results_filename
         )
         save_json(results_for_json, results_file)
         
@@ -314,11 +355,7 @@ def main():
         logger.log("EVALUATION SUMMARY")
         logger.log("="*80)
         
-        for dataset_key, dataset_name in [
-            ('cnn_dm', 'CNN/DailyMail'),
-            ('xsum', 'XSUM'),
-            ('samsum', 'SAMSum')
-        ]:
+        for dataset_key, dataset_name in dataset_list:
             logger.log(f"\n{dataset_name}:")
             
             # Skip datasets that weren't evaluated (no test samples)

@@ -52,10 +52,15 @@ submit_cpu() {
 submit_gpu() {
   local script="$1"
   local dep="${2:-}"
+  local extra="${3:-}"
+  local export_arg="$EXPORT"
+  if [ -n "$extra" ]; then
+    export_arg="$EXPORT,$extra"
+  fi
   if [ -n "$dep" ]; then
-    sbatch --partition="$PARTITION" --qos="$QOS" --gres="$GRES" --export="$EXPORT" --dependency="$dep" "$script"
+    sbatch --partition="$PARTITION" --qos="$QOS" --gres="$GRES" --export="$export_arg" --dependency="$dep" "$script"
   else
-    sbatch --partition="$PARTITION" --qos="$QOS" --gres="$GRES" --export="$EXPORT" "$script"
+    sbatch --partition="$PARTITION" --qos="$QOS" --gres="$GRES" --export="$export_arg" "$script"
   fi
 }
 
@@ -65,7 +70,21 @@ J0=$(submit_cpu jobs/job_0_setup.sh | awk '{print $4}')
 J1=$(sbatch --partition=acpu --qos=cpu-normal --export="$EXPORT" --dependency="afterok:$J0" jobs/job_1_data.sh | awk '{print $4}')
 J2=$(submit_gpu jobs/job_2_baseline.sh "afterok:$J1" | awk '{print $4}')
 J3=$(submit_gpu jobs/job_3_monotonic.sh "afterok:$J2" | awk '{print $4}')
-J4=$(submit_gpu jobs/job_4_evaluate.sh "afterok:$J3" | awk '{print $4}')
+
+if [ "$FULL" = "1" ]; then
+  # Full test sets push a single 3-datasets x 3-models eval job past CURC's
+  # 24h gpu-normal QoS ceiling (~40h+ observed). Shard by dataset into
+  # parallel jobs, then merge back into the canonical evaluation_results.json
+  # that Stage 5/6/7 expect (see stage_4_merge_shards.py).
+  J4A=$(submit_gpu jobs/job_4_evaluate.sh "afterok:$J3" "EVAL_DATASET_FILTER=cnn_dm" | awk '{print $4}')
+  J4B=$(submit_gpu jobs/job_4_evaluate.sh "afterok:$J3" "EVAL_DATASET_FILTER=xsum" | awk '{print $4}')
+  J4C=$(submit_gpu jobs/job_4_evaluate.sh "afterok:$J3" "EVAL_DATASET_FILTER=samsum" | awk '{print $4}')
+  J4=$(sbatch --partition=acpu --qos=cpu-normal --export="$EXPORT" --dependency="afterok:$J4A:$J4B:$J4C" jobs/job_4_merge.sh | awk '{print $4}')
+  echo "Sharded Stage 4 eval: cnn_dm=$J4A xsum=$J4B samsum=$J4C merge=$J4"
+else
+  J4=$(submit_gpu jobs/job_4_evaluate.sh "afterok:$J3" | awk '{print $4}')
+fi
+
 J5=$(submit_gpu jobs/job_5_uat.sh "afterok:$J4" | awk '{print $4}')
 J6=$(submit_gpu jobs/job_6_hotflip.sh "afterok:$J5" | awk '{print $4}')
 J6B=$(submit_gpu jobs/job_6b_hotflip_transfer.sh "afterok:$J6" | awk '{print $4}')
