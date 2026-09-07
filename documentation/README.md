@@ -74,7 +74,12 @@ Check `sinfo` if a partition or gres name is rejected. Run `curc-quota` before l
 
 ## Paper Draft
 
-**Main File:** `monotone_llms_paper.tex` (ICML 2025 submission)  
+**Main File (current, actively maintained):** `paper/example_paper.tex` — this is the draft the recent commits (Pythia-1.4B, transfer/order-preservation/ablation experiments, size-tier scale-up, Llama 3 gated-FFN route) actually update. It compiles against the ICML style files (`icml2025.sty`/`icml2026.sty`) already in `paper/`.
+
+**ICLR 2027 port (target venue as of 2026-09-07):** `paper/iclr2027/monotone_llms_iclr2027.tex`, using the official style files vendored into `paper/iclr2027/` (`iclr2027_conference.sty`/`.bst`, `natbib.sty`, `fancyhdr.sty`) and the same `example_paper.bib`. Body content (abstract through Conclusion) is byte-identical to `paper/example_paper.tex`; only front matter, bibliography style, and required ICLR back-matter sections (Ethics/Reproducibility/AI-use statements) differ. Deadlines: abstract Sept 18 2026, full paper Sept 25 2026 (both 11:59pm AoE). **Main text must fit 9 pages** — compiled main-text length is currently ~15 pages and needs a trim/appendix-move pass; see chat for the proposed plan.
+
+**Stale, do not edit:** `documentation/monotone_llms_paper.tex` (680 lines) — an older fork of this paper last touched before the Pythia/transfer/ablation/scale-up work landed (see `git log -- documentation/monotone_llms_paper.tex` vs `git log -- paper/example_paper.tex`). Kept for history only.
+
 **Presentation:** `research_update_slides.tex`  
 **Tutorial:** `getting_started.ipynb` (interactive introduction)
 
