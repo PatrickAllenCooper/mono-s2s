@@ -7,6 +7,7 @@ torch>=2.0.0
 transformers>=4.30.0
 datasets>=2.14.0
 accelerate>=0.21.0
+zstandard>=0.21.0  # monology/pile-uncopyrighted ships .jsonl.zst; fsspec needs this to decompress
 
 # Evaluation
 numpy>=1.24.0

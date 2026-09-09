@@ -45,7 +45,7 @@ Do not insert scale-up or five-seed means into the manuscript until the correspo
 #   /projects/$USER/software/anaconda/envs/mono_s2s_cu128
 # Job scripts search both that tree and miniconda3. Do not recreate it in miniconda3.
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf matplotlib
+pip install transformers datasets rouge-score scipy pandas tqdm sentencepiece protobuf matplotlib zstandard
 
 # T5 five-seed full-test validation (A100)
 cd /projects/$USER/mono-s2s/hpc_version
