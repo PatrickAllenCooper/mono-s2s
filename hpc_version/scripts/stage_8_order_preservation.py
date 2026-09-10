@@ -118,8 +118,12 @@ def _extract_hidden_states(model, tokenizer, text, device):
     for layer_h in out.hidden_states:
         h = layer_h[0]  # (seq_len, d)
         mean_h = (h * mask.unsqueeze(-1)).sum(0) / mask.sum().clamp(min=1)
-        mean_pooled.append(mean_h.cpu().numpy().tolist())
-        last_pooled.append(h[last_idx].cpu().numpy().tolist())
+        # .float() before .numpy(): numpy has no bfloat16 dtype, and unlike
+        # mean_h (implicitly promoted to fp32 by multiplying with the fp32
+        # mask), this is a raw slice of the model's hidden states, which are
+        # bf16 for the size-tier presets (t5-base/t5-large).
+        mean_pooled.append(mean_h.float().cpu().numpy().tolist())
+        last_pooled.append(h[last_idx].float().cpu().numpy().tolist())
     return {'mean': mean_pooled, 'last': last_pooled}
 
 
@@ -138,7 +142,7 @@ def _hidden_states_from_ids(model, input_ids, attention_mask, device):
     mask = attention_mask[0].float()
     h = out.hidden_states[-1][0]
     mean_h = (h * mask.unsqueeze(-1)).sum(0) / mask.sum().clamp(min=1)
-    return mean_h.cpu().numpy()
+    return mean_h.float().cpu().numpy()
 
 
 def _build_hidden_cache(model, tokenizer, texts, device, cache_path, logger):

@@ -31,21 +31,48 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from configs.experiment_config import ExperimentConfig
 from utils.common_utils import (
     set_all_seeds, load_dataset_split, check_dependencies,
-    save_json, StageLogger
+    check_completion_flag, save_json, StageLogger
 )
+
+
+def _atomic_torch_save(obj, path):
+    """
+    torch.save() writes directly to `path`; if two concurrent processes save
+    to the same path (DATA_CACHE_DIR is shared across every seed/model/
+    ablation chain by design -- WORK_DIR has no seed or model suffix), a
+    reader can observe a corrupted, partially-written file ("PytorchStreamReader
+    failed reading file data.pkl ... internal miniz error"). Write to a
+    per-process temp file in the same directory, then os.replace() into
+    place -- atomic on POSIX, so a concurrent reader always sees either the
+    fully-old or fully-new file, never a partial one.
+    """
+    tmp_path = f"{path}.tmp.{os.getpid()}"
+    torch.save(obj, tmp_path)
+    os.replace(tmp_path, path)
+
 
 def main():
     """Run data preparation stage"""
     logger = StageLogger("stage_1_data_prep")
-    
+
     # Check dependencies
     if not check_dependencies(["stage_0_setup"]):
         return 1
-    
+
+    # DATA_CACHE_DIR is shared across every seed/model/ablation chain
+    # (WORK_DIR has no seed or model suffix), so once any chain has
+    # completed this stage, every other chain can skip straight to Stage 2
+    # instead of redundantly re-downloading/re-processing the same data --
+    # this also closes most of the window for the concurrent-write race
+    # _atomic_torch_save() guards against.
+    if check_completion_flag("stage_1_data_prep"):
+        logger.log("Stage 1 already complete (shared data cache) -- skipping regeneration.")
+        return logger.complete(success=True)
+
     try:
         # Set seeds
         set_all_seeds(ExperimentConfig.CURRENT_SEED)
-        
+
         # ===================================================================
         # Load Training Data
         # ===================================================================
@@ -174,7 +201,7 @@ def main():
         
         # Save training data
         train_data_path = os.path.join(ExperimentConfig.DATA_CACHE_DIR, "train_data.pt")
-        torch.save({
+        _atomic_torch_save({
             'texts': train_texts_all,
             'summaries': train_summaries_all
         }, train_data_path)
@@ -182,7 +209,7 @@ def main():
         
         # Save validation data
         val_data_path = os.path.join(ExperimentConfig.DATA_CACHE_DIR, "val_data.pt")
-        torch.save({
+        _atomic_torch_save({
             'texts': val_texts_all,
             'summaries': val_summaries_all
         }, val_data_path)
@@ -190,12 +217,12 @@ def main():
         
         # Save test data
         test_data_path = os.path.join(ExperimentConfig.DATA_CACHE_DIR, "test_data.pt")
-        torch.save(test_data, test_data_path)
+        _atomic_torch_save(test_data, test_data_path)
         logger.log(f"✓ Test data: {test_data_path}")
         
         # Save attack data
         attack_data_path = os.path.join(ExperimentConfig.DATA_CACHE_DIR, "attack_data.pt")
-        torch.save(attack_data, attack_data_path)
+        _atomic_torch_save(attack_data, attack_data_path)
         logger.log(f"✓ Attack data: {attack_data_path}")
         
         # ===================================================================

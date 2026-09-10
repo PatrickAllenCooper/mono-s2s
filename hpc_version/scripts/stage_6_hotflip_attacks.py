@@ -163,8 +163,11 @@ class HotFlipT5Attack:
         
         # Get top-k tokens
         top_values, top_indices = torch.topk(scores, top_k)
-        
-        return top_indices.cpu().numpy(), top_values.cpu().numpy()
+
+        # .float(): embedding_matrix (and so scores/top_values) is bf16 for
+        # the size-tier presets (t5-base/t5-large); numpy has no bfloat16
+        # dtype. top_indices are integer, unaffected.
+        return top_indices.cpu().numpy(), top_values.float().cpu().numpy()
     
     def attack_single(self, text, summary, num_flips=5, beam_size=10, return_ids=False):
         """
