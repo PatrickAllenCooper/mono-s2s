@@ -44,8 +44,13 @@ def main():
         shards = [s.strip() for s in shards_raw.split(",") if s.strip()]
         logger.log(f"Merging shards: {shards}")
 
+        # Both keys are non-dataset metadata, not part of the partition:
+        # 'metadata' is stage_4_evaluate.py's own decode-params/seed dict;
+        # '_metadata' is auto-injected by save_json()'s add_timestamp=True
+        # default (timestamp/seed provenance) and present in every shard.
+        METADATA_KEYS = {'metadata', '_metadata'}
         combined = {}
-        metadata = None
+        metadata_by_key = {}
         for shard in shards:
             shard_file = os.path.join(
                 ExperimentConfig.RESULTS_DIR, f"evaluation_results_{shard}.json"
@@ -57,9 +62,8 @@ def main():
                 )
             shard_data = load_json(shard_file)
             for key, value in shard_data.items():
-                if key == 'metadata':
-                    if metadata is None:
-                        metadata = value
+                if key in METADATA_KEYS:
+                    metadata_by_key.setdefault(key, value)
                     continue
                 if key in combined:
                     raise ValueError(
@@ -67,15 +71,19 @@ def main():
                         f"-- shards must partition the dataset list, not overlap."
                     )
                 combined[key] = value
-            logger.log(f"  ✓ Loaded {shard_file} ({[k for k in shard_data if k != 'metadata']})")
+            logger.log(f"  ✓ Loaded {shard_file} ({[k for k in shard_data if k not in METADATA_KEYS]})")
 
-        if metadata is not None:
-            combined['metadata'] = metadata
+        # 'metadata' (decode params/seed/model) carries real content worth
+        # keeping; '_metadata' is just save_json()'s own timestamp
+        # provenance, which it will regenerate fresh below for the merged
+        # file (more correct than any one shard's stale timestamp anyway).
+        if 'metadata' in metadata_by_key:
+            combined['metadata'] = metadata_by_key['metadata']
 
         results_file = os.path.join(ExperimentConfig.RESULTS_DIR, 'evaluation_results.json')
         save_json(combined, results_file)
         logger.log(f"\n✓ Combined results saved to: {results_file}")
-        logger.log(f"  Datasets present: {[k for k in combined if k != 'metadata']}")
+        logger.log(f"  Datasets present: {[k for k in combined if k not in METADATA_KEYS]}")
 
         logger.complete(success=True)
         return 0
