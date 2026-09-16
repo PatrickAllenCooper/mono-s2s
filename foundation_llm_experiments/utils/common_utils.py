@@ -148,14 +148,26 @@ class NonNegativeParametrization(nn.Module):
         self.init_weight = init_weight
 
     def forward(self, V):
-        return F.softplus(V)
+        # Compute in fp32 regardless of V's dtype (Pythia's bf16 size
+        # tiers), rounding back only once at the end -- see right_inverse()
+        # for why this matters: the same arithmetic run directly in bf16
+        # caused a confirmed training collapse on the T5 track's t5-base
+        # tier (identical reparametrization, shared with this file).
+        orig_dtype = V.dtype
+        return F.softplus(V.float()).to(orig_dtype)
 
     def right_inverse(self, W):
         """Initialize V from pretrained W"""
         eps = 1e-4
-        W_abs = torch.abs(W) + eps
+        orig_dtype = W.dtype
+        W_abs = torch.abs(W.float()) + eps
+        # inverse_softplus(x) = log(exp(x) - 1), in fp32: under bf16,
+        # exp(x)-1 rounds to exactly 0 for a measurable fraction of small
+        # pretrained weight magnitudes (~11% empirically on T5-base-scale
+        # FFN weights), collapsing V to a degenerate initialization
+        # regardless of the true weight -- not just imprecise, but wrong.
         V = torch.log(torch.exp(W_abs) - 1.0 + eps)
-        return V
+        return V.to(orig_dtype)
 
 
 # Known parameter renames across transformers versions. A checkpoint saved

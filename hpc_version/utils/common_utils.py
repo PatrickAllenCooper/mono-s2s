@@ -341,7 +341,16 @@ class NonNegativeParametrization(nn.Module):
     def forward(self, V):
         if self.mode == "abs_init_free":
             return V
-        W = F.softplus(V)
+        # bf16 has ~3 decimal digits of precision. Measured empirically:
+        # computing this softplus directly in bf16 (t5-base/t5-large and
+        # Pythia's bf16 size tiers) gives ~1-3% relative error -- tolerable
+        # on its own, but see right_inverse() below for why the pair of
+        # these caused an outright training collapse on t5-base. Upcast to
+        # fp32 for the arithmetic and round back to the parameter's own
+        # dtype only once, at the end, rather than compounding bf16
+        # rounding error through the nonlinear op itself.
+        orig_dtype = V.dtype
+        W = F.softplus(V.float()).to(orig_dtype)
         if self.mode == "sign_frozen":
             W = self.sign * W
         return W
@@ -349,22 +358,28 @@ class NonNegativeParametrization(nn.Module):
     def right_inverse(self, W):
         """
         Initialize V from pretrained W to preserve learned features.
-        
+
         For numerical stability:
         - Use |W| to ensure positive input to inverse softplus
         - Add small epsilon to avoid log(0)
         - Clamp to reasonable range
         """
         eps = 1e-4
-        W_abs = torch.abs(W) + eps
+        orig_dtype = W.dtype
+        W_abs = torch.abs(W.float()) + eps
         if self.mode == "abs_init_free":
-            return W_abs
-        # inverse_softplus(x) = log(exp(x) - 1) 
-        # For numerical stability, use: log(expm1(x)) for x > 0
-        # But simpler: inverse_softplus(x) ≈ x for large x, log(x) + log(2) for small x
-        # We use: log(exp(x) - 1 + eps) for stability
+            return W_abs.to(orig_dtype)
+        # inverse_softplus(x) = log(exp(x) - 1)
+        # Computed in fp32 (see forward() above): under bf16, exp(x)-1
+        # rounds to exactly 0 for a measurable fraction of small pretrained
+        # weight magnitudes (empirically ~11% on t5-base-scale FFN weights),
+        # collapsing V to a degenerate initialization regardless of the true
+        # weight -- not just imprecise, but wrong. That corrupted
+        # initialization, combined with softplus's near-zero gradient for
+        # very negative V, is what produced t5-base's monotonic training
+        # collapse (loss plateaus at initialization, never recovers).
         V = torch.log(torch.exp(W_abs) - 1.0 + eps)
-        return V
+        return V.to(orig_dtype)
 
 
 def make_model_monotonic(model, mode=None):  # pragma: no cover - Requires transformers/T5, tested on HPC
