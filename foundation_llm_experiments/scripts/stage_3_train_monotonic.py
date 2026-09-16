@@ -33,7 +33,7 @@ from utils.common_utils import (
     set_all_seeds, create_completion_flag, save_json,
     StageLogger, check_dependencies, get_generator, worker_init_fn,
     LanguageModelingDataset, compute_perplexity, make_model_monotonic,
-    optimizer_step_count, prune_epoch_checkpoints,
+    optimizer_step_count, prune_epoch_checkpoints, load_state_dict_compat,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
@@ -176,7 +176,7 @@ class MonotonicTrainer:
             return
 
         ckpt = torch.load(candidate, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(ckpt['model_state_dict'])
+        load_state_dict_compat(self.model, ckpt['model_state_dict'])
         self.optimizer.load_state_dict(ckpt['optimizer_state_dict'])
         self.scheduler.load_state_dict(ckpt['scheduler_state_dict'])
         self.start_epoch = ckpt['epoch']
@@ -427,7 +427,7 @@ def main():
         if os.path.exists(init_path):
             logger.log(f"Loading initialized weights from: {init_path}")
             state_dict = torch.load(init_path, map_location='cpu', weights_only=False)
-            model.load_state_dict(state_dict)
+            load_state_dict_compat(model, state_dict)
             logger.log("  Loaded monotonic-initialized weights")
         else:
             logger.log("WARNING: No initialized weights found, using freshly applied constraints")

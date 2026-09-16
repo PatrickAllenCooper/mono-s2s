@@ -25,6 +25,7 @@ from configs.experiment_config import FoundationExperimentConfig as Config
 from utils.common_utils import (
     set_all_seeds, check_dependencies, save_json, load_json, load_json_safe,
     atomic_save_json, partial_results_dir, StageLogger, make_model_monotonic,
+    load_state_dict_compat,
 )
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -64,7 +65,7 @@ def _load_model(model_type, device):
         model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
     path = _checkpoint_path(model_type)
     state = torch.load(path, map_location='cpu', weights_only=False)
-    model.load_state_dict(state)
+    load_state_dict_compat(model, state)
     model = model.to(device=device, dtype=dtype)
     model.eval()
     return model

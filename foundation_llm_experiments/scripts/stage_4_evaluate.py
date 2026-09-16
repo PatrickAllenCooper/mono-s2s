@@ -34,6 +34,7 @@ from utils.common_utils import (
     set_all_seeds, save_json, load_json, atomic_save_json,
     StageLogger, check_dependencies, compute_perplexity_resumable,
     make_model_monotonic, partial_results_dir, load_pile_eval_texts,
+    load_state_dict_compat,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -63,7 +64,7 @@ def _load_baseline(device):
         cache_dir=Config.DATA_CACHE_DIR,
         torch_dtype=torch.float32,
     ).to(device)
-    model.load_state_dict(torch.load(path, map_location=device, weights_only=False))
+    load_state_dict_compat(model, torch.load(path, map_location=device, weights_only=False))
     model.eval()
     return model
 
@@ -77,7 +78,7 @@ def _load_monotonic(device):
         torch_dtype=torch.float32,
     )
     model = make_model_monotonic(model, variant=Config.MONOTONIC_VARIANT)
-    model.load_state_dict(torch.load(path, map_location=device, weights_only=False))
+    load_state_dict_compat(model, torch.load(path, map_location=device, weights_only=False))
     model = model.to(device)
     model.eval()
     return model

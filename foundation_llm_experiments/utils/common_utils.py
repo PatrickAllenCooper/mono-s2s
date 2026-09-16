@@ -158,6 +158,33 @@ class NonNegativeParametrization(nn.Module):
         return V
 
 
+# Known parameter renames across transformers versions. A checkpoint saved
+# with an older transformers install can fail to load under a newer one
+# ("Missing key(s) ... lm_head.weight. Unexpected key(s) ... embed_out.weight")
+# purely because of a cosmetic rename, not an actual architecture mismatch.
+_STATE_DICT_KEY_RENAMES = {
+    'embed_out.weight': 'lm_head.weight',  # GPT-NeoX (Pythia) output head, renamed in transformers
+}
+
+
+def load_state_dict_compat(model, state_dict, strict=True):
+    """
+    model.load_state_dict(), tolerant of the known renames in
+    _STATE_DICT_KEY_RENAMES. Only remaps a key when the checkpoint's name is
+    absent from the model and the renamed target is present, so an
+    unrelated real mismatch still raises normally.
+    """
+    model_keys = set(model.state_dict().keys())
+    remapped = {}
+    for key, value in state_dict.items():
+        if key not in model_keys and key in _STATE_DICT_KEY_RENAMES:
+            new_key = _STATE_DICT_KEY_RENAMES[key]
+            if new_key in model_keys:
+                key = new_key
+        remapped[key] = value
+    return model.load_state_dict(remapped, strict=strict)
+
+
 def make_model_monotonic(model, variant=None):
     """
     Apply non-negative weight constraints to selected Linear layers.

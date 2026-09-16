@@ -31,7 +31,7 @@ from utils.common_utils import (
     set_all_seeds, create_completion_flag, save_json,
     StageLogger, check_dependencies, get_generator, worker_init_fn,
     LanguageModelingDataset, compute_perplexity,
-    optimizer_step_count, prune_epoch_checkpoints,
+    optimizer_step_count, prune_epoch_checkpoints, load_state_dict_compat,
 )
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, get_linear_schedule_with_warmup
@@ -174,7 +174,7 @@ class BaselineTrainer:
             return
 
         ckpt = torch.load(candidate, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(ckpt['model_state_dict'])
+        load_state_dict_compat(self.model, ckpt['model_state_dict'])
         self.optimizer.load_state_dict(ckpt['optimizer_state_dict'])
         self.scheduler.load_state_dict(ckpt['scheduler_state_dict'])
         self.start_epoch = ckpt['epoch']
