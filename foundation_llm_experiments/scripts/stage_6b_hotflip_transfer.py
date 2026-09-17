@@ -88,22 +88,33 @@ def _load_test_texts(logger):
     return texts
 
 
-def _evaluate_precomputed(model, orig_ids, flipped_ids, attention_mask, device):
+def _evaluate_precomputed(model, orig_ids, flipped_ids, attention_mask, positions_flipped, device):
     """Forward-only (no gradient) re-evaluation of a fixed attacked sequence
-    on a possibly different model than the one that produced it."""
+    on a possibly different model than the one that produced it.
+
+    Both the clean and attacked loss are scored on exactly the same set of
+    positions, excluding the substituted ones, so degradation measures the
+    effect of the substitution as context rather than the model's
+    (irrelevantly low) likelihood of the substituted tokens themselves --
+    same rationale as stage_6_hotflip_attacks.HotFlipAttacker._masked_loss.
+    """
     model.eval()
     orig = torch.tensor([orig_ids], device=device)
     flipped = torch.tensor([flipped_ids], device=device)
     mask = torch.tensor([attention_mask], device=device)
 
-    with torch.no_grad():
-        clean_labels = orig.clone()
-        clean_labels[mask == 0] = -100
-        clean_loss = model(input_ids=orig, attention_mask=mask, labels=clean_labels).loss.item()
+    def _masked_labels(ids):
+        labels = ids.clone()
+        labels[mask == 0] = -100
+        if positions_flipped:
+            idx = torch.tensor(sorted(positions_flipped), device=ids.device, dtype=torch.long)
+            if idx.numel():
+                labels[0, idx] = -100
+        return labels
 
-        attacked_labels = flipped.clone()
-        attacked_labels[mask == 0] = -100
-        attacked_loss = model(input_ids=flipped, attention_mask=mask, labels=attacked_labels).loss.item()
+    with torch.no_grad():
+        clean_loss = model(input_ids=orig, attention_mask=mask, labels=_masked_labels(orig)).loss.item()
+        attacked_loss = model(input_ids=flipped, attention_mask=mask, labels=_masked_labels(flipped)).loss.item()
 
     degradation = (attacked_loss - clean_loss) / clean_loss if clean_loss else 0.0
     return {
@@ -111,6 +122,7 @@ def _evaluate_precomputed(model, orig_ids, flipped_ids, attention_mask, device):
         'attacked_loss': float(attacked_loss),
         'degradation': float(degradation),
         'success': bool(degradation > Config.ATTACK_SUCCESS_THRESHOLD),
+        'num_flipped': len(positions_flipped) if positions_flipped else 0,
     }
 
 
@@ -155,6 +167,7 @@ def _cross_eval_resumable(model, craft_records, jsonl_path, logger, label):
             try:
                 metrics = _evaluate_precomputed(
                     model, rec['orig_ids'], rec['flipped_ids'], rec['attention_mask'],
+                    rec.get('positions_flipped', []),
                     next(model.parameters()).device,
                 )
                 record = {"idx": idx, **metrics}
@@ -238,11 +251,23 @@ class QueryAttacker:
         self.candidates_per_position = candidates_per_position
         self.candidate_tokens = candidate_tokens
 
-    def _loss(self, ids, mask):
+    def _loss(self, ids, mask, exclude_positions=None):
+        """Causal-LM loss excluding `exclude_positions` from the targets
+        (the positions already committed to a substitution, plus -- during
+        the search below -- the position currently being tried). Scoring
+        candidates by their effect on the SURROUNDING context, rather than
+        by how hard the candidate token itself is to predict, avoids a
+        degenerate search that just picks whatever token is intrinsically
+        least likely regardless of context (see the loss-convention caveat
+        in Sec. 4 of the paper, and HotFlipAttacker._masked_loss)."""
         input_ids = torch.tensor([ids], device=self.device)
         attn = torch.tensor([mask], device=self.device)
         labels = input_ids.clone()
         labels[attn == 0] = -100
+        if exclude_positions:
+            idx = torch.tensor(sorted(exclude_positions), device=input_ids.device, dtype=torch.long)
+            if idx.numel():
+                labels[0, idx] = -100
         with torch.no_grad():
             return self.model(input_ids=input_ids, attention_mask=attn, labels=labels).loss.item()
 
@@ -254,35 +279,40 @@ class QueryAttacker:
         if seq_len == 0:
             return None
 
-        clean_loss = self._loss(orig_ids, attention_mask)
-
         k = min(self.num_flips, seq_len)
-        positions = rng.choice(seq_len, size=k, replace=False)
+        positions = [int(p) for p in rng.choice(seq_len, size=k, replace=False)]
+        all_positions = set(positions)
+        # Both the clean reference and every candidate evaluation during the
+        # search are scored on the same final position set (every planned
+        # flip position excluded), so the greedy choice at each step reflects
+        # damage to the untouched context, not self-predictability.
+        clean_loss = self._loss(orig_ids, attention_mask, exclude_positions=all_positions)
+
         flipped_ids = list(orig_ids)
         current_loss = clean_loss
 
         for pos in positions:
-            pos = int(pos)
             best_loss = current_loss
             best_token = flipped_ids[pos]
             for _ in range(self.candidates_per_position):
                 candidate = int(rng.choice(self.candidate_tokens))
                 trial = list(flipped_ids)
                 trial[pos] = candidate
-                loss = self._loss(trial, attention_mask)
+                loss = self._loss(trial, attention_mask, exclude_positions=all_positions)
                 if loss > best_loss:
                     best_loss = loss
                     best_token = candidate
             flipped_ids[pos] = best_token
             current_loss = best_loss
 
-        attacked_loss = self._loss(flipped_ids, attention_mask)
+        attacked_loss = self._loss(flipped_ids, attention_mask, exclude_positions=all_positions)
         degradation = (attacked_loss - clean_loss) / clean_loss if clean_loss else 0.0
         return {
             'clean_loss': float(clean_loss),
             'attacked_loss': float(attacked_loss),
             'degradation': float(degradation),
             'success': bool(degradation > Config.ATTACK_SUCCESS_THRESHOLD),
+            'num_flipped': len(all_positions),
         }
 
 

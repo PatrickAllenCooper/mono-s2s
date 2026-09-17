@@ -54,6 +54,25 @@ class HotFlipAttacker:
         self.num_flips = num_flips
         self.vocab_size = len(tokenizer)
 
+    def _masked_loss(self, ids, attention_mask, exclude_positions=None, inputs_embeds=None):
+        """Causal-LM loss, scored on every valid position EXCEPT
+        `exclude_positions`. Excluding the substituted/flipped positions
+        from the targets means the loss measures how much the substitution
+        damages the model's prediction of the surrounding (unperturbed)
+        context, rather than including the model's (irrelevantly low)
+        likelihood of the substituted tokens themselves as part of the
+        score -- see the loss-convention caveat in Sec. 4 of the paper.
+        """
+        labels = ids.clone()
+        labels[attention_mask == 0] = -100
+        if exclude_positions:
+            idx = torch.tensor(sorted(exclude_positions), device=ids.device, dtype=torch.long)
+            if idx.numel():
+                labels[0, idx] = -100
+        if inputs_embeds is not None:
+            return self.model(inputs_embeds=inputs_embeds, labels=labels).loss
+        return self.model(input_ids=ids, labels=labels).loss
+
     def attack_single_example(self, text, return_ids=False):
         """
         Attack one text. Returns scalar metrics only (JSON-safe) by default.
@@ -73,20 +92,14 @@ class HotFlipAttacker:
         attention_mask = encoding.attention_mask
 
         self.model.eval()
-        with torch.no_grad():
-            labels = input_ids.clone()
-            labels[attention_mask == 0] = -100
-            clean_outputs = self.model(input_ids=input_ids, labels=labels)
-            clean_loss = clean_outputs.loss.item()
 
         embedding_layer = self.model.get_input_embeddings()
         embeddings = embedding_layer(input_ids).detach().requires_grad_(True)
 
-        labels = input_ids.clone()
-        labels[attention_mask == 0] = -100
-
-        outputs = self.model(inputs_embeds=embeddings, labels=labels)
-        loss = outputs.loss
+        # Position/token selection is unaffected by the masking below: it is
+        # driven by the gradient of the *unperturbed* sequence's own loss,
+        # computed before any flip exists to exclude.
+        loss = self._masked_loss(input_ids, attention_mask, inputs_embeds=embeddings)
         loss.backward()
 
         token_gradients = embeddings.grad[0]
@@ -98,6 +111,7 @@ class HotFlipAttacker:
         ).indices
 
         flipped_ids = input_ids.clone()
+        flipped_positions = set()
 
         for pos in topk_positions:
             pos_idx = pos.item()
@@ -108,14 +122,18 @@ class HotFlipAttacker:
             scores = torch.matmul(all_embeddings, grad_at_pos)
             best_token = scores.argmax().item()
             flipped_ids[0, pos_idx] = best_token
+            flipped_positions.add(pos_idx)
 
         with torch.no_grad():
-            attacked_labels = flipped_ids.clone()
-            attacked_labels[attention_mask == 0] = -100
-            attacked_outputs = self.model(
-                input_ids=flipped_ids, labels=attacked_labels,
-            )
-            attacked_loss = attacked_outputs.loss.item()
+            # Score the clean and attacked sequences on exactly the same
+            # positions (every valid position except the flipped ones) so
+            # degradation isolates the effect of the flip as context.
+            clean_loss = self._masked_loss(
+                input_ids, attention_mask, exclude_positions=flipped_positions
+            ).item()
+            attacked_loss = self._masked_loss(
+                flipped_ids, attention_mask, exclude_positions=flipped_positions
+            ).item()
 
         degradation = (attacked_loss - clean_loss) / clean_loss if clean_loss else 0.0
 
@@ -124,15 +142,13 @@ class HotFlipAttacker:
             'attacked_loss': float(attacked_loss),
             'degradation': float(degradation),
             'success': bool(degradation > Config.ATTACK_SUCCESS_THRESHOLD),
+            'num_flipped': len(flipped_positions),
         }
         if return_ids:
             result['orig_ids'] = input_ids[0].tolist()
             result['flipped_ids'] = flipped_ids[0].tolist()
             result['attention_mask'] = attention_mask[0].tolist()
-            result['positions_flipped'] = sorted({
-                pos.item() for pos in topk_positions
-                if pos.item() < input_ids.size(1) and attention_mask[0, pos.item()] == 1
-            })
+            result['positions_flipped'] = sorted(flipped_positions)
         return result
 
 

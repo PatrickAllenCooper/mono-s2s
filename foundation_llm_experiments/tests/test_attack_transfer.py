@@ -281,9 +281,9 @@ class TestQueryAttackerGradientFree:
         call_count = {"n": 0}
         original_loss = attacker._loss
 
-        def counting_loss(ids, mask):
+        def counting_loss(ids, mask, **kwargs):
             call_count["n"] += 1
-            return original_loss(ids, mask)
+            return original_loss(ids, mask, **kwargs)
 
         monkeypatch.setattr(attacker, "_loss", counting_loss)
         rng = np.random.RandomState(0)

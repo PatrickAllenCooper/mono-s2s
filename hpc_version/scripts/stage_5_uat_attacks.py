@@ -162,19 +162,26 @@ class AggressiveUATAttack:
             batch_texts = texts[start:start + bs]
             batch_summaries = summaries[start:start + bs]
 
-            # Ragged encode sources without truncation; we'll do left-truncation after trigger insert.
+            # Ragged encode sources without truncation, then truncate the
+            # ARTICLE to leave room for the full trigger before prepending
+            # it, so the trigger is never itself truncated away (previously
+            # the trigger was prepended first and _safe_pack's left-truncate
+            # then discarded it whenever "summarize: " + article + trigger
+            # exceeded max_src_len -- i.e. for most CNN/DM-length articles;
+            # see the truncation caveat in the paper).
             src = self.tokenizer(
                 ["summarize: " + t for t in batch_texts],
                 padding=False,
                 truncation=False
             )
 
-            if trigger_ids is not None and len(trigger_ids) > 0:
-                trig = list(map(int, trigger_ids))
+            trig = list(map(int, trigger_ids)) if trigger_ids is not None and len(trigger_ids) > 0 else []
+            article_budget = max(max_src_len - len(trig), 0)
+            src = self._safe_pack(src, max_len=article_budget)
+
+            if trig:
                 src["input_ids"] = [trig + ids for ids in src["input_ids"]]
                 src["attention_mask"] = [[1] * len(trig) + m for m in src["attention_mask"]]
-
-            src = self._safe_pack(src, max_len=max_src_len)
 
             # Pad to tensor batch
             src_t = self.tokenizer.pad(src, padding=True, return_tensors="pt").to(self.device)
@@ -357,14 +364,19 @@ class AggressiveUATAttack:
         scorer = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeLsum"], use_stemmer=True)
         
         def encode(text):
-            enc = self._encode_source(text)
+            # Truncate the article to leave room for the full trigger
+            # BEFORE prepending it (see compute_loss_batch for why: a
+            # trigger prepended before truncation is silently dropped for
+            # any article long enough to need truncating).
+            trig_len = len(trigger_ids) if trigger_ids is not None else 0
+            enc = self._safe_pack(self._encode_source(text), max_len=max(max_src_len - trig_len, 0))
             if trigger_ids is not None and len(trigger_ids) > 0:
                 enc["input_ids"] = self._insert_ids_prefix(enc["input_ids"], trigger_ids)
                 enc["attention_mask"] = torch.cat(
                     [torch.ones(1, len(trigger_ids), device=self.device), enc["attention_mask"]],
                     dim=1
                 )
-            return self._safe_pack(enc, max_len=max_src_len)
+            return enc
         
         clean_scores, atk_scores = [], []
         clean_outs, atk_outs = [], []

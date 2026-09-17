@@ -68,29 +68,51 @@ class UATOptimizer:
         return candidates[:Config.ATTACK_NUM_CANDIDATES]
 
     def compute_trigger_loss(self, trigger_ids, texts, batch_size=8):
+        """Mean loss with the trigger prepended, EXCLUDING the trigger's own
+        token positions from the loss target. Concatenates the exact trigger
+        token ids (rather than decoding to text and re-tokenizing, whose BPE
+        merge at the trigger/text boundary would make the trigger's token
+        count in the final sequence ambiguous) so the excluded positions are
+        known exactly. Without this, the search objective rewards triggers
+        that are merely hard for the model to predict as tokens, independent
+        of their effect on the real text -- see the loss-convention caveat
+        in Sec. 4 of the paper.
+        """
         self.model.eval()
         total_loss = 0.0
         num_examples = 0
-        trigger_text = self.tokenizer.decode(trigger_ids, skip_special_tokens=True)
+        trig = list(map(int, trigger_ids))
+        trig_len = len(trig)
 
         with torch.no_grad():
             for i in range(0, len(texts), batch_size):
-                batch_texts = [trigger_text + " " + t for t in texts[i:i+batch_size]]
-
+                batch_texts = texts[i:i + batch_size]
                 encodings = self.tokenizer(
                     batch_texts,
                     return_tensors='pt',
                     padding=True,
                     truncation=True,
-                    max_length=Config.MAX_SEQ_LENGTH,
+                    max_length=max(Config.MAX_SEQ_LENGTH - trig_len, 1),
                 ).to(self.device)
 
-                labels = encodings.input_ids.clone()
-                labels[encodings.attention_mask == 0] = -100
+                if trig_len > 0:
+                    bsz = encodings.input_ids.size(0)
+                    trig_ids_t = torch.tensor([trig], device=self.device, dtype=encodings.input_ids.dtype).expand(bsz, -1)
+                    trig_mask_t = torch.ones(bsz, trig_len, dtype=encodings.attention_mask.dtype, device=self.device)
+                    input_ids = torch.cat([trig_ids_t, encodings.input_ids], dim=1)
+                    attention_mask = torch.cat([trig_mask_t, encodings.attention_mask], dim=1)
+                else:
+                    input_ids = encodings.input_ids
+                    attention_mask = encodings.attention_mask
+
+                labels = input_ids.clone()
+                labels[attention_mask == 0] = -100
+                if trig_len > 0:
+                    labels[:, :trig_len] = -100
 
                 outputs = self.model(
-                    input_ids=encodings.input_ids,
-                    attention_mask=encodings.attention_mask,
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
                     labels=labels,
                 )
 
@@ -209,24 +231,39 @@ def evaluate_trigger(model, tokenizer, trigger_ids, texts, device, batch_size=No
     batch_size = batch_size or Config.ATTACK_LOSS_BATCH_SIZE
     model.eval()
 
+    trig = list(map(int, trigger_ids))
+    trig_len = len(trig)
+
     def _mean_loss(text_list, prepend_trigger=False):
-        trigger_text = ""
-        if prepend_trigger:
-            trigger_text = tokenizer.decode(trigger_ids, skip_special_tokens=True) + " "
+        # Trigger tokens are concatenated by id (not decoded-to-text and
+        # re-tokenized) and excluded from the loss target when present, for
+        # the same reason as UATOptimizer.compute_trigger_loss above: it
+        # keeps clean_loss and attacked_loss comparable (same kind of
+        # target: the real text) and avoids inflating attacked_loss with
+        # the model's likelihood of the arbitrary trigger tokens themselves.
         total_loss = 0.0
         count = 0
+        max_len = max(Config.MAX_SEQ_LENGTH - (trig_len if prepend_trigger else 0), 1)
         with torch.no_grad():
             for i in range(0, len(text_list), batch_size):
                 batch = text_list[i:i + batch_size]
-                if prepend_trigger:
-                    batch = [trigger_text + t for t in batch]
                 encodings = tokenizer(
                     batch, return_tensors='pt', padding=True, truncation=True,
-                    max_length=Config.MAX_SEQ_LENGTH,
+                    max_length=max_len,
                 ).to(device)
-                labels = encodings.input_ids.clone()
-                labels[encodings.attention_mask == 0] = -100
-                outputs = model(**encodings, labels=labels)
+                input_ids = encodings.input_ids
+                attention_mask = encodings.attention_mask
+                if prepend_trigger and trig_len > 0:
+                    bsz = input_ids.size(0)
+                    trig_ids_t = torch.tensor([trig], device=device, dtype=input_ids.dtype).expand(bsz, -1)
+                    trig_mask_t = torch.ones(bsz, trig_len, dtype=attention_mask.dtype, device=device)
+                    input_ids = torch.cat([trig_ids_t, input_ids], dim=1)
+                    attention_mask = torch.cat([trig_mask_t, attention_mask], dim=1)
+                labels = input_ids.clone()
+                labels[attention_mask == 0] = -100
+                if prepend_trigger and trig_len > 0:
+                    labels[:, :trig_len] = -100
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, labels=labels)
                 total_loss += outputs.loss.item() * len(batch)
                 count += len(batch)
         return total_loss / count if count > 0 else 0.0
