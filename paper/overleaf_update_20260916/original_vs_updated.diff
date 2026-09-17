@@ -1,0 +1,1117 @@
+--- /private/tmp/claude-501/-Users-pat-code-mono-s2s/00a98a58-76ee-4b6b-9596-591653a62b60/scratchpad/overleaf/extracted/example_paper.tex	2026-09-16 21:46:14
++++ overleaf_update_20260916/example_paper.tex	2026-09-16 19:59:16
+@@ -155,28 +155,36 @@
+ reasoning, negation, and contradiction. This separation yields
+ \emph{monotone language models} whose semantic refinement is order-preserving
+ without globally restricting Transformer expressivity.
++%% [CHANGE: results] headline numbers now the fine-tuned baseline vs monotone (seed 2024, n = 200), pretrained model in parentheses; ROUGE-L cost from the five-seed full-test-set evaluation; controls sentence added; stray '..' fixed
+ On encoder--decoder models, this simple structural constraint substantially
+ improves adversarial robustness while largely preserving task performance:
+-attack success rates fall from approximately $69\%$ to $19\%$ with only a
+-modest reduction in summarization quality, without adversarial training,
+-additional data, or modified training objectives. We further show that the
+-effect transfers to the decoder-only Pythia-1.4B architecture, but only when
+-the constraint is placed along the relevant propagation paths. Constraining a
+-single feed-forward projection is ineffective, whereas constraining both
++gradient-based attack success rates fall from $60\%$ for an identically
++fine-tuned unconstrained baseline ($69\%$ for the pretrained model) to $17\%$,
++with a modest reduction in summarization quality (a $2$--$5\%$ relative ROUGE-L
++decrease on two benchmarks, consistent across five training seeds on full test sets), without adversarial
++training, additional data, or modified training objectives. We further show that
++the effect transfers to the decoder-only Pythia-1.4B architecture, but only when
++the constraint is placed along the relevant propagation paths. Constraining the
++feed-forward input projection alone is ineffective, whereas constraining both
+ projections reduces mean attack success from $69.0\%$ to $42.5\%$ across three
+-seeds, revealing a larger quality--robustness trade-off. Together, these
+-results identify monotonicity as a practical structural prior for robust
+-language modeling and show that its effectiveness depends critically on where
+-constraints are imposed within the architecture.. %, revealing an architecture-dependent trade-off between robustness and model quality.
++seeds, revealing a larger quality--robustness trade-off; the advantage persists
++under random-substitution and gradient-free query attacks, arguing against
++gradient masking as the explanation. Together, these results identify
++monotonicity as a practical structural prior for robust language modeling and
++show that its effectiveness depends critically on where constraints are imposed
++within the architecture. %, revealing an architecture-dependent trade-off between robustness and model quality.
+ 
+ % Our results demonstrate that strong architectural constraints, long assumed to limit the capacity of LLMs, can be applied at scale without sacrificing accuracy. Monotonicity thus emerges as a practical and principled design choice for building language models whose semantic behavior is more robust, predictable, and amenable to formal reasoning.
+ \end{abstract}
+ 
+ \section{Introduction}
++\label{sec:intro}
+ 
+ Large language models (LLMs) have achieved remarkable performance across a wide range of language tasks, yet their behavior remains surprisingly brittle. Carefully crafted prompts, jailbreaks, and even small targeted perturbations can push otherwise well-aligned models toward unsafe or unintended outputs. This vulnerability is not merely a failure of alignment; it reflects a deeper property of modern neural language models, whose representations evolve in extremely high-dimensional spaces where small input changes can be amplified through successive layers. Recent work has linked this sensitivity, in part, to the large Lipschitz constants exhibited by Transformer models, which can magnify perturbations as they propagate through the network~\citep{newhouse2025training}. This raises a fundamental question: \emph{can robustness be built into the architecture itself, rather than added only after vulnerabilities are discovered?}
+ 
+-This question has motivated a growing body of work on language-model robustness~\citep{salah2026jailbreaking, su2024mission}. Existing approaches largely rely on training-time interventions, including alignment objectives~\citep{cao2024defending} and adversarial training~\citep{howe2024effects}, or inference-time defenses such as output filtering~\citep{khachaturov2025adversarial}. While effective in many settings, these methods are typically reactive: they suppress or correct undesirable behavior after the underlying vulnerability has already emerged. An alternative is to ask whether architectural structure can directly restrict how adversarial perturbations are transformed and amplified inside the model.
++This question has motivated a growing body of work on language-model robustness~\citep{wei2023jailbroken, su2024mission}.
++%% [CHANGE: citation] salah2026jailbreaking is an unrefereed ResearchGate upload; replaced by Wei et al. (NeurIPS 2023)
++Existing approaches largely rely on training-time interventions, including alignment objectives~\citep{cao2024defending} and adversarial training~\citep{howe2024effects}, or inference-time defenses such as output filtering~\citep{khachaturov2025adversarial}. While effective in many settings, these methods are typically reactive: they suppress or correct undesirable behavior after the underlying vulnerability has already emerged. An alternative is to ask whether architectural structure can directly restrict how adversarial perturbations are transformed and amplified inside the model.
+ 
+ We explore \emph{monotonicity} as such a structural inductive bias. At a high level, monotonicity imposes directional consistency: strengthening an input along an ordered dimension cannot cause the corresponding downstream representation to move in the opposite direction. This property has a long history in machine learning~\citep{Gupta2016MonotonicLattices, runje2023constrained} and related fields~\citep{smith1995monotone}, and has been particularly influential in control theory, where monotone systems admit tractable reasoning about stability, safety, and perturbation propagation even in high-dimensional settings~\citep{michel2015stability,ito2014max}. Monotonicity has, for example, enabled analysis and certification of large-scale dynamical systems such as power networks, where exhaustive reasoning over all possible system states is infeasible~\citep{rantzer2014control}.
+ 
+@@ -279,7 +287,8 @@
+ 
+ Our motivation is closely related to the structure of \emph{monotone Boolean circuits}~\citep{jukna2012boolean}. In a monotone circuit, negation is excluded from the internal computation and must be introduced explicitly at the input. This restriction is not simply mathematical convenience; it imposes a clear semantic discipline by preventing established information from being silently reversed downstream. We adopt an analogous principle for language models. By enforcing monotonicity only during semantic refinement, we encourage negation, contradiction, and constraint relaxation to arise through explicit contextual mechanisms such as attention, rather than through fragile cancellation inside nonlinear transformations. This creates a deliberate separation between \emph{where semantic reversals are introduced} and \emph{where semantic information is refined}.
+ 
+-Viewed this way, a language model can be treated as a high-dimensional system whose internal semantic state evolves through a sequence of nonlinear transformations. Monotonic structure restricts the ways perturbations can propagate through this system: along ordered semantic directions, stronger evidence or constraints cannot be transformed into weaker downstream representations. Note that Transformer is not globally monotone, nor does it eliminate all adversarial behavior. Instead, it imposes structure precisely where semantic features are refined, reducing the space of admissible transformations and making perturbation propagation more predictable. This mirrors a central advantage of monotone systems, where structural order can simplify reasoning about global behavior and, under suitable conditions, reduce verification to extremal cases~\citep{feyzmahdavian2017stability}.
++Viewed this way, a language model can be treated as a high-dimensional system whose internal semantic state evolves through a sequence of nonlinear transformations. Monotonic structure restricts the ways perturbations can propagate through this system: along ordered semantic directions, stronger evidence or constraints cannot be transformed into weaker downstream representations. Note that the resulting Transformer is not globally monotone, nor does the constraint eliminate all adversarial behavior. %% [CHANGE: grammar, minor] was "Note that Transformer is not globally monotone, nor does it eliminate"
++Instead, it imposes structure precisely where semantic features are refined, reducing the space of admissible transformations and making perturbation propagation more predictable. This mirrors a central advantage of monotone systems, where structural order can simplify reasoning about global behavior and, under suitable conditions, reduce verification to extremal cases~\citep{feyzmahdavian2017stability}.
+ 
+ 
+ % Beyond its role in classical dynamical systems, monotonicity also aligns naturally with how we expect language models to behave semantically. Intuitively, prompts that are semantically equivalent (or differ only in minor, non-essential ways) should produce similar outputs. From this perspective, modern Transformer architectures can be viewed as mapping inputs to latent representations through attention mechanisms that act as powerful feature extractors. If two prompts induce similar internal representations, their outputs should likewise be similar. Extending this intuition, if three prompts produce representations ordered such that one lies between the other two in feature space, then it is reasonable to expect the corresponding output to lie between the two extremes. 
+@@ -303,14 +312,18 @@
+ 
+ % Despite these advantages, monotonic constraints have traditionally been viewed as incompatible with expressive neural architectures. Enforcing monotonicity was long believed to significantly limit model capacity or degrade performance~\citep{runje2023constrained}, making it impractical for modern models such as Transformers. In this work, we challenge this assumption.
+ 
++%% [CHANGE: clarity] "modest reduction" restricted to the encoder--decoder setting (Pythia pays 5.6x perplexity); causal-attribution claim softened pending the ablation's robustness evaluation
+ Our central finding is that monotonicity can be incorporated
+-into Transformer architectures while incurring only a modest
+-reduction in task performance. By selectively enforcing monotonicity
+- within feed-forward sublayers and leaving attention
+-mechanisms unconstrained, the resulting models achieve
+-substantially greater robustness while maintaining competitive
+-performance.
+-In particular, these gains arise purely from the architectural structure, without additional data, modified training objectives, or heuristic defenses, isolating monotonicity itself as a causal factor.
++into Transformer architectures at a modest cost in task performance in the
++encoder--decoder setting, and at a markedly larger cost in clean perplexity in the
++decoder-only setting. By selectively enforcing monotonicity within feed-forward
++sublayers and leaving attention mechanisms unconstrained, the resulting models
++achieve substantially greater robustness in both settings. These gains arise
++without adversarial training, additional data, modified training objectives, or
++heuristic defenses; whether they are due to the nonnegativity constraint itself or
++to the accompanying magnitude initialization is examined in
++Appendix~\ref{app:ablation}, which so far settles the question only for clean
++quality.
+ 
+ %%--- move the following to the main body ----
+ % Our central finding is that monotonicity can be incorporated into modern Transformer architectures without sacrificing performance. Rather than constraining the entire model, we apply monotonicity selectively to the feed-forward sublayers that dominate the model’s nonlinear transformations, while leaving attention mechanisms, residual connections, and normalization layers unconstrained. To enable effective optimization under these constraints, we adopt a smooth reparameterization that avoids the degeneracies associated with naive projection-based approaches. This design allows pretrained sequence-to-sequence models to be distilled into monotone counterparts that closely match their original performance on standard summarization benchmarks.
+@@ -319,7 +332,9 @@
+ 
+ These results challenge a common assumption in constrained neural architectures:
+ that strong structural restrictions must inevitably come at the expense of
+-optimization or expressive power~\citep{sartor2025advancing}. Our findings
++optimization or expressive power~\citep[see the discussion in][]{sartor2025advancing}.
++%% [CHANGE: citation, minor] Sartor et al. argue against this assumption; cited as discussion
++Our findings
+ suggest a more nuanced view. When monotonicity is imposed selectively, it can
+ serve as a practical and principled inductive bias that shapes how semantic
+ information is transformed while preserving much of the flexibility that makes
+@@ -329,9 +344,9 @@
+ design allows the model to retain expressive contextual reasoning while
+ restricting the internal transformations most likely to amplify or reverse
+ semantic information. More broadly, our results show that carefully placed
+-architectural constraints can improve robustness and predictability without
++architectural constraints can improve robustness without
+ requiring adversarial training, additional data, or a redesign of the
+-Transformer architecture.
++Transformer architecture. %% [CHANGE: clarity, minor] "and predictability" removed: not measured (the order-preservation diagnostic is negative)
+ 
+ \noindent\textbf{Contributions.}
+ Our main contributions are:
+@@ -349,15 +364,22 @@
+ 
+     \item \textbf{Substantial gains in adversarial robustness.}
+     We demonstrate that monotonicity significantly reduces vulnerability to
+-    adversarial and jailbreak-style perturbations without relying on
+-    adversarial training, additional data, or modified training objectives.
++    gradient-based token-level attacks (HotFlip and universal triggers) without relying on
++    adversarial training, additional data, or modified training objectives,
++    and that, on the decoder-only track, the reduction persists under
++    random-substitution and gradient-free query attacks, which argues
++    against gradient masking as its explanation.
++    %% [CHANGE: new result] clause added for the Pythia control experiments
+ 
+     \item \textbf{Architecture-dependent constraint placement.}
+     We show that the effectiveness of monotonicity depends critically on where
+     constraints are imposed. Extending the method from encoder--decoder models
+-    to Pythia-1.4B reveals that decoder-only architectures require broader
+-    constraint coverage to close adversarial propagation paths, exposing a
+-    distinct and quantifiable quality--robustness trade-off.
++    to Pythia-1.4B shows that the benefit transfers under the same constraint
++    scope (both feed-forward projections), that constraining the input
++    projection alone is ineffective, and that the decoder-only model pays a
++    markedly larger clean-performance cost, exposing a distinct and quantifiable
++    quality--robustness trade-off.
++%% [CHANGE: factual] was "decoder-only architectures require broader constraint coverage"; the T5 track uses the same scope
+ \end{enumerate}
+ 
+ % \noindent\textbf{Contributions.}
+@@ -389,16 +411,28 @@
+ 
+ \textbf{Vulnerabilities of Language Models.}
+ Large language models are highly susceptible to adversarial manipulations that bypass alignment and safety mechanisms. Prior work has documented jailbreak prompts and transferable adversarial suffixes that generalize across models and settings, including aligned systems~\citep{Zou2023UniversalTransferableAttacksOnAlignedLLMs}. Subsequent studies identify additional failure modes, such as position-sensitive jailbreaks~\citep{wang2025vulnerability}, interpretable attacks that evade perplexity-based defenses~\citep{Zhu2023AutoDAN}, and many-shot jailbreaks whose effectiveness increases with larger context windows~\citep{anil2024many}. Robustness benchmarks further show that models perform poorly under systematic adversarial evaluation~\citep{Wang2021AdvGLUE}, and that safety mechanisms often fail in multilingual or low-resource settings~\citep{deng2024multilingual}. Prompt injection attacks, which exploit the lack of separation between instruction and context, are now recognized as a fundamental vulnerability, alongside broader threats to inference and training-time surveyed in recent security analyses~\citep{li2025security}.
++%% [CHANGE: new citations] token-level attack lineage relevant to the HotFlip/UAT/query attacks used here
++At the token level, the attacks we use descend from a well-developed lineage: gradient-guided substitutions~\citep{ebrahimi2018hotflip}, universal triggers~\citep{wallace2019universal}, and their prompt-search descendants~\citep{shin2020autoprompt}; fully gradient-based relaxations for Transformers~\citep{guo2021gradient}; gradient-free, query-based word substitutions~\citep{jin2020bert}; and attacks designed specifically for sequence-to-sequence models~\citep{cheng2020seq2sick}.
+ 
+ \textbf{Defenses and Robustness Enhancements.}
+-Proposed defenses include smoothing-based methods with provable jailbreak guarantees~\citep{Robey2023SmoothLLM}, lightweight detection based on output distributions~\citep{sayeedi2025jailbreaktracer}, and adversarial training approaches whose effectiveness depends on model scale and threat model~\citep{howe2024effects}. Other work examines attack transferability and adaptive prompt sequences to harden models against structured adversarial dependencies~\citep{wang2025understanding}. Despite these advances, most defenses remain reactive and training-dependent.
++Proposed defenses include smoothing-based methods with provable jailbreak guarantees~\citep{Robey2023SmoothLLM}, %% [CHANGE: citation] JailbreakTracer is an input-prompt classifier, not an output-distribution detector
++prompt-level classifiers trained on synthetic jailbreak data~\citep{sayeedi2025jailbreaktracer}, and adversarial training approaches whose effectiveness depends on model scale and threat model~\citep{howe2024effects}.
++%% [CHANGE: citation] wang2025understanding is a survey of transfer learning, unrelated to attack transferability; sentence re-cited to the GCG transferability result
++Adversarial prompts also transfer across models, so that a defense evaluated against a single attacker can be circumvented by suffixes optimized elsewhere~\citep{Zou2023UniversalTransferableAttacksOnAlignedLLMs}.
++%% [CHANGE: new citations] baseline/representation-level/certified defenses and the gradient-masking evaluation methodology motivating our controls
++Simple input-side baselines such as perplexity filtering and paraphrasing are surprisingly competitive against optimization-based attacks~\citep{jain2023baseline}, representation-level interventions reroute the internal activations responsible for harmful outputs~\citep{zou2024circuit}, and certified training bounds the effect of word substitutions for small classifiers~\citep{jia2019certified}. Despite these advances, most defenses remain reactive and training-dependent. A recurring lesson from the vision literature is that apparent robustness to gradient-based attacks can be an artifact of obfuscated gradients, so that any architectural defense must be evaluated with gradient-free and adaptive attacks as well~\citep{athalye2018obfuscated,carlini2019evaluating,tramer2020adaptive}; the random-substitution and query-based controls of Section~\ref{sec:results-pythia} follow this guidance.
+ 
+ \textbf{Monotonic Neural Networks and Structural Constraints.}
+-Monotonicity has long been studied as a structural inductive bias for interpretability and robustness. Classical results show that feed-forward networks with non-negative weights and monotone activations are universal approximators of monotone functions, establishing that monotonicity need not limit expressivity~\citep{Sill1998MonotonicNetworks,Daniels2010Monotone}. Subsequent work proposed practical monotone and partially monotone architectures, including lattice-based models, enabling scalable learning under monotonic constraints in structured domains~\citep{Gupta2016MonotonicLattices,You2017DeepLattice}. More recent research highlights monotonicity’s benefits for verification, reducing reasoning to boundary inputs in piecewise linear networks~\citep{Weber2021CertifyingMonotonicNetworks}. More broadly, architectural constraints and structured layers have been shown to improve robustness and stability without prohibitive performance loss~\citep{Amos2017OptNet}. Our work builds on this line by showing that selectively enforced monotonicity can scale to Transformer-based language models and yield tangible robustness gains.
++Monotonicity has long been studied as a structural inductive bias for interpretability and robustness. Classical results show that feed-forward networks with non-negative weights and sigmoidal activations~\citep{Daniels2010Monotone}, as well as min--max networks of sign-constrained linear units~\citep{Sill1998MonotonicNetworks}, are universal approximators of monotone functions, establishing that monotonicity need not limit expressivity. Subsequent work proposed practical monotone and partially monotone architectures, including lattice-based models, enabling scalable learning under monotonic constraints in structured domains~\citep{Gupta2016MonotonicLattices,You2017DeepLattice}. More recent work certifies monotonicity of piecewise-linear networks by mixed-integer linear programming~\citep{liu2020certified} or counterexample-guided repair~\citep{sivaraman2020counterexample}.
++%% [CHANGE: citation] Weber2021CertifyingMonotonicNetworks could not be found (fabricated authors and arXiv id); replaced by Liu et al. 2020 and Sivaraman et al. 2020 with the claim reworded to what they show
++%% [CHANGE: new citations] modern monotone architectures, theory of nonnegative-weight networks, and the monotonicity-for-robustness precedent
++Alternatives to sign-constrained weights include integrating a positive derivative network~\citep{wehenkel2019unconstrained}, smooth min--max constructions~\citep{igel2024smooth}, and Lipschitz-bounded residual architectures that are monotone by construction and simultaneously certify robustness~\citep{nolte2023expressive,kitouni2023robust}; the price of the nonnegative-parameter inductive bias in depth and width has been characterized theoretically~\citep{mikulincer2022size}, and nonnegative weight constraints have also been used for interpretability in multilayer perceptrons~\citep{chorowski2015learning}. The observation that monotone classifiers are structurally resistant to a class of evasion attacks predates the LLM era~\citep{incer2018adversarially}. In control theory, monotone (cooperative) systems admit order-preserving flows with strong convergence properties~\citep{hirsch2006monotone,angeli2003monotone}, an intuition we draw on in Section~\ref{sec:gradient-attenuation}; monotone operator theory has separately been used to guarantee well-posedness of implicit-depth networks~\citep{winston2020monotone}. More broadly, architectural constraints and structured layers have been shown to improve robustness and stability without prohibitive performance loss~\citep{Amos2017OptNet}, and controlling the Lipschitz constant of attention has been proposed as a structural route to more stable Transformers~\citep{kim2021lipschitz,newhouse2025training}. Our work builds on this line by showing that selectively enforced monotonicity can scale to Transformer-based language models and yield tangible robustness gains.
+ 
+ \section{Monotone Transformers}
+ \label{Prelim}
+ We study the role of monotonicity constraints in improving the adversarial robustness of sequence-to-sequence (Seq2Seq) language models.
++%% [CHANGE: clarity] roadmap sentence
++This section proceeds in three steps: we define the order along which monotonicity is required (a semantic order induced by a matrix $A$), define the constrained feed-forward sublayer and show that nonnegative weights make it monotone, and finally describe how the constraint is enforced during training.
+ \begin{definition}[Sequence-to-Sequence Model]
+ A sequence-to-sequence model is a parameterized mapping
+ \[
+@@ -423,13 +457,20 @@
+ h \preceq h' \quad \Longleftrightarrow \quad Ah \le Ah' \;\; (\text{elementwise}),
+ \]
+ and interpret $h' \succeq h$ as semantically stronger along the chosen axes.
+-In practice, we choose $A$ either by (i) training $p$ linear probes on curated ordered
++%% [CHANGE: math-rigor, minor] preorder vs partial order remark
++Note that $\preceq$ is a preorder rather than a partial order whenever $p < d$: $h \preceq h' \preceq h$ holds exactly when $h - h' \in \ker(A)$, and such pairs are indistinguishable to the constraint; when $A = I$, $\preceq$ is the coordinatewise partial order.
++%% [CHANGE: method-as-implemented, minor] "we choose $A$" -> "$A$ may be chosen"; the trained models use A = I
++In practice, $A$ may be chosen either by (i) training $p$ linear probes on curated ordered
+ prompt pairs and using their weights as rows of $A$, or (ii) taking a small set of fixed
+ directions from auxiliary classifiers; in both cases, $A$ is fixed before imposing
+-monotonicity constraints. When $A = I$, this reduces to the coordinatewise order.
++monotonicity constraints. When $A = I$, this reduces to the coordinatewise order;
++\emph{all models trained in this paper use this instantiation}, and probe-derived
++directions are used only as a post-hoc diagnostic (Section~\ref{sec:results-order}).
++%% [CHANGE: method-as-implemented] previous text: "In our experiments we use p = 64 with d = 512, constructing A from probe weight vectors ... A and A^dagger are frozen before constrained training begins." No such projection exists in the trained models.
+ 
+ % Explanation for A
+-Enforcing monotonicity across all $d$ hidden dimensions would require every FFN weight to be nonnegative, severely limiting expressivity. Instead, $A$ selects a $p$-dimensional semantic subspace ($p \ll d$) along which monotonicity holds, leaving the remaining $d - p$ directions in $\ker(A)$ unconstrained. Each monotone sublayer projects via $Ah$, applies the constrained MLP $g$ in $\mathbb{R}^p$, and lifts back via $A^\dagger$. The identity $AA^\dagger = I_p$ reduces the semantic-space map to $T(s) = s + g(s)$, so monotonicity in $\mathbb{R}^p$ follows directly from that of $g$ without requiring the full Jacobian $J_F(h)$ to be nonnegative. In our experiments we use $p = 64$ with $d = 512$, constructing $A$ from probe weight vectors trained on ordered prompt pairs. $A$ and $A^\dagger$ are frozen before constrained training begins.
++%% [CHANGE: method-as-implemented + math-rigor, minor] "would require" -> sufficient-condition phrasing (Prop. prop:ffn_mono is sufficient, not necessary); "p = 64 with d = 512 ... A frozen" -> A = I in all experiments
++Enforcing monotonicity across all $d$ hidden dimensions via the sufficient condition of Proposition~\ref{prop:ffn_mono} requires every FFN weight to be nonnegative, which limits expressivity. The general construction with $p < d$ relaxes this: $A$ selects a $p$-dimensional semantic subspace along which monotonicity holds, leaving the remaining directions in $\ker(A)$ unconstrained. Each monotone sublayer projects via $Ah$, applies the constrained multilayer perceptron (MLP) $g$ in $\mathbb{R}^p$, and lifts back via $A^\dagger$. The identity $AA^\dagger = I_p$ reduces the semantic-space map to $T(s) = s + g(s)$, so monotonicity in $\mathbb{R}^p$ follows directly from that of $g$ without requiring the full Jacobian $J_F(h)$ to be nonnegative. With $A = I$, as in all our experiments, $g$ is the model's own FFN ($d = 512$ for T5-small and $d = 2048$ for Pythia-1.4B), every FFN weight is constrained, and the constrained sublayer is exactly a monotone neural network in the sense of Proposition~\ref{prop:ffn_mono}; instantiations with $p < d$ and a probe-derived $A$ are left to future work.
+ 
+ \begin{definition}[Monotonicity w.r.t.\ $\preceq$]
+ A function $F:\mathbb{R}^d \to \mathbb{R}^d$ is \emph{$A$-monotone} if
+@@ -451,7 +492,8 @@
+ \[
+ F(h) := h + A^\dagger\, g(Ah),
+ \]
+-where $g:\mathbb{R}^p \to \mathbb{R}^p$ is an ordinary coordinatewise-monotone MLP.
++where $g:\mathbb{R}^p \to \mathbb{R}^p$ is an ordinary coordinatewise-monotone MLP, i.e., monotone with respect to the product order on $\mathbb{R}^p$ in the sense of the definition below (equivalently, non-decreasing in each input coordinate with the others held fixed).
++%% [CHANGE: math-rigor, minor] "coordinatewise monotone" was used before being defined
+ 
+ \begin{proposition}[Sufficient condition for $A$-monotonicity]
+ If $g$ is monotone w.r.t.\ the product order on $\mathbb{R}^p$, then $F$ is $A$-monotone.
+@@ -540,9 +582,11 @@
+ % \end{proposition}
+ 
+ % \textbf{Proof.} The claim follows by applying Lemma~\ref{lem:mono_comp} layerwise and using closure of monotonicity under composition.
+-\textbf{Proof.} Each affine map with nonnegative weights is monotone, and $\sigma$ preserves monotonicity by assumption. The claim follows by Lemma~\ref{lem:mono_comp}. \hfill $\square$
++%% [CHANGE: math-rigor, minor] proof made explicit (was "sigma preserves monotonicity by assumption"); pointer to the appendix proof of Lemma mono_comp added
++\textbf{Proof.} Each affine map $y \mapsto W_i y + b_i$ with $W_i \ge 0$ is monotone, and the elementwise map $y \mapsto \sigma(y)$ is monotone because $\sigma$ is non-decreasing. The claim follows by Lemma~\ref{lem:mono_comp} (proved in Appendix~\ref{prf:lem1}). \hfill $\square$
+ 
+-Neural networks satisfying Proposition~\ref{prop:ffn_mono} are commonly referred to as \emph{monotone neural networks}. Such networks are universal approximators of \emph{continuous monotone functions} on compact domains~\citep{Daniels2010Monotone}.
++Neural networks satisfying Proposition~\ref{prop:ffn_mono} are commonly referred to as \emph{monotone neural networks}. With bounded sigmoidal activations, such networks are universal approximators of \emph{continuous monotone functions} on compact domains~\citep{Daniels2010Monotone}. This does not extend to ReLU: every output coordinate of a nonnegative-weight ReLU network is convex in its input, so such networks cannot represent concave monotone maps~\citep{runje2023constrained}. The ReLU-based monotone FFNs of our T5 experiments are therefore a strictly restricted family, which is part of the expressivity cost quantified in Section~\ref{sec:results}.
++%% [CHANGE: math-rigor] the universal-approximation claim was stated for arbitrary non-decreasing activations, which is false for ReLU (convexity)
+ 
+ 
+ % \begin{definition}[Monotone Feed-Forward Network]
+@@ -577,9 +621,16 @@
+ 
+ 
+ 
+-This definition does not assert global monotonicity of the full Transformer, but enforces monotonic semantic refinement at the level of FFN sublayers, where implicit feature cancellation is most likely to occur~\citep{runje2023constrained,sartor2025advancing,nguyen2023mononet}.
++This definition does not assert global monotonicity of the full Transformer, but enforces monotonic semantic refinement at the level of FFN sublayers, where we hypothesize that implicit feature cancellation is most likely to occur (cf.\ the constrained-network literature~\citep{runje2023constrained,sartor2025advancing,nguyen2023mononet}).
++%% [CHANGE: math-rigor, minor] the cited works do not establish where cancellation occurs in Transformers; hedged
+ 
++%% [CHANGE: math-rigor] new remark: the T5/GPT-NeoX block is pre-normalized, so the constrained object is the FFN branch g, not the map h -> F(h)
++\begin{remark}[Placement inside a pre-normalized block]
++\label{rem:preln}
++In the T5 and GPT-NeoX blocks we instantiate (with $A = I$), the FFN branch receives the normalized residual state $u = \mathrm{LN}(h)$, where $\mathrm{LN}$ denotes the block's normalization layer, and the residual connection is applied outside the branch, $F(h) = h + g(\mathrm{LN}(h))$, with $g(u) = W_{\mathrm{o}}\,\mathrm{ReLU}(W_{\mathrm{i}} u)$ in T5 (no biases) and $g(u) = W_{\mathrm{out}}\,\mathrm{GELU}(W_{\mathrm{in}} u + b_{\mathrm{in}}) + b_{\mathrm{out}}$ in GPT-NeoX. The normalization (a root-mean-square rescaling with an unconstrained gain in T5; standard layer normalization with mean centering, gain, and bias in GPT-NeoX) is not monotone, so $F$ need not be coordinatewise monotone as a map of $h$. The property we enforce, and the object of the analysis in Section~\ref{sec:gradient-attenuation}, is the monotonicity of the branch $g$ as a map of its own input $u$; the residual path is the identity and is unaffected by the constraint.
++\end{remark}
+ 
++
+ % \begin{definition}[Monotone Transformer]
+ % A Transformer model $\mathcal{M}_\theta$ is said to be \emph{monotone with respect to its feed-forward networks (FFNs)} if every feed-forward network within each Transformer block satisfies the monotonicity conditions of Definition~3. All other components of the architecture, including attention mechanisms, residual connections, and normalization layers, are left unconstrained.
+ % \end{definition}
+@@ -588,23 +639,33 @@
+ 
+ We enforce coordinatewise monotonicity of $g:\mathbb{R}^p\to\mathbb{R}^p$ by
+ constraining all linear maps inside $g$ to be elementwise nonnegative and using
+-an elementwise non-decreasing activation $\sigma$.
++an elementwise non-decreasing activation $\sigma$; in the T5 track $\sigma$ is the
++ReLU of the pretrained FFN, and in the Pythia track it is GELU (see the caveat in
++Section~\ref{sec:setup-pythia}).
++%% [CHANGE: math-rigor] the activation was never specified
+ Concretely, for each constrained weight matrix $W \in \mathbb{R}^{m\times n}$ in $g$,
+ we reparameterize
+ \[
+ W = \phi(V), \qquad \phi(v) = \log(1+\exp(v)),
+ \]
+-with unconstrained $V$, applied elementwise. This guarantees $W \ge 0$ without
+-projection or constrained optimization.
++with unconstrained $V$, applied elementwise. This maintains $W \ge 0$ throughout
++optimization without projection or constrained optimization, so $g$ remains
++coordinatewise monotone during training.
+ 
+-We fix $A$ (and hence $A^\dagger$) before training. We initialize $g$ to be near
+-the zero map so that $F(h)\approx h$ at the start of distillation/fine-tuning.
+-Specifically, we initialize the unconstrained parameters $V$ so that
+-$\phi(V)$ is small (e.g., $V \ll 0$ elementwise), and initialize biases to zero.
++We fix $A$ (and hence $A^\dagger$) before training. To retain the information in
++the pretrained weights $W_{\mathrm{pre}}$ when $g$ is the model's own FFN (the case
++$A = I$ used in all our experiments), we initialize the unconstrained parameters as
++\[
++V_{\mathrm{init}} = \phi^{-1}\bigl(|W_{\mathrm{pre}}| + \epsilon\bigr), \qquad \epsilon = 10^{-4},
++\]
++so that $\phi(V_{\mathrm{init}}) = |W_{\mathrm{pre}}| + \epsilon$ preserves the
++magnitude of every pretrained weight while flipping the sign of the negative
++entries; recovering from this sign disruption is the task of the subsequent
++fine-tuning (Section~\ref{sec:results}), and its cost is isolated in
++Appendix~\ref{app:ablation}. Pretrained biases, where present, are retained
++unconstrained.
++%% [CHANGE: method-as-implemented] previous text: "We initialize g to be near the zero map so that F(h) ≈ h ... V << 0 elementwise, and initialize biases to zero." The code initializes V = softplus^{-1}(|W_pre| + 1e-4).
+ 
+-Rather than projecting after each update, we maintain $W\ge 0$ throughout
+-optimization via the softplus reparameterization above, ensuring $g$ remains
+-coordinatewise monotone during training.
+ 
+ 
+ 
+@@ -627,49 +688,88 @@
+ We instantiate the monotone Transformer framework of Section~\ref{Prelim} using the T5 architecture~\citep{raffel2020exploring}, enabling a controlled empirical study of monotonicity as an architectural inductive bias for robustness.
+ 
+ \textbf{Implementation Scope.}
+-We replace each Transformer FFN sublayer by the semantically-monotone update
++%% [CHANGE: method-as-implemented] The Overleaf text described the experiments as using the
++%% p=64 semantic projection A. The code that produced every result in this paper
++%% (hpc_version/utils/common_utils.py, NonNegativeParametrization) constrains the full-width
++%% FFN weight matrices directly, i.e. the A = I instance of Definition 3.4, initialised at
++%% |W_pre| rather than near zero. The paragraph below states what was run.
++Our experiments instantiate Definition~\ref{def:mono_transformer} in its
++coordinatewise form, $A = I_d$ and $p = d$: each FFN sublayer keeps its pretrained
++architecture, $F(h) = h + g(\mathrm{LN}(h))$ with
+ \[
+-F(h) := h + A^\dagger\, g(Ah),
++g(u) = W_{\mathrm{o}}\,\mathrm{ReLU}(W_{\mathrm{i}} u), \qquad
++W_{\mathrm{i}}\in\mathbb{R}^{2048\times 512},\;\; W_{\mathrm{o}}\in\mathbb{R}^{512\times 2048},
+ \]
+-where $A\in\mathbb{R}^{p\times d}$ is fixed, $A^\dagger$ satisfies $AA^\dagger=I_p$,
+-and $g:\mathbb{R}^p\to\mathbb{R}^p$ is a coordinatewise-monotone MLP enforced via
+-elementwise nonnegative weights and monotone activations.
+-Attention layers, residual connections, and normalization remain unconstrained.
++and no biases, and both weight matrices are constrained to be elementwise
++nonnegative through the softplus reparameterization of Section~\ref{Prelim}, in
++all 6 encoder and 6 decoder blocks. The FFN branch $g$ is therefore a monotone
++neural network in the sense of Proposition~\ref{prop:ffn_mono}
++(Remark~\ref{rem:preln}); the semantic directions $A$ of Section~\ref{Prelim}
++are not used during training, but are recovered post hoc as a diagnostic
++instrument in Section~\ref{sec:results-order}. Attention layers, residual
++connections, and normalization remain unconstrained. The unconstrained parameters
++are initialized from the pretrained weights as
++$V = \phi^{-1}(|W_{\mathrm{pre}}| + \epsilon)$ (Section~\ref{Prelim}), and the
++effect of this initialization on clean validation loss is isolated in Appendix~\ref{app:ablation}.
+ 
++We use \texttt{T5-small}, comprising 6 encoder and 6 decoder layers with 512-dimensional hidden representations, 8 attention heads per layer, and 2048-dimensional FFN intermediate activations. Of the model's approximately 60.5M parameters, 25M (42\%) correspond to the FFN sublayers whose weights are constrained; all remaining parameters are unconstrained.
+ 
+-We use \texttt{T5-small}, comprising 6 encoder and 6 decoder layers with 512-dimensional hidden representations, 8 attention heads per layer, and 2048-dimensional FFN intermediate activations. Of the model's approximately 60M parameters, roughly 24M (40\%) correspond to the FFN sublayers that we replace with the semantic-space update; within each such sublayer, only the parameters inside $g:\mathbb{R}^p\to\mathbb{R}^p$ are constrained to be elementwise nonnegative to enforce coordinatewise monotonicity in semantic space.
+-
+ Training and evaluation protocols, including optimization hyperparameters, datasets, and decoding settings, are detailed in Appendix~\ref{app:training}.
+ 
+ \subsection{Adversarial Robustness Evaluation}
++\label{sec:setup-attacks}
+ We evaluate robustness under two complementary classes of adversarial attacks designed to probe different failure modes of sequence-to-sequence models.
+ 
+ \textbf{Universal Adversarial Triggers.}
+-Universal adversarial triggers (UATs)~\citep{wallace2019universal} consist of short, input-agnostic token sequences that, when prepended to an input, maximize the model’s loss. We optimize triggers using coordinate-wise search with three random restarts and 50 iterations. Candidate tokens are drawn from a vocabulary biased toward punctuation, special characters, and high-frequency words that empirically induce greater disruption. Triggers are optimized on a held-out validation split and evaluated on a disjoint test set. To assess transferability, we additionally construct a transfer matrix measuring cross-model vulnerability to learned triggers.
++Universal adversarial triggers (UATs)~\citep{wallace2019universal} consist of short, input-agnostic token sequences that, when prepended to an input, maximize the model's loss. We optimize five-token triggers using coordinate-wise search with five random restarts and 100 iterations.
++%% [CHANGE: protocol] was "three random restarts and 50 iterations" (that is the Pythia setting)
++%% [CHANGE: protocol] candidate pool and search described as implemented (stage_5_uat_attacks.py); previous text claimed an empirically selected vocabulary
++Candidate tokens are drawn from a restricted pool of about 4{,}000 SentencePiece ids (ids 1000--4999) augmented with a short hand-picked list of negation and discourse words (e.g., \emph{not}, \emph{never}, \emph{ignore}), punctuation strings, and numerals; each iteration re-samples three of the five trigger positions, scores 50 random candidates per position on a random 30-example subset, and the trigger with the highest mean loss on the full optimization set is kept. Triggers are optimized on 1{,}000 held-out CNN/DailyMail validation examples and evaluated on 1{,}500 disjoint test examples; the cross-model transfer matrix is computed on the first 100 evaluation examples.
++%% [CHANGE: rigor] truncation caveat found by code audit: the trigger is prepended and the encoder input is then LEFT-truncated to 512 tokens, so long articles lose the trigger
++The trigger is inserted at the start of the encoder input, ahead of the \texttt{summarize:} prefix, and the concatenation is then truncated \emph{from the left} to the 512-token encoder budget. For articles longer than about 505 tokens the trigger is therefore partially or entirely discarded and the attacked input coincides with the clean input; because many CNN/DailyMail articles exceed this length, the universal-trigger results on T5 reflect only the shorter articles and should be read as a lower bound on trigger effectiveness.
+ 
+ \textbf{HotFlip Attacks.}
+ HotFlip attacks~\citep{ebrahimi2018hotflip} identify vulnerable input positions by computing gradients of the loss with respect to token embeddings and replacing selected tokens to maximize loss increase. We allow up to five token replacements per example, selecting replacements based on the dot product between gradient directions and candidate embeddings.
+ 
+ \textbf{Robustness Metrics.}
+-Robustness is quantified using ROUGE score degradation under attack, attack success rate (defined as a ROUGE-L degradation exceeding 10\%), and statistical significance assessed via independent $t$-tests. We additionally report mean loss increase and analyze cross-model transferability of adversarial triggers.
++Robustness is quantified using the relative increase in the model's cross-entropy loss under attack (\emph{degradation}, averaged over examples), the attack success rate (the fraction of examples whose degradation exceeds 10\%), and statistical significance assessed via independent-samples $t$-tests on the per-example degradations.
++%% [CHANGE: metric] success was described as "ROUGE-L degradation exceeding 10%"; the code thresholds the relative loss increase (stage_6_hotflip_attacks.py)
++Because relative degradation is normalized by each model's own clean loss, we also report the absolute loss increase in nats, which is insensitive to differences in clean loss between models. For UATs we report the relative increase in negative log-likelihood (NLL) and ROUGE changes under the trigger, and analyze cross-model transferability of adversarial triggers.
+ 
++\textbf{Order-preservation diagnostic.}
++%% [CHANGE: new protocol] describes hpc_version/scripts/stage_8_order_preservation.py (T5) and foundation_llm_experiments/scripts/stage_11_order_preservation.py (Pythia)
++To test whether sublayer monotonicity translates into order preservation along the semantic directions that motivate it, we construct a templated corpus of ordered prompt pairs: 13 semantic axes (severity, safety constraints, certainty, urgency, and others, as in Section~\ref{sec:intro}) instantiated on 18 topics as four-level chains, yielding 702 adjacent-level pairs (weaker $\preceq$ stronger), split at the chain level into 507 probe-fitting and 195 disjoint evaluation pairs. For each model and pooling we fit $p=64$ probe directions $A$ on final-layer representations of the fitting split, each row being an $\ell_2$-regularized logistic-regression direction for stronger-versus-weaker fit on a bootstrap resample of the fitting pairs, so that the 64 rows are correlated readouts of one underlying ordering signal rather than 64 distinct axes. For every evaluation pair and every layer we then report the fraction of the $64$ probe coordinates for which $A h_{\mathrm{weak}} \le A h_{\mathrm{strong}}$, with bootstrap confidence intervals, under both mean and last-token pooling. This instrument is fit post hoc and plays no role in training.
++
+ \subsection{Decoder-Only Foundation Model Track}
+ \label{sec:setup-pythia}
+-The T5 experiments above concern an encoder-decoder architecture. To determine whether the monotonicity--robustness relationship generalizes to the decoder-only architectures that dominate contemporary foundation models, we conduct a second experimental track using Pythia-1.4B~\citep{biderman2023pythia}, a 24-layer autoregressive language model from the GPT-NeoX family. Models are fine-tuned and evaluated on the Pile~\citep{gao2020pile} (uncopyrighted subset), and clean performance is measured by \emph{perplexity}—the exponentiated mean negative log-likelihood per token—on a held-out sample, the standard intrinsic quality metric for autoregressive language models.
++The T5 experiments above concern an encoder-decoder architecture. To determine whether the monotonicity--robustness relationship generalizes to the decoder-only architectures that dominate contemporary foundation models, we conduct a second experimental track using Pythia-1.4B~\citep{biderman2023pythia}, a 24-layer autoregressive language model from the GPT-NeoX family. Models are fine-tuned and evaluated on the Pile~\citep{gao2020pile} (uncopyrighted subset), and clean performance is measured by \emph{perplexity}---the exponentiated mean negative log-likelihood per token---on a held-out sample, the standard intrinsic quality metric for autoregressive language models.
+ 
+-Because decoder-only blocks lack the encoder-decoder bottleneck of T5, it is not obvious which sublayers must be constrained for monotonicity to bind. Each GPT-NeoX block contains an attention sublayer with an output projection and a feed-forward (MLP) sublayer with an input projection ($W_{\mathrm{in}} \in \mathbb{R}^{4d \times d}$) and an output projection ($W_{\mathrm{out}} \in \mathbb{R}^{d \times 4d}$). We therefore compare three \emph{constraint scopes}, each applying the softplus reparameterization of Section~\ref{Prelim} directly to the designated weight matrices in all 24 layers (enforcing elementwise nonnegativity, i.e., the coordinatewise order):
++Because decoder-only blocks lack the encoder-decoder bottleneck of T5, it is not obvious which sublayers must be constrained for monotonicity to bind. Each GPT-NeoX block contains an attention sublayer with an output projection and a feed-forward (MLP) sublayer with an input projection ($W_{\mathrm{in}} \in \mathbb{R}^{4d \times d}$) and an output projection ($W_{\mathrm{out}} \in \mathbb{R}^{d \times 4d}$). We therefore compare three \emph{constraint scopes}, each applying the softplus reparameterization of Section~\ref{Prelim} directly to the designated weight matrices in all 24 layers (enforcing elementwise nonnegativity, i.e., the coordinatewise order, with $A = I$ exactly as in the T5 track):
+ \begin{itemize}
+-    \item \textbf{MLP-in}: constrain only $W_{\mathrm{in}}$, the direct analogue of the T5 scheme;
+-    \item \textbf{MLP-both}: constrain both $W_{\mathrm{in}}$ and $W_{\mathrm{out}}$;
++    \item \textbf{MLP-in}: constrain only $W_{\mathrm{in}}$;
++%% [CHANGE: factual] was "the direct analogue of the T5 scheme" — the T5 track constrains both wi and wo
++    \item \textbf{MLP-both}: constrain both $W_{\mathrm{in}}$ and $W_{\mathrm{out}}$, the direct analogue of the T5 scheme;
+     \item \textbf{MLP-in + Attn-out}: constrain $W_{\mathrm{in}}$ and the attention output projection.
+ \end{itemize}
+-After imposing constraints, each model undergoes \emph{recovery training}—fine-tuning on the Pile to re-establish effective representations under the constrained parameterization—with the unconstrained baseline fine-tuned under an identical protocol. Constraint scopes are first screened under a reduced training budget on a single seed; the selected scope is then validated under the full recovery budget (5 epochs baseline, 10 epochs monotonic) across three seeds (42, 1337, 2024). Robustness is assessed with the same attack implementations as the T5 track: HotFlip with $n = 200$ examples and up to 10 token flips, and UATs optimized on 80 texts and evaluated on 120 disjoint texts, with attack effect measured as the relative increase in negative log-likelihood (NLL) under the learned trigger.
++%% [CHANGE: math-rigor] GELU is not non-decreasing; MLP-in and Attn-out scopes are not monotone models in the sense of Section 3
++Two caveats apply. First, the GPT-NeoX MLP uses the GELU activation, which is not globally non-decreasing ($\mathrm{GELU}'(z) = \Phi(z) + z\,\phi(z) < 0$ for $z < -0.752$, with $\min_z \mathrm{GELU}'(z) \approx -0.13$ attained at $z = -\sqrt{2}$), so Proposition~\ref{prop:ffn_mono} does not apply exactly: the constrained Pythia FFNs are nonnegative-weight networks that are monotone up to this small non-monotone region of the activation, whereas the T5 track (ReLU) satisfies the proposition exactly. We retain GELU for compatibility with the pretrained weights and treat the Pythia track as an empirical test of the same weight constraint rather than as an exactly monotone model. Second, only the MLP-both scope constrains every weight matrix of the FFN branch; MLP-in leaves $W_{\mathrm{out}}$ free and is included as an ablation rather than as a monotone model, and the Attn-out scope constrains a matrix outside the FFN.
++After imposing constraints, each model undergoes \emph{recovery training}---fine-tuning on the Pile to re-establish effective representations under the constrained parameterization---with the unconstrained baseline fine-tuned on the same data. %% [CHANGE: protocol] recovery runs differ in learning rate and warmup as well as epochs (experiment_config.py RECOVERY_* vs MONOTONIC_RECOVERY_*); screening budgets stated as run
++The two recovery runs differ in learning rate ($10^{-5}$ for the baseline, $5\times 10^{-5}$ for the monotone model), warmup fraction (10\% versus 20\%), and length (5 versus 10 epochs), the monotone model receiving the larger budget to compensate for its disrupted initialization (Appendix~\ref{app:pythia}). Constraint scopes are first screened on a single seed (MLP-in under the full recovery budget, the two broader scopes under a reduced budget, which is why their baseline entries in Table~\ref{tab:pythia-variants} differ; the scope comparison is therefore indicative rather than budget-matched); the selected scope is then validated under the full recovery budget across three seeds (42, 1337, 2024). %% [CHANGE: protocol] Pythia HotFlip success threshold is 15% (vs 10% on T5); UAT length and search budget stated; A = I clause added above
++\textbf{Attacks.} Robustness is assessed with causal-LM analogues of the T5 attacks (separate implementations that follow the same attack logic but differ in candidate handling and in the loss that is attacked): HotFlip with $n = 200$ examples and up to 10 token flips chosen by an unrestricted argmax over the vocabulary (success threshold 15\%), and ten-token UATs optimized by coordinate ascent with three restarts and 50 iterations on 80 texts and evaluated on 120 disjoint texts, with 20 sampled candidates per position per sweep drawn from a fixed pool of 100 token ids (the lowest-numbered ids of a candidate set comprising vocabulary ids 1000--4999 and a short list of negation and punctuation tokens). %% [CHANGE: protocol] attack implementation details as in foundation_llm_experiments/scripts/stage_5_uat_attacks.py and stage_6_hotflip_attacks.py
++\textbf{Loss convention.} Attack effect is measured as the relative increase in the mean per-token negative log-likelihood (NLL) of the perturbed sequence. %% [CHANGE: rigor] loss definition found by code audit: inserted/substituted tokens are themselves prediction targets
++In this track the loss is the causal-LM loss of the perturbed input itself, so the trigger tokens (and, for the substitution attacks below, the substituted tokens) are among the prediction targets; this differs from the T5 track, where the loss is that of the fixed reference summary given the perturbed source, and it means that part of every reported NLL increase reflects the low likelihood of the inserted tokens themselves rather than their effect on the remaining text. Because both models are scored identically, comparisons between them remain valid, but absolute degradation figures in this track are inflated by this effect.
++%% [CHANGE: new protocol] transfer and gradient-free controls, stage_5b_uat_transfer.py / stage_6b_hotflip_transfer.py
++\textbf{Controls.} To distinguish genuine robustness from gradient masking, we add three controls on the full-budget models. \emph{Substitution transfer} replays the token substitutions found by HotFlip on one model verbatim against the other, yielding the full crafted-on $\times$ evaluated-on matrix (and analogously for UAT triggers, evaluated on 900 held-out texts). A \emph{random-substitution control} applies the same number of substitutions at uniformly random positions with replacement tokens drawn uniformly from the same restricted candidate vocabulary used by the trigger search, involving no model or gradient. A \emph{gradient-free query attack} chooses positions at random and, at each of the 10 positions, keeps whichever of 20 candidate tokens from that vocabulary most increases the target model's own loss (greedy coordinate search on 50 texts, $10\times 20 + 2$ forward passes per example).
+ 
+ \section{Mechanisms of Gradient Attenuation in Monotone Feed-Forward Networks}
+ \label{sec:gradient-attenuation}
+-We provide a mechanistic explanation for the empirical robustness gains observed in monotone Transformer language models. Rather than claiming global robustness guarantees, we analyze how monotonicity constraints alter the local gradient structure of feed-forward sublayers in a way that can reduce the effectiveness of gradient-based adversarial attacks such as HotFlip.
++We propose a candidate mechanism for the empirical robustness gains observed in monotone Transformer language models.
++%% [CHANGE: math-rigor] was "We provide a mechanistic explanation for"; the lemmas below are conditional
++Rather than claiming global robustness guarantees, we analyze how monotonicity constraints alter the local gradient structure of feed-forward sublayers in a way that can reduce the effectiveness of gradient-based adversarial attacks such as HotFlip.
+ 
+-Our analysis is motivated by classical results in the theory of monotone dynamical systems, which show that, under mild boundedness assumptions, trajectories of strongly monotone flows converge to equilibrium points almost surely; in particular, derivatives along these trajectories tend to zero as the system approaches an invariant set~\citep{hirsch1985systems}. While a feed-forward network is not a time-indexed dynamical system in this sense, this perspective suggests that monotonicity can limit the set of active directions along which outputs and gradients vary. We leverage this intuition to inform a local analysis of gradient behavior under monotone perturbations, focusing on how saturation and non-negative weights interact to diminish exploitable gradient directions.
++Our analysis is motivated by classical results in the theory of monotone dynamical systems, which show that, for strongly monotone (cooperative and irreducible) flows, almost every bounded trajectory converges to the set of equilibria~\citep{hirsch1985systems}.
++%% [CHANGE: math-rigor, minor] was "trajectories ... converge to equilibrium points almost surely; in particular, derivatives along these trajectories tend to zero"
++While a feed-forward network is not a time-indexed dynamical system in this sense, and convergence of states says nothing directly about input--output sensitivities, this perspective suggests that monotonicity can limit the set of active directions along which outputs and gradients vary. We leverage this intuition to inform a local analysis of gradient behavior under monotone perturbations, focusing on how saturation and non-negative weights interact to diminish exploitable gradient directions.
+ 
+ Consider an $A$-monotone FFN update
+ \[
+@@ -686,6 +786,15 @@
+ We analyze the Jacobian of $T$ and its implications for gradients with respect to
+ semantic coordinates. (In general, $J_F(h)$ need not be elementwise nonnegative in
+ $\mathbb{R}^d$ due to $A^\dagger$.)
++%% [CHANGE: method-as-implemented, minor] tie the analysis to the A = I instantiation that was trained
++In our experiments $A = I$, so $s = \mathrm{LN}(h)$ is the input of the FFN branch of
++Remark~\ref{rem:preln} and $g$ is the branch itself. Because the block is
++pre-normalized, the residual adds $h$ rather than $s$, so $T$ is not literally the
++sublayer map $h \mapsto F(h) = h + g(\mathrm{LN}(h))$, whose Jacobian is
++$I_d + J_g(\mathrm{LN}(h))\,J_{\mathrm{LN}}(h)$; for the trained models the chain-rule
++decomposition below therefore holds with the correction term multiplied on the left by
++the unconstrained factor $J_{\mathrm{LN}}(h)^{\top}$. All statements that follow concern
++the branch factor $J_g$ and are unaffected by this factor.
+ 
+ % \subsection{Preliminaries}
+ 
+@@ -705,40 +814,68 @@
+ 
+ \begin{lemma}[Non-negativity of the Semantic Jacobian]
+ \label{lem:jacobian-nonneg}
+-If $g$ is implemented as an MLP with elementwise non-decreasing activations and
+-elementwise nonnegative weight matrices, then the Jacobian
++Let $g$ be an MLP with elementwise non-decreasing activation $\sigma$ and
++elementwise nonnegative weight matrices. At every $s \in \mathbb{R}^p$ at which $g$
++is differentiable (all $s$ if $\sigma$ is continuously differentiable;
++Lebesgue-almost every $s$ for ReLU), the Jacobian
+ \[
+-J_T(s) = \nabla_s T(s)
++J_T(s) = \partial T(s)/\partial s = I + J_g(s)
+ \]
+-has non-negative entries for all $s \in \mathbb{R}^p$.
++has non-negative entries. The same holds for every element of the Clarke
++generalized Jacobian of $T$ (for locally Lipschitz $\sigma$), and likewise for the
++matrix returned by reverse-mode automatic differentiation under any nonnegative
++convention for $\sigma'$ at kinks.
+ \end{lemma}
++%% [CHANGE: math-rigor, minor] previous statement quantified over all s (undefined at ReLU kinks) and was proved only for two layers
+ 
+ This follows from $T(s)=s+g(s)$ and the factorization of the MLP Jacobian. For a
+ two-layer $g(s)=W_2\sigma(W_1 s + b_1)+b_2$ with $W_1,W_2\ge 0$ elementwise,
+ \[
+ J_g(s)=W_2\,\mathrm{diag}(\sigma'(W_1 s+b_1))\,W_1 \ge 0 \quad (\text{elementwise}),
+ \]
+-hence $J_T(s)=I + J_g(s)\ge 0$ elementwise.
++hence $J_T(s)=I + J_g(s)\ge 0$ elementwise; for deeper $g$ the Jacobian is a product
++of elementwise nonnegative matrices (Appendix~\ref{prf:jac}). %% [CHANGE: math-rigor, minor] general depth noted
+ Intuitively, increasing any semantic coordinate cannot decrease any output semantic
+ coordinate through $T$; sign cancellations are ruled out \emph{within semantic space}.
+ 
+-Let $\mathcal{L}:\mathbb{R}^p\to\mathbb{R}$ be any differentiable scalar objective
+-defined on semantic coordinates (e.g., $\mathcal{L}(s')$ induced by the rest of the
+-network through $s'=Ah'$). By the chain rule,
++%% [CHANGE: math-rigor] the downstream loss is a function of the sublayer output h' in R^d, not of s' = Ah' alone; the chain rule below is the correct decomposition
++Let $\ell:\mathbb{R}^d\to\mathbb{R}$ be the differentiable objective induced by the
++rest of the network on the sublayer output $h' = F(h)$. Since
++$J_F(h) = I_d + A^\dagger J_g(Ah)\, A$, the chain rule gives
+ \[
+-\nabla_s \mathcal{L}(T(s)) = J_T(s)^\top \nabla_{s'} \mathcal{L}(s')\big|_{s'=T(s)}.
++\nabla_h\, \ell(F(h)) \;=\; \nabla \ell(h') \;+\; A^{\top} J_g(Ah)^{\top} (A^\dagger)^{\top} \nabla \ell(h').
+ \]
+-Thus the backpropagated gradient in semantic space is filtered by $J_T(s)^\top$,
+-whose entries are nonnegative under Lemma~\ref{lem:jacobian-nonneg}.
++The first term is the residual path and is unaffected by the constraint; the second
++is a correction of rank at most $p$ that acts, through $J_g^\top$, on the downstream
++gradient expressed in semantic coordinates, $v := (A^\dagger)^{\top}\nabla \ell(h')
++\in \mathbb{R}^p$. For brevity we write $\nabla_{s'}\mathcal{L} := v$; the
++semantic-space gradient on which the constraint acts is then
++\[
++\nabla_s \mathcal{L}(T(s)) \;:=\; J_T(s)^\top \nabla_{s'} \mathcal{L}
++\;=\; \nabla_{s'}\mathcal{L} + J_g(s)^\top \nabla_{s'}\mathcal{L}.
++\]
++Thus the backpropagated gradient in semantic space equals the residual-path gradient
++plus an additive correction whose matrix has nonnegative entries under
++Lemma~\ref{lem:jacobian-nonneg}. Nonnegativity rules out sign cancellation inside
++this correction; it does not by itself reduce its magnitude (indeed $J_T \ge I$
++elementwise). All statements below concern this correction term.
+ 
+ 
+ \subsection{Saturation-Induced Gradient Attenuation}
+-We now examine how saturation in monotone networks affects gradient magnitude.
++We now examine how saturation in monotone networks affects gradient magnitude. The idea is simple: a hidden unit whose activation is flat at its current pre-activation contributes nothing to the gradient that flows through it, so the more units sit in such a flat regime, the fewer directions an attacker can exploit. The assumption below fixes what ``flat'' means for the activations we use, and the lemma quantifies the contribution of nearly flat units.
++%% [CHANGE: clarity] intuition sentence added
+ \begin{assumption}[Saturating Activations]
+ \label{ass:saturation}
+-The activation $\sigma$ used inside $g$ has bounded derivative and admits saturated
+-regimes, i.e., $\sigma'(z)$ becomes arbitrarily small as $z\to +\infty$.
++The activation $\sigma$ used inside $g$ has bounded derivative and admits a
++saturated regime in the negative direction: $|\sigma'(z)| \to 0$ as $z\to -\infty$,
++and $|\sigma'|$ is non-decreasing on some tail $(-\infty, z^\ast]$. This holds exactly
++for ReLU, used by T5-small ($\sigma'(z) = 0$ for all $z < 0$, with $z^\ast = 0$), and
++for the softplus and logistic activations (with any $z^\ast \le 0$); GELU, used by Pythia,
++satisfies it with $z^\ast = -\sqrt{2}$. ReLU, softplus, and GELU do not saturate in the positive direction, where
++$\sigma'(z) \to 1$; the logistic activation saturates on both tails, but only
++negative-tail saturation is used below.
+ \end{assumption}
++%% [CHANGE: math-rigor] previous assumption required sigma'(z) -> 0 as z -> +infinity, which is false for ReLU, GELU and softplus (all saturate as z -> -infinity)
+ 
+ 
+ % \begin{assumption}[Saturating Activations]
+@@ -752,20 +889,49 @@
+ 
+ \begin{lemma}[Gradient Attenuation under Saturation]
+ \label{lem:gradient-attenuation}
+-Let $T(s)=s+g(s)$ where $g$ is an MLP with elementwise nonnegative weights and
+-activation $\sigma$ satisfying Assumption~\ref{ass:saturation}. Suppose that along
+-a sequence $\{s_k\}$, a non-empty subset of pre-activations in $g$ diverges to
+-$+\infty$, so that the corresponding entries of $\sigma'$ converge to $0$.
+-Then the contribution of those saturated units to $J_g(s_k)$ vanishes, and hence
+-their contribution to $\nabla_s \mathcal{L}(T(s_k)) = J_T(s_k)^\top \nabla_{s'}\mathcal{L}$
+-vanishes asymptotically.
++Let $T(s)=s+g(s)$ with $g(s)=W_2\sigma(W_1 s+b_1)+b_2$, $W_1\in\mathbb{R}^{m\times p}$
++and $W_2\in\mathbb{R}^{p\times m}$ elementwise nonnegative, and write
++$z_j(s) := (W_1 s + b_1)_j$. Wherever $\sigma$ is differentiable at $z(s)$,
++\[
++J_g(s) = \sum_{j=1}^{m} \sigma'(z_j(s))\, W_2[:,j]\, W_1[j,:],
++\]
++so that each hidden unit contributes a rank-one term to $J_g$ weighted by its
++derivative. Let $S \subseteq \{1,\dots,m\}$ be a set of units with
++$\max_{j\in S} |\sigma'(z_j(s))| \le \varepsilon$, and suppose
++$\|\nabla_{s'}\mathcal{L}\|_2 \le G$. Then
++\[
++\Big\| \nabla_s \mathcal{L}(T(s)) - \Big( I + \sum_{j\notin S} \sigma'(z_j(s))\, W_2[:,j]\, W_1[j,:] \Big)^{\!\top} \nabla_{s'}\mathcal{L} \Big\|_2
++\;\le\; \varepsilon\, G \sum_{j\in S} \|W_2[:,j]\|_2\, \|W_1[j,:]\|_2 .
++\]
++In particular, if $\sigma$ satisfies Assumption~\ref{ass:saturation}, then along any
++sequence $\{s_k\}$ on which the pre-activations of the units in $S$ diverge to
++$-\infty$ while $\nabla_{s'}\mathcal{L}$ remains bounded,
++the contribution of those units to $J_g(s_k)$, and hence to
++$\nabla_s \mathcal{L}(T(s_k))$, vanishes.
+ \end{lemma}
++%% [CHANGE: math-rigor] previous statement had no proof (its pointer resolved to the proof of the Jacobian lemma), left "contribution of a unit" undefined, required divergence to +infinity, and omitted the boundedness hypothesis on the downstream gradient
+ 
+ 
+-Proof is deferred to Appendix~\ref{prf:jac}.
++Proof is deferred to Appendix~\ref{prf:atten}.
+ 
+-This result shows that monotonicity, when combined with activation saturation,
+-can locally attenuate gradient magnitude without eliminating all gradient signal.
++This result shows that activation saturation can locally suppress the feed-forward
++branch's own contribution $J_g^\top\nabla_{s'}\mathcal{L}$ to the backpropagated
++gradient, driving the sublayer Jacobian toward the identity of the residual path,
++without eliminating all gradient signal. Nonnegativity of the weights is not needed
++for the bound itself; its role is to prevent cancellation among the remaining active
++units (Lemma~\ref{lem:jacobian-nonneg}). Because of this, the suppression is a
++genuine attenuation whenever the downstream gradient is sign-coherent: if
++$\sigma' \ge 0$ and $\nabla_{s'}\mathcal{L} \ge 0$ (or $\le 0$) elementwise, every
++coordinate of $\nabla_{s'}\mathcal{L} + J_g^\top\nabla_{s'}\mathcal{L}$ is
++non-decreasing in absolute value in each $\sigma'(z_j)$, so saturating units can
++only shrink $\|\nabla_s\mathcal{L}(T(s))\|$ toward $\|\nabla_{s'}\mathcal{L}\|$.
++The condition $\sigma' \ge 0$ holds everywhere for ReLU, but for GELU it fails
++precisely on the saturated tail ($\mathrm{GELU}'(z) < 0$ for $z < -0.752$), so this
++monotone-attenuation reading applies to the T5 track, while for the Pythia track only
++the norm bound of Lemma~\ref{lem:gradient-attenuation} is available. For mixed-sign
++downstream gradients, removing a unit's contribution can increase the norm, and the
++lemma should be read as a statement about the feed-forward term alone.
++%% [CHANGE: math-rigor] previous text claimed attenuation of gradient magnitude, which the lemma does not establish (J_T >= I elementwise; counterexample with mixed-sign downstream gradient)
+ 
+ 
+ \subsection{Persistence of Saturation Effects}
+@@ -775,26 +941,57 @@
+ 
+ \begin{lemma}[Persistence of Saturated Units]
+ \label{lem:persistence}
+-Let $s \le s'$ and consider any first-layer pre-activation $z(s)= (W_1 s + b_1)_j$
+-within $g$, with $W_1\ge 0$ elementwise. If unit $j$ is saturated at $s'$, i.e.,
+-$\sigma'(z(s'))=0$, then for any monotone semantic perturbation $\delta\ge 0$,
+-the unit remains saturated at $s'+\delta$.
++Let $\sigma$ satisfy Assumption~\ref{ass:saturation} with tail threshold $z^\ast$,
++and consider any first-layer pre-activation $z_j(s)= (W_1 s + b_1)_j$ within $g$,
++with $W_1\ge 0$ elementwise. For $\varepsilon \ge 0$, call unit $j$
++\emph{$\varepsilon$-saturated} at $s$ if $z_j(s) \le z^\ast$ and
++$|\sigma'(z_j(s))| \le \varepsilon$ (for ReLU, with the convention $\sigma'(0)=0$,
++$0$-saturated means $z_j(s) \le 0$). If unit $j$ is $\varepsilon$-saturated at $s'$,
++then for any monotone semantic perturbation $\delta \le 0$, i.e., for any
++$s' + \delta \le s'$ in the product order on $\mathbb{R}^p$, the unit remains
++$\varepsilon$-saturated at $s'+\delta$.
+ \end{lemma}
++%% [CHANGE: math-rigor] previous statement asserted persistence under delta >= 0 with sigma' = 0 exactly; false for ReLU (a monotone increase can re-activate a dead unit) and vacuous for smooth activations (sigma' is never exactly 0)
+ 
+ 
+ Proof is deferred to Appendix~\ref{prf:persis}.
+ 
+ Importantly, this lemma applies to individual hidden units rather than to the
+ entire input gradient, and does not preclude other units from becoming active.
++%% [CHANGE: math-rigor] direction of persistence stated explicitly, matching the corrected Lemma persistence
++Its
++direction is set by the activation: for the activations used here, saturation is
++preserved under monotone decreases of the semantic coordinates, whereas a monotone
++increase can re-activate a saturated unit.
+ \subsection{Implications for Gradient-Based Attacks}
+ 
+ Gradient-based adversarial attacks such as HotFlip rely on persistent,
+ high-magnitude gradients with respect to token embeddings to identify impactful
+-discrete perturbations. The preceding analysis suggests that monotonicity
+-constraints can reduce the availability of such gradients by driving subsets of
+-hidden units into saturated regimes from which they do not recover under monotone
+-increases in internal representations.
++discrete perturbations. The preceding analysis is conditional: it does not show
++that the constraint \emph{produces} saturation, and whether training under
++nonnegativity places pre-activations of $g$ in saturated regimes is an empirical
++question that we do not test here. What it shows is that, \emph{if} hidden units
++of $g$ are saturated, their contribution to the semantic gradient is small
++(Lemma~\ref{lem:gradient-attenuation}), that this state is stable under monotone
++decreases of the semantic coordinates (Lemma~\ref{lem:persistence}), and that the
++contributions of the remaining active units cannot cancel one another
++(Lemma~\ref{lem:jacobian-nonneg}; this last property requires $\sigma' \ge 0$ and
++therefore holds exactly for the ReLU FFNs of the T5 track and only up to the small
++negative-derivative region of GELU for the Pythia track). Together these properties
++reduce the number and the variability of the directions through which a
++gradient-based attacker can move the sublayer output.
++%% [CHANGE: math-rigor] previous text: "monotonicity constraints can reduce the availability of such gradients by driving subsets of hidden units into saturated regimes from which they do not recover under monotone increases" — not established by the lemmas, and directionally reversed for ReLU/GELU
+ 
++%% [CHANGE: math-rigor] new scope paragraph: the lemmas concern one FFN branch; HotFlip's token-embedding gradient also flows through unconstrained residual/attention/normalization paths
++\textbf{Scope.} The analysis concerns the feed-forward branch of a single sublayer.
++The gradient with respect to token embeddings that HotFlip uses is a product of
++Jacobians across all sublayers, in which the residual identity, attention, and
++normalization paths are unconstrained; even if every feed-forward correction term
++vanished, this product would reduce to that of the unconstrained paths. The
++mechanism is therefore local, and the controls of Section~\ref{sec:results-pythia}
++(random and gradient-free attacks) are needed to establish that the observed
++robustness is not an artifact of gradient-based optimization.
++
+ While monotone feed-forward networks are not dynamical systems in the formal
+ sense, their behavior is reminiscent of classical results in monotone dynamical
+ systems, where cooperative interactions restrict the effective directions along
+@@ -808,33 +1005,33 @@
+ 
+ \section{Results}
+ \label{sec:results}
+-We evaluate the impact of monotonicity constraints on both task performance and adversarial robustness. We first analyze optimization behavior and summarization quality on the encoder-decoder (T5) track to assess potential performance degradation, and then evaluate robustness under targeted adversarial attacks. We conclude with the decoder-only foundation model track (Section~\ref{sec:results-pythia}), which tests whether the robustness benefit transfers across architectures. Together, these experiments assess whether monotonicity serves as a practical inductive bias for improving robustness without sacrificing model utility.
++We evaluate the impact of monotonicity constraints on both task performance and adversarial robustness. We first analyze optimization behavior and summarization quality on the encoder-decoder (T5) track to assess potential performance degradation, and then evaluate robustness under targeted adversarial attacks. We next test whether the sublayer constraint yields order preservation along semantic directions end to end (Section~\ref{sec:results-order}), and conclude with the decoder-only foundation model track (Section~\ref{sec:results-pythia}), which tests whether the robustness benefit transfers across architectures and adds gradient-free controls. Together, these experiments assess whether monotonicity serves as a practical inductive bias for improving robustness without sacrificing model utility.
+ 
+ 
+ \subsection{Training Dynamics and Summarization Quality}
+ 
+-We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models from our experiments. The baseline model refers to a T5-small checkpoint fine-tuned under identical settings as the monotonic model but without monotonicity constraints, while the standard model denotes the pretrained T5-small without additional fine-tuning. The monotonic model starts with a substantially higher initial loss (4.97 vs.\ 2.94), reflecting the impact of the softplus reparameterization and the constrained semantic-space parameterization of $g$. This initialization disrupts the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
++%% [CHANGE: results + method-as-implemented] five-seed numbers; initial-loss explanation now describes the |W_pre| initialization; "slightly reduces expressivity" -> "reduces clean performance"; attribution sentence added (single-seed ablation, Appendix app:ablation)
++We begin by analyzing the effect of monotonicity constraints on optimization behavior and summarization quality. Table~\ref{tab:training} summarizes the training dynamics of the baseline and monotonic models across five training seeds (42, 1337, 2024, 8888, 12345). The baseline model refers to a T5-small checkpoint fine-tuned under identical settings as the monotonic model but without monotonicity constraints, while the standard model denotes the pretrained T5-small without additional fine-tuning. The monotonic model starts with a substantially higher initial loss (4.99 vs.\ 2.94), reflecting the impact of the softplus reparameterization and of replacing the pretrained FFN weights by their magnitudes. This initialization disrupts the original weight geometry, requiring the model to re-establish effective internal representations during fine-tuning.
+ 
+-Despite this unfavorable initialization, the monotonic model converges reliably during training. Validation loss decreases from 2.92 at epoch 1 to 2.54 at epoch 7, indicating stable optimization under the imposed constraints. The model exhibits rapid initial recovery, reducing training loss by 1.92 points in the first two epochs (from 4.97 to 3.05), followed by slower asymptotic convergence with diminishing returns in later epochs. A persistent optimization gap of 0.32 points remains at convergence (2.54 vs.\ 2.21 for baseline), consistent with the reduced expressivity of the constrained parameter space. This gap reflects a deliberate and predictable
+-quality--robustness trade-off. Although the constrained
+-parameterization slightly reduces expressivity, the resulting
+-loss in summarization quality is modest relative to the
+-substantial improvements in adversarial robustness presented
+-below.
++Despite this unfavorable initialization, the monotonic model converges reliably during training, and its trajectory is essentially identical across seeds (standard deviations of at most 0.02 in training loss and 0.01 in validation loss at every epoch). Validation loss decreases from 2.92 at epoch 1 to 2.51 at epoch 7, indicating stable optimization under the imposed constraints. The model exhibits rapid initial recovery, reducing training loss by 1.94 points in the first two epochs (from 4.99 to 3.05), followed by slower asymptotic convergence with diminishing returns in later epochs. A persistent gap of 0.30 points in validation loss remains at convergence (2.51 vs.\ 2.21 for baseline). The attribution ablation in Appendix~\ref{app:ablation} indicates that this gap is driven by the loss of the pretrained sign pattern at initialization rather than by the nonnegativity constraint itself: an unconstrained model initialized at $|W_{\mathrm{pre}}|$ converges to the same validation loss as the monotone model, whereas a sign-preserving softplus reparameterization converges to within about 0.06 of the baseline. Because nonnegative weights cannot retain the pretrained sign pattern, this
++initialization cost is an unavoidable consequence of imposing the constraint on a
++pretrained model, and we treat it as the price of the quality--robustness trade-off:
++the resulting loss in summarization quality is modest relative to the substantial
++improvements in adversarial robustness presented below.
+ 
+ 
+ \begin{table}[t]
+-\caption{Training dynamics comparison (seed = 42).}
++\caption{Training dynamics (mean $\pm$ s.d.\ over five training seeds; both models are trained for 7 epochs).}
+ \label{tab:training}
+ \vskip 0.1in
+ \begin{center}
+ \begin{small}
+ \begin{tabular}{lcccc}
+ \toprule
+-Model & Initial Loss & Final Loss & $\Delta$ Loss & Epochs \\
++Model & Train loss (ep.\ 1) & Train loss (ep.\ 7) & Val.\ loss (ep.\ 1) & Val.\ loss (ep.\ 7) \\
+ \midrule
+-Baseline  & 2.94 & 2.21 & $-$0.73 & 6 \\
+-Monotonic & 4.97 & 2.54 & $-$2.43 & 7 \\
++Baseline  & $2.94 \pm 0.00$ & $2.40 \pm 0.00$ & $2.43 \pm 0.00$ & $2.21 \pm 0.00$ \\
++Monotonic & $4.99 \pm 0.02$ & $2.73 \pm 0.00$ & $2.92 \pm 0.01$ & $2.51 \pm 0.00$ \\
+ \bottomrule
+ \end{tabular}
+ \end{small}
+@@ -842,12 +1039,12 @@
+ \vskip -0.1in
+ \end{table}
+ 
+-Table~\ref{tab:rouge} reports summarization performance on CNN/DailyMail (n=200, seed 42). The monotonic model achieves a ROUGE-L score of 24.2 [22.7, 25.6], compared to 25.0 [23.6, 26.4] for the baseline, corresponding to a relative decrease of 3.2 percent. ROUGE-1 exhibits a similar trend (29.6 [28.0, 31.1] vs 30.9 [29.4, 32.4], a 4.2 percent decrease). While these results indicate a modest reduction in task performance, the monotonic model remains competitive, with confidence intervals showing substantial overlap across all metrics.
++Table~\ref{tab:rouge} reports summarization performance on the full CNN/DailyMail test set (11{,}490 articles), averaged over the five training seeds. The monotonic model achieves a ROUGE-L score of $31.5 \pm 0.2$, compared to $33.2 \pm 0.1$ for the baseline, corresponding to a relative decrease of 4.9 percent. ROUGE-1 exhibits a similar trend ($37.9 \pm 0.2$ vs $39.8 \pm 0.1$, a 5.0 percent decrease), and ROUGE-2 a somewhat larger one ($15.2 \pm 0.2$ vs $16.9 \pm 0.0$, 10.0 percent). With full test sets the per-example paired $t$-tests are highly significant on every metric and seed (Bonferroni-corrected $p < 10^{-57}$), but the effect sizes are small (Cohen's $d$ between 0.15 and 0.24 across seeds and metrics): the cost of monotonicity is systematic and reproducible across seeds, yet modest in magnitude, and the monotonic model remains competitive.
+ 
+-To assess generalization, we additionally evaluate on XSUM (n=200, seed 42). Table~\ref{tab:xsum} shows consistent results: the monotonic model achieves ROUGE-L of 12.9 [12.3, 13.6] compared to 13.3 [12.6, 13.9] for baseline, a similar 3.0 percent relative gap. The consistency of the performance trade-off across distinct summarization datasets (news articles in CNN/DM, single-sentence summaries in XSUM) suggests that the cost of monotonicity constraints is stable and predictable across different data distributions.
++To assess generalization, we additionally evaluate on the full XSUM test set (11{,}333 articles). Table~\ref{tab:xsum} shows consistent results: the monotonic model achieves ROUGE-L of $12.8 \pm 0.0$ compared to $13.1 \pm 0.0$ for baseline, a 2.1 percent relative gap (ROUGE-1: $19.3 \pm 0.1$ vs $20.1 \pm 0.0$, 3.7 percent; Bonferroni-corrected $p < 1.4 \times 10^{-6}$, Cohen's $d \le 0.14$). The consistency of the performance trade-off across distinct summarization datasets (news articles in CNN/DM, single-sentence summaries in XSUM) suggests that the cost of monotonicity constraints is stable and predictable across different data distributions.
+ 
+ \begin{table}[t]
+-\caption{Summarization quality on CNN/DailyMail (n = 200, seed = 42). Values are means with 95\% bootstrap confidence intervals.}
++\caption{Summarization quality on the full CNN/DailyMail test set ($n = 11{,}490$). Values are ROUGE F$_1$ $\times 100$, mean $\pm$ s.d.\ over five training seeds; within-seed 95\% bootstrap confidence intervals are narrower than $\pm 0.25$ points. ROUGE-L is the summary-level variant. The standard model is not fine-tuned and is therefore identical across seeds.}
+ \label{tab:rouge}
+ \vskip 0.1in
+ \centering
+@@ -856,9 +1053,9 @@
+ \toprule
+ Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
+ \midrule
+-Standard  & 32.6 [30.9, 34.2] & 11.9 [10.5, 13.4] & 26.6 [25.0, 28.1] \\
+-Baseline  & 30.9 [29.4, 32.4] & 11.5 [10.1, 12.8] & 25.0 [23.6, 26.4] \\
+-Monotonic & 29.6 [28.0, 31.1] & 10.6 [9.2, 11.9] & 24.2 [22.7, 25.6] \\
++Standard  & 38.6 & 17.1 & 33.2 \\
++Baseline  & $39.8 \pm 0.1$ & $16.9 \pm 0.0$ & $33.2 \pm 0.1$ \\
++Monotonic & $37.9 \pm 0.2$ & $15.2 \pm 0.2$ & $31.5 \pm 0.2$ \\
+ \bottomrule
+ \end{tabular}
+ }
+@@ -866,7 +1063,7 @@
+ \end{table}
+ 
+ \begin{table}[t]
+-\caption{Summarization quality on XSUM (n = 200, seed = 42). Values are means with 95\% bootstrap confidence intervals.}
++\caption{Summarization quality on the full XSUM test set ($n = 11{,}333$). Values are ROUGE F$_1$ $\times 100$, mean $\pm$ s.d.\ over five training seeds.}
+ \label{tab:xsum}
+ \vskip 0.1in
+ \centering
+@@ -875,18 +1072,19 @@
+ \toprule
+ Model & ROUGE-1 & ROUGE-2 & ROUGE-L \\
+ \midrule
+-Standard  & 19.9 [18.8, 21.1] & 2.9 [2.3, 3.4] & 13.3 [12.6, 14.1] \\
+-Baseline  & 20.0 [19.0, 21.0] & 3.2 [2.7, 3.7] & 13.3 [12.6, 13.9] \\
+-Monotonic & 18.9 [18.0, 19.7] & 2.8 [2.3, 3.2] & 12.9 [12.3, 13.6] \\
++Standard  & 20.1 & 2.9 & 13.5 \\
++Baseline  & $20.1 \pm 0.0$ & $3.1 \pm 0.0$ & $13.1 \pm 0.0$ \\
++Monotonic & $19.3 \pm 0.1$ & $2.9 \pm 0.0$ & $12.8 \pm 0.0$ \\
+ \bottomrule
+ \end{tabular}
+ }
+ \vskip -0.1in
+ \end{table}
+ 
+-The training dynamics exhibit a characteristic pattern of monotone-constrained optimization. During the first two epochs, the monotonic model rapidly recovers much of the performance gap introduced by constrained initialization, reducing training loss by 1.92 points (from 4.97 to 3.05). Subsequent epochs yield diminishing returns, with only 0.36 points of additional improvement from epochs 3 through 7. This behavior highlights the importance of the extended warmup phase (15 percent vs 10 percent for baseline), which stabilizes gradient estimates and enables effective learning despite the constrained parameter space.
++%% [CHANGE: clarity] the first three sentences duplicated the paragraph above; the warmup claim was not tested
++The monotonic model uses an extended warmup phase (15 percent of steps vs.\ 10 percent for the baseline), intended to stabilize early optimization under the constrained parameterization; we did not ablate this choice.
+ 
+-Analysis of generation behavior reveals that both fine-tuned models produce longer outputs than the pretrained T5 model (mean lengths 74 to 76 tokens vs 57 tokens), reflecting adaptation to the distributional properties of the summarization training data. The monotonic model exhibits slightly higher length variance (std 11.3 tokens) compared to the standard model (std 12.0 tokens), though this difference is minimal. Importantly, the brevity penalty for the monotonic model (1.00) indicates that output length is well-calibrated to reference summary length, suggesting the constraints do not introduce systematic length bias.
++Analysis of generation behavior reveals that both fine-tuned models produce longer outputs on CNN/DailyMail than the pretrained T5 model (mean lengths of 75.4 tokens for the baseline and 74.9 for the monotonic model vs.\ 62.3 for the standard model, against a mean reference length of 78.3 tokens; five-seed means), reflecting adaptation to the distributional properties of the summarization training data. The monotonic model exhibits somewhat higher length variance (s.d.\ 9.5 tokens) than the baseline (6.6 tokens), though both are below that of the standard model (12.0 tokens). Importantly, the brevity penalty of the monotonic model (0.955) is close to that of the baseline (0.962), indicating that output length is well-calibrated to reference summary length and that the constraints do not introduce systematic length bias.
+ 
+ \subsection{Adversarial Robustness}
+ 
+@@ -894,15 +1092,16 @@
+ \textbf{HotFlip Attacks.}
+ We evaluate gradient-based robustness using HotFlip attacks, which identify vulnerable input positions via gradients with respect to token embeddings and perform targeted token substitutions to maximize loss. For each example, the attack computes gradients of the cross-entropy loss, selects the five positions with largest gradient magnitudes, and replaces tokens at those positions with vocabulary items that maximize the dot product between the gradient and the replacement embedding.
+ 
+-Robustness is quantified using three complementary metrics: average degradation, the mean relative loss increase under attack; attack success rate, the fraction of examples for which degradation exceeds 10\%; and mean loss increase, the average absolute loss increase.
++We report the three metrics defined in Section~\ref{sec:setup-attacks}: average degradation, attack success rate, and the mean absolute loss increase ($\Delta$Loss).
+ 
+ 
+-Table~\ref{tab:hotflip} reports results on 100 test examples from seed 42. To verify robustness consistency, we repeated the HotFlip evaluation using the same checkpoints with two additional random seeds (1337, 2024) for attack sampling variability. Results were identical across all three seeds, confirming that the observed robustness improvements are stable. The monotonic model demonstrates improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 5.2 percent, compared to 16.2 percent for the fine-tuned baseline and 21.3 percent for the standard pretrained model. Attack success rates follow a similar pattern, with only 19 percent of attacks succeeding against the monotonic model, compared to 63 percent for the baseline and 69 percent for the standard model. This corresponds to a 69.8 percent relative reduction in attack success rate (63 percent to 19 percent) and a 67.9 percent reduction in average degradation (16.2 percent to 5.2 percent). Paired $t$-tests confirm that the difference between the baseline and monotonic models is highly significant ($t {= }6.17$, $p = 3.8 {\times} 10^{-9}$), with an even larger effect relative to the standard model ($t {=} 7.45$, $p {=} 2.8{ \times} 10^{-12}$).
++Table~\ref{tab:hotflip} reports results on 200 held-out CNN/DailyMail test examples for the checkpoints of training seed 2024. An earlier evaluation of the seed-42 checkpoints on 100 examples gave the same picture (average degradation 5.2 percent for the monotonic model versus 16.2 and 21.3 percent for the baseline and standard models; success rates 19, 63 and 69 percent), so the effect is stable across independently trained models and evaluation subsets. The monotonic model demonstrates improved robustness relative to both baselines. Under HotFlip perturbations, the monotonic model incurs an average degradation of 4.9 percent, compared to 15.1 percent for the fine-tuned baseline and 19.9 percent for the standard pretrained model. Attack success rates follow a similar pattern, with only 17.0 percent of attacks succeeding against the monotonic model, compared to 59.5 percent for the baseline and 68.5 percent for the standard model. This corresponds to a 71 percent relative reduction in attack success rate (59.5 percent to 17.0 percent) and a 67 percent reduction in average degradation (15.1 percent to 4.9 percent). Because relative degradation is normalized by each model's own clean loss, and the monotonic model's clean loss is higher (3.39 vs.\ 2.77 nats for the baseline), we also report the absolute loss increase: 0.14 nats for the monotonic model versus 0.35 for the baseline and 0.40 for the standard model, so the gap is not an artifact of normalization. %% [CHANGE: metric] test named as implemented (scipy ttest_ind on per-example degradations); was "Paired t-tests"
++Independent-samples $t$-tests on the per-example degradations confirm that the difference between the baseline and monotonic models is highly significant ($t {= }9.04$, $p = 6.9 {\times} 10^{-18}$), with an even larger effect relative to the standard model ($t {=} 10.49$, $p {=} 6.5{ \times} 10^{-23}$).
+ 
+ 
+ 
+ \begin{table}[t]
+-\caption{HotFlip attack results on CNN/DailyMail (n = 100, seed = 42).}
++\caption{HotFlip attack results on CNN/DailyMail ($n = 200$ held-out examples, five flips, training seed 2024). Avg.\ Deg.\ is the mean relative loss increase; Success Rate is the fraction of examples with degradation above 10\%; $\Delta$Loss is the mean absolute loss increase in nats.}
+ \label{tab:hotflip}
+ \vskip 0.1in
+ \begin{center}
+@@ -911,9 +1110,9 @@
+ \toprule
+ Model & Avg. Deg. & Success Rate & $\Delta$Loss \\
+ \midrule
+-Standard  & 21.3\% & 69\% & +0.42 \\
+-Baseline  & 16.2\% & 63\% & +0.35 \\
+-Monotonic &  5.2\% & 19\% & +0.14 \\
++Standard  & 19.9\% & 68.5\% & +0.40 \\
++Baseline  & 15.1\% & 59.5\% & +0.35 \\
++Monotonic &  4.9\% & 17.0\% & +0.14 \\
+ \bottomrule
+ \end{tabular}
+ \end{small}
+@@ -921,22 +1120,39 @@
+ \vskip -0.1in
+ \end{table}
+ 
+-Overall, enforcing monotonicity in the FFN sublayers yields a 69.8 percent relative reduction in attack success rate (from 63 percent to 19 percent) and a 67.8 percent reduction in average degradation (from 16.1 percent to 5.2 percent), without requiring adversarial training, modified training objectives, or architectural changes beyond the FFN constraints. The effect size is large (Cohen's $d > 0.8$) and the statistical significance is robust ($p < 10^{-9}$). These results demonstrate that structural constraints alone—applied selectively to feed-forward sublayers—can substantially improve robustness to gradient-based adversarial manipulation, providing evidence for monotonicity as a practical architectural inductive bias for building more robust language models.
++Overall, enforcing monotonicity in the FFN sublayers reduces both the attack success rate and the average degradation by roughly two thirds, without requiring adversarial training, modified training objectives, or architectural changes beyond the FFN constraints. The effect size is large (Cohen's $d = 0.91$) and the statistical significance is robust ($p < 10^{-17}$). These results demonstrate that structural constraints alone---applied selectively to feed-forward sublayers---can substantially improve robustness to gradient-based adversarial manipulation, providing evidence for monotonicity as a practical architectural inductive bias for building more robust language models.
+ 
+ %\textbf{Universal Adversarial Trigger Attacks.}
+ \textbf{Universal Adversarial Trigger Attacks.}
+-We evaluate robustness to universal adversarial triggers (UATs), input-agnostic token sequences optimized to maximize model loss when prepended to any input. Triggers are learned via coordinate ascent with 3 restarts and 50 iterations over 80 training examples, then evaluated on 120 disjoint test examples. Robustness is measured via NLL increase under trigger prepending. UAT attacks prove minimally effective across all models, with NLL increases below 1 percent. The monotonic model exhibits the smallest degradation (0.73 percent NLL increase), compared to 0.89 percent for the baseline and 0.97 percent for standard T5. While this ordering is consistent with improved robustness, the effect sizes are too small to draw strong conclusions. The weak effectiveness of universal triggers, in contrast to the impact of input-specific HotFlip attacks, suggests that input-agnostic perturbations are limited for attacking sequence-to-sequence models, and that monotonicity’s robustness benefits are most pronounced against adaptive, gradient-based attacks.
++We evaluate robustness to universal adversarial triggers (UATs), input-agnostic token sequences optimized to maximize model loss when prepended to any input. Five-token triggers are learned via coordinate ascent with 5 restarts and 100 iterations over 1{,}000 held-out CNN/DailyMail validation examples, then evaluated on 1{,}500 disjoint test examples, for four of the five training seeds (1337, 2024, 8888, 12345; the seed-42 checkpoints were not evaluated under the final trigger protocol). Robustness is measured via NLL increase under trigger prepending. UAT attacks prove minimally effective across all models, with NLL increases below 1 percent. The monotonic model exhibits the smallest degradation ($0.33 \pm 0.05$ percent NLL increase, mean $\pm$ s.d.\ over seeds), compared to $0.56 \pm 0.06$ percent for the baseline and $0.74 \pm 0.09$ percent for standard T5, an ordering that holds on every seed. ROUGE-L changes under the triggers are within $\pm 0.3$ points for the fine-tuned models in every seed, and on the 100-example transfer subset there is no measurable cross-model transfer either: off-diagonal entries of the ROUGE-L transfer matrix average within $\pm 0.35$ points and never exceed 0.75 points in any seed (Appendix~\ref{app:transfer}). While this ordering is consistent with improved robustness, the effect sizes are too small to draw strong conclusions. %% [CHANGE: rigor] conclusion qualified by the left-truncation caveat of Section sec:setup-attacks
++The weak effectiveness of universal triggers on T5 must also be read with the truncation caveat of Section~\ref{sec:setup-attacks} in mind: the trigger reaches the model only for short articles, so these results do not establish that input-agnostic perturbations are ineffective against sequence-to-sequence models in general. The robustness benefit of monotonicity on T5 is established here against the adaptive, gradient-based HotFlip attack.
+ 
++\subsection{Order Preservation Along Semantic Directions}
++\label{sec:results-order}
++%% [CHANGE: new result] stage_8 (T5, five seeds) and stage_11 (Pythia, seed 42) order-preservation diagnostic; figure order_preservation_depth.pdf
++The constraint of Section~\ref{Prelim} is imposed per sublayer and in the coordinatewise order of the residual stream. Whether the resulting network preserves the \emph{semantic} orderings that motivate it (Section~\ref{sec:intro}) end to end is an empirical question, because attention, normalization, and residual mixing between sublayers are unconstrained. Figure~\ref{fig:order} reports the probe-based diagnostic of Section~\ref{sec:setup-attacks}: the fraction, over held-out pairs, of the $64$ probe coordinates satisfying $A h_{\mathrm{weak}} \le A h_{\mathrm{strong}}$, as a function of depth.
++
++On T5 the result is negative at intermediate depth and neutral at the output; on Pythia-1.4B it is negative at every depth. With mean pooling, the baseline T5 encoder keeps 0.78--0.92 of probe coordinates correctly ordered at every layer, whereas the monotone encoder falls to 0.42--0.45 at layers 3--5 before recovering to 0.78 at the final layer (five-seed means; the dip is present in every seed). With last-token pooling the two models are within 0.07 of each other at every layer, and the monotone model is slightly higher at the output (0.85 vs.\ 0.80). On Pythia-1.4B (seed 42, last-token pooling) the baseline reaches 0.92 by layer 13 while the monotone model plateaus between 0.73 and 0.81. We conclude that coordinatewise nonnegativity of the FFN weights does not, by itself, make the network's representation of these semantic orderings more order-preserving. The robustness gains reported above are therefore more plausibly attributed to the local sensitivity properties of the constrained sublayers (Section~\ref{sec:gradient-attenuation}) than to end-to-end semantic monotonicity, which remains a design goal rather than a demonstrated property of the trained models.
++
++\begin{figure}[t]
++\centering
++\includegraphics[width=\linewidth]{order_preservation_depth.pdf}
++\caption{Order preservation along learned semantic directions as a function of depth. Left: T5-small encoder, mean $\pm$ s.d.\ over five training seeds. Right: Pythia-1.4B (MLP-both, seed 42), 95\% bootstrap confidence intervals over 195 held-out pairs. Layer 0 is the embedding output; the last-token value at layer 0 is trivially 1 because all prompts share the same final token.}
++\label{fig:order}
++\end{figure}
++
+ \subsection{Generalization to Decoder-Only Foundation Models}
+ \label{sec:results-pythia}
+ 
+ We next ask whether the robustness benefit of monotone feed-forward constraints is specific to the encoder-decoder setting or extends to decoder-only foundation models, using the Pythia-1.4B track described in Section~\ref{sec:setup-pythia}.
+ 
+ \textbf{Constraint scope determines whether robustness transfers.}
+-Table~\ref{tab:pythia-variants} reports the constraint-scope screening. The direct analogue of the T5 scheme—constraining only the MLP input projection (MLP-in)—fails on the decoder-only architecture: perplexity increases by a factor of 3.65, yet the HotFlip attack success rate \emph{rises} from 71.5\% to 83.5\%. The constraint degrades clean performance without impeding the attack, indicating that adversarial gradient signal is routed around the constrained matrix through the unconstrained MLP output projection and attention pathways. Extending the constraint scope closes these leak paths: constraining both MLP projections (MLP-both) reduces the success rate by 30.5 percentage points, and additionally constraining the attention output projection (MLP-in + Attn-out) yields a 39.5-point reduction. The latter, however, roughly doubles the perplexity penalty ($12.49\times$ versus $6.80\times$) for a further 9-point reduction in success rate, a diminishing return consistent with attention serving as a secondary leak path. Balancing robustness against clean performance, we select MLP-both for full-budget validation.
++Table~\ref{tab:pythia-variants} reports the constraint-scope screening. Constraining only the MLP input projection (MLP-in) fails: perplexity increases by a factor of 3.65, yet the HotFlip attack success rate \emph{rises} from 71.5\% to 83.5\%.
++%% [CHANGE: factual] removed "The direct analogue of the T5 scheme"; the T5 track constrains both projections
++The constraint degrades clean performance without impeding the attack, indicating that adversarial gradient signal is routed around the constrained matrix through the unconstrained MLP output projection and attention pathways. Extending the constraint scope closes these leak paths: constraining both MLP projections (MLP-both, the scope used in the T5 track) reduces the success rate by 30.5 percentage points, and additionally constraining the attention output projection (MLP-in + Attn-out) yields a 39.5-point reduction. The latter, however, roughly doubles the perplexity penalty ($12.49\times$ versus $6.80\times$) for a further 9-point reduction in success rate, a diminishing return consistent with attention serving as a secondary leak path. Balancing robustness against clean performance, we select MLP-both for full-budget validation.
+ 
+ \begin{table}[t]
+-\caption{Constraint-scope screening on Pythia-1.4B (seed = 42). PPL denotes held-out Pile perplexity; SR denotes HotFlip attack success rate ($n = 200$, 10 flips). MLP-in was screened under the full training budget, the other scopes under a reduced budget.}
++\caption{Constraint-scope screening on Pythia-1.4B (seed = 42). PPL denotes held-out Pile perplexity; SR denotes HotFlip attack success rate ($n = 200$, 10 flips, 15\% threshold), and SR drop its reduction in percentage points (pp). MLP-in was screened under the full training budget, the other scopes under a reduced budget.}
+ \label{tab:pythia-variants}
+ \vskip 0.1in
+ \centering
+@@ -955,74 +1171,125 @@
+ \end{table}
+ 
+ \textbf{Multi-seed validation.}
+-Table~\ref{tab:pythia-seeds} reports the MLP-both scope under the full recovery-training budget across three seeds. The robustness improvement is stable: the HotFlip success rate falls from 69.0\% to between 39.0\% and 45.0\% (mean 42.5\%), an absolute reduction of 26.5 percentage points and a relative reduction of 38.4\%. Under UAT attacks—which, unlike on T5, are substantially damaging to the decoder-only baseline, raising NLL by approximately 16\%—the monotone models are consistently less affected, with a mean NLL increase of 10.6\% versus 16.1\% for the baseline. The monotone models thus improve robustness against both adaptive gradient-based and input-agnostic attacks in this setting.
++Table~\ref{tab:pythia-seeds} reports the MLP-both scope under the full recovery-training budget across three seeds. The robustness improvement is stable: the HotFlip success rate falls from 69.0\% to between 39.0\% and 45.0\% (mean 42.5\%), an absolute reduction of 26.5 percentage points and a relative reduction of 38.4\%. Under UAT attacks---which, unlike on T5, are substantially damaging to the decoder-only baseline, raising NLL by approximately 16\%---the monotone models are consistently less affected in relative terms, with a mean NLL increase of 10.6\% versus 16.1\% for the baseline. Because the relative increase is normalized by each model's own clean NLL, and the monotone model's clean NLL is roughly 1.9 times higher, this comparison should be read alongside the absolute increase, which is not smaller for the monotone model ($0.40 \pm 0.14$ vs.\ $0.32 \pm 0.01$ nats). The monotone models thus improve robustness against adaptive gradient-based attacks in this setting, and reduce the relative, but not the absolute, effect of input-agnostic triggers.
++%% [CHANGE: rigor] added the absolute-nats caveat; previous sentence claimed improvement against both attack types
+ 
+ \begin{table}[t]
+-\caption{Pythia-1.4B results with the MLP-both constraint scope under the full recovery budget. PPL denotes held-out Pile perplexity; SR denotes HotFlip attack success rate ($n = 200$, 10 flips); UAT NLL$\uparrow$ denotes the relative NLL increase under the learned universal trigger (base $\to$ monotone).}
++\caption{Pythia-1.4B results with the MLP-both constraint scope under the full recovery budget. PPL denotes held-out Pile perplexity; SR denotes HotFlip attack success rate ($n = 200$, 10 flips, 15\% threshold); UAT NLL$\uparrow$ denotes the relative NLL increase under the learned universal trigger (base $\to$ monotone), and UAT $\Delta$NLL the corresponding absolute increase in nats.}
+ \label{tab:pythia-seeds}
+ \vskip 0.1in
+ \centering
+ \resizebox{\columnwidth}{!}{
+-\begin{tabular}{lcccc}
++\begin{tabular}{lccccc}
+ \toprule
+-Seed & PPL base & PPL mono & SR base $\to$ mono & UAT NLL$\uparrow$ \\
++Seed & PPL base & PPL mono & SR base $\to$ mono & UAT NLL$\uparrow$ & UAT $\Delta$NLL (nats) \\
+ \midrule
+-42   & 6.72 & 36.01 & 69.0\% $\to$ 43.5\% & $+15.5\% \to +8.8\%$ \\
+-1337 & 6.72 & 42.00 & 69.0\% $\to$ 39.0\% & $+16.4\% \to +8.1\%$ \\
+-2024 & 6.72 & 35.03 & 69.0\% $\to$ 45.0\% & $+16.5\% \to +15.0\%$ \\
++42   & 6.72 & 36.01 & 69.0\% $\to$ 43.5\% & $+15.5\% \to +8.8\%$ & $0.31 \to 0.33$ \\
++1337 & 6.72 & 42.00 & 69.0\% $\to$ 39.0\% & $+16.4\% \to +8.1\%$ & $0.33 \to 0.32$ \\
++2024 & 6.72 & 35.03 & 69.0\% $\to$ 45.0\% & $+16.5\% \to +15.0\%$ & $0.33 \to 0.56$ \\
+ \midrule
+-Mean & 6.72 & 37.68 & 69.0\% $\to$ 42.5\% & $+16.1\% \to +10.6\%$ \\
++Mean & 6.72 & 37.68 & 69.0\% $\to$ 42.5\% & $+16.1\% \to +10.6\%$ & $0.32 \to 0.40$ \\
+ \bottomrule
+ \end{tabular}
+ }
+ \vskip -0.1in
+ \end{table}
+ 
++\textbf{Transfer and gradient-free controls.}
++%% [CHANGE: new result] stage_5b_uat_transfer.py and stage_6b_hotflip_transfer.py, three full-budget seeds
++A natural concern is that a constrained model merely masks gradients, so that gradient-based attacks fail while the model remains vulnerable to perturbations found by other means~\citep{athalye2018obfuscated,carlini2019evaluating,tramer2020adaptive}. Table~\ref{tab:pythia-controls} reports the controls of Section~\ref{sec:setup-pythia} on the three full-budget seeds. Three observations follow. First, the monotone model's advantage persists under every gradient-free attack: random substitutions raise the baseline's loss by $64.6 \pm 0.3$ percent (success rate 73.0 percent) but the monotone model's by $17.9 \pm 1.5$ percent (36.5 percent), and the query attack---the strongest attack we ran---degrades the baseline by $112 \pm 4$ percent versus $34 \pm 3$ percent for the monotone model (success rates 77.3 vs.\ 50.0 percent). Since neither control uses gradients, this gap cannot be explained by gradient masking.
++
++Second, attacks do not transfer symmetrically: substitutions crafted on the baseline degrade the monotone model by only 15.4 percent, less than random substitutions do, whereas substitutions crafted on the monotone model degrade the baseline by 65.0 percent, as much as random ones. Universal triggers behave the same way (Appendix~\ref{app:transfer}): on the 900-text transfer set, a trigger learned on the baseline raises its NLL by 17.8 percent but the monotone model's by only 6.3 percent, while a trigger learned on the monotone model raises the baseline's NLL by 13.3 percent (the on-model figures differ slightly from Table~\ref{tab:pythia-seeds}, which uses the 120-text evaluation set).
++
++Third, in absolute terms the gaps are narrower than the relative figures suggest (random: 0.66 vs.\ 0.91 nats; query: 1.17 vs.\ 1.39 nats; HotFlip: 0.77 vs.\ 0.82 nats), because the monotone model starts from a clean NLL roughly 1.9 times higher. The monotone Pythia model is therefore less sensitive to token substitutions of every kind we tested, but a substantial part of its relative advantage reflects its higher clean loss; the encoder--decoder results, where the absolute gap is 2.5-fold, are not subject to this caveat to the same degree. Finally, we note that on the baseline, HotFlip's gradient-guided substitutions (55.2 percent) are less damaging than random ones (64.6 percent), indicating that the first-order approximation underlying HotFlip is a weak guide for this model and that the query attack is the more informative reference attack in this setting.
++
++\begin{table}[t]
++\caption{Transfer and gradient-free controls on Pythia-1.4B (MLP-both, full budget; mean $\pm$ s.d.\ over seeds 42, 1337, 2024). All attacks use 10 substitutions on 200 held-out texts, except the query attack (50 texts). Deg.\ is the mean relative loss increase, SR the success rate (15\% threshold), and $\Delta$NLL the absolute loss increase in nats. ``Crafted on'' indicates the model on which HotFlip substitutions were found; the random control and query attack are model-agnostic and target-scored, respectively. The HotFlip rows re-run the attack of Table~\ref{tab:pythia-seeds} inside the transfer pipeline; the baseline success rates obtained there (68.5--69.0\%) differ from Table~\ref{tab:pythia-seeds} by at most 0.5 points.}
++\label{tab:pythia-controls}
++\vskip 0.1in
++\centering
++\resizebox{\columnwidth}{!}{
++\begin{tabular}{llcccccc}
++\toprule
++ & & \multicolumn{3}{c}{Evaluated on baseline} & \multicolumn{3}{c}{Evaluated on monotone} \\
++\cmidrule(lr){3-5}\cmidrule(lr){6-8}
++Attack & Crafted on & Deg. & SR & $\Delta$NLL & Deg. & SR & $\Delta$NLL \\
++\midrule
++HotFlip & baseline & $55.2 \pm 0.4\%$ & $68.7 \pm 0.3\%$ & 0.82 & $15.4 \pm 1.3\%$ & $25.8 \pm 1.6\%$ & 0.57 \\
++HotFlip & monotone & $65.0 \pm 0.9\%$ & $72.8 \pm 1.8\%$ & 0.94 & $20.5 \pm 1.6\%$ & $42.5 \pm 3.1\%$ & 0.77 \\
++Random substitutions & --- & $64.6 \pm 0.3\%$ & $73.0 \pm 1.0\%$ & 0.91 & $17.9 \pm 1.5\%$ & $36.5 \pm 2.3\%$ & 0.66 \\
++Query attack (gradient-free) & target & $112.3 \pm 4.0\%$ & $77.3 \pm 1.2\%$ & 1.39 & $33.6 \pm 2.9\%$ & $50.0 \pm 3.5\%$ & 1.17 \\
++\bottomrule
++\end{tabular}
++}
++\vskip -0.1in
++\end{table}
++
+ \textbf{The quality--robustness trade-off is architecture-dependent.}
+ The decoder-only results demonstrate that monotonicity is not
+ universally ``free.'' Instead, the robustness benefits depend on
+-where constraints are placed within the architecture. Achieving
+-robustness in decoder-only models requires broader constraint
+-coverage, which carries a correspondingly larger cost in clean
+-performance.
++where constraints are placed within the architecture. In decoder-only
++models, the same constraint scope as in the encoder--decoder track
++carries a markedly larger cost in clean performance.
++%% [CHANGE: factual] was "requires broader constraint coverage, which carries a correspondingly larger cost"
+ 
+-The robustness gains on Pythia-1.4B come at a markedly higher cost in clean performance than on T5. Held-out perplexity increases by a mean factor of 5.61 (range 5.21--6.25), and full-budget recovery training does not close this gap, whereas the T5 monotone model recovers to within a few percent of its baseline. We attribute this asymmetry to architectural structure: in T5, the encoder-decoder bottleneck and cross-attention alignment restrict the routes by which token-level perturbations can propagate without traversing a constrained sublayer, so constraining the feed-forward input projections suffices and leaves most of the network free to recover expressivity. In a decoder-only model, autoregressive self-attention connects every position to all preceding positions without passing through any constrained layer, providing a bypass for adversarial signal; robustness therefore requires constraining a larger fraction of each block's transformation, which in turn imposes a steeper expressivity penalty. The monotonicity--robustness mechanism itself transfers across architectures, but the constraint scope required to realize it—and the price paid in clean performance—is architecture-conditional.
++Held-out perplexity increases by a mean factor of 5.61 (range 5.21--6.25), and full-budget recovery training does not close this gap, whereas the T5 monotone model's validation perplexity is only about $1.35\times$ that of its baseline (a 0.30-nat gap; Table~\ref{tab:training}) and its ROUGE-L is within 5\%. We attribute this asymmetry to architectural structure: in T5, the encoder-decoder bottleneck and cross-attention alignment restrict the routes by which token-level perturbations can propagate without traversing a constrained sublayer, so constraining the feed-forward sublayers suffices and leaves most of the network free to recover expressivity.
++%% [CHANGE: factual] was "constraining the feed-forward input projections suffices"
++In a decoder-only model, autoregressive self-attention connects every position to all preceding positions without passing through any constrained layer, providing a bypass for adversarial signal; we conjecture that the constrained feed-forward sublayers must therefore absorb a larger share of each block's transformation to close this bypass, which would explain the steeper expressivity penalty. The monotonicity--robustness mechanism itself transfers across architectures under the same constraint scope, but the price paid in clean performance is architecture-conditional. %% [CHANGE: factual] removed "requires constraining a larger fraction of each block" and "the constraint scope required ... is architecture-conditional" (same scope in both tracks)
+ 
+ \section{Discussion}
+ 
+-This work provides both empirical and theoretical evidence that monotonicity is a promising architectural bias for improving the robustness of modern language models. By selectively enforcing monotonicity in feed-forward sublayers, we consistently reduce vulnerability to adversarial and jailbreak-style attacks while largely preserving task performance in encoder-decoder models. These improvements require neither additional data nor
++This work provides empirical evidence, together with a conditional theoretical mechanism, that monotonicity is a promising architectural bias
++%% [CHANGE: math-rigor, minor] was "both empirical and theoretical evidence"
++for improving the robustness of modern language models. By selectively enforcing monotonicity in feed-forward sublayers, we consistently reduce vulnerability to token-level adversarial attacks while largely preserving task performance in encoder-decoder models.
++%% [CHANGE: clarity] no jailbreak experiments are run; was "adversarial and jailbreak-style attacks"
++These improvements require neither additional data nor
+ modified training objectives. Instead, they arise from a
+ favorable architectural trade-off in which modest reductions in
+ task performance yield substantial improvements in adversarial
+ robustness.
+ 
+-Our theoretical analysis offers insight into why these improvements arise despite the absence of formal end-to-end robustness guarantees. Viewing a language model as a high-dimensional system whose semantic representations evolve through successive nonlinear transformations, monotonicity constrains how perturbations propagate across layers. In particular, it enforces directional consistency: strengthening information or constraints cannot induce regressions in downstream representations. This restriction narrows the space of admissible behaviors, making worst-case effects easier to characterize because they occur at semantic extremes rather than intermediate states.
++Our theoretical analysis offers insight into why these improvements arise despite the absence of formal end-to-end robustness guarantees. Viewing a language model as a high-dimensional system whose semantic representations evolve through successive nonlinear transformations, end-to-end monotonicity would constrain how perturbations propagate across layers by enforcing directional consistency: strengthening information or constraints could not induce regressions in downstream representations, and worst-case effects would be easier to characterize because they would occur at semantic extremes rather than at intermediate states. Our models, however, are monotone only within the feed-forward branch of each sublayer, and Section~\ref{sec:results-order} shows that the trained networks are not more order-preserving end to end, so this reasoning is a design heuristic rather than a property we can claim for the trained models.
++%% [CHANGE: math-rigor, minor] hedged: no end-to-end monotonicity is established
+ 
+-The empirical results further suggest that feed-forward sublayers play a central role in robustness. While attention performs contextual reasoning and semantic aggregation, feed-forward networks are primarily responsible for nonlinear transformation and feature amplification. Enforcing monotonicity at this stage constrains how semantic information is refined after context has been established, without limiting attention or global information flow. This selective constraint also reshapes the local gradient landscape, reducing the stability and magnitude of the gradients exploited by attacks such as HotFlip.
++The empirical results further suggest that feed-forward sublayers play a central role in robustness. While attention performs contextual reasoning and semantic aggregation, feed-forward networks are primarily responsible for nonlinear transformation and feature amplification. Enforcing monotonicity at this stage constrains how semantic information is refined after context has been established, without limiting attention or global information flow. This selective constraint also changes the local gradient structure of the constrained sublayers (Section~\ref{sec:gradient-attenuation}), which we conjecture reduces the gradients exploited by attacks such as HotFlip.
++%% [CHANGE: math-rigor, minor] was "reducing the stability and magnitude of the gradients"; not established by the lemmas
+ 
+ These observations are consistent with classical monotone systems theory, where structural monotonicity limits the propagation of perturbations and enables more tractable analysis of high-dimensional systems. Although Transformers are not dynamical systems in the formal sense, this perspective provides useful intuition for understanding the behavior of monotonic components within the network.
+ 
+-The decoder-only experiments further reveal that robustness depends on architectural signal paths rather than individual layers. In T5, perturbations are naturally funneled through constrained feed-forward sublayers, whereas the residual stream in decoder-only models provides unconstrained routes around any single constrained matrix. As a result, constraining only the feed-forward input projection is ineffective on Pythia-1.4B, while constraining both feed-forward projections restores much of the robustness benefit. Monotonicity should therefore be viewed as a property of the paths through which adversarial signals propagate, providing practical guidance for where constraints should be applied in different Transformer architectures.
++%% [CHANGE: new discussion] consequences of the control experiments and the order-preservation diagnostic
++Two further results sharpen this picture. First, the gradient-free controls on Pythia-1.4B show that the robustness advantage is not confined to gradient-based attacks: the monotone model is also less sensitive to random substitutions and to a query-based attack that never computes a gradient. The gradient-attenuation mechanism of Section~\ref{sec:gradient-attenuation} therefore describes one symptom of a more general reduction in sensitivity to token-level perturbations, rather than a masking of gradients that a stronger attacker could circumvent. At the same time, the absolute-loss view shows that part of the monotone Pythia model's relative advantage reflects its higher clean loss, so relative degradation should be reported together with absolute degradation whenever constrained and unconstrained models differ substantially in clean performance.
+ 
++Second, the order-preservation diagnostic shows that per-sublayer, coordinatewise monotonicity does not by itself make the trained network more order-preserving along learned semantic directions; if anything, the monotone T5 encoder is less order-preserving at intermediate depth. The semantic-ordering motivation of Section~\ref{sec:intro} should thus be understood as the design principle behind the constraint, whereas the mechanism that the experiments support is the local sensitivity reduction of the constrained sublayers. Closing this gap---for instance by imposing the constraint in a learned semantic basis $A$ as in Definition~\ref{def:mono_transformer}, rather than in the coordinatewise basis---is a natural next step.
++
++The decoder-only experiments further reveal that robustness depends on architectural signal paths rather than individual layers. The residual stream provides unconstrained routes around any single constrained matrix: constraining only the feed-forward input projection is ineffective on Pythia-1.4B, while constraining both feed-forward projections, as in the T5 track, restores much of the robustness benefit.
++%% [CHANGE: factual] removed the unsupported contrast with T5 (both tracks constrain both projections)
++Monotonicity should therefore be viewed as a property of the paths through which adversarial signals propagate, providing practical guidance for where constraints should be applied in different Transformer architectures.
++
+ The quality--robustness trade-off also depends on architecture. In encoder-decoder models, the reduction in expressivity
+ introduced by monotonicity has only a modest effect on task
+ performance, while yielding substantial gains in robustness. In
+-decoder-only architectures, achieving comparable robustness
+-requires broader constraint coverage, resulting in a
+-significantly steeper quality--robustness trade-off. In decoder-only models, however, the broader constraint coverage required for robustness incurs a considerably larger perplexity cost that full-budget recovery training does not eliminate. Reducing this cost through improved initialization, specialized optimization strategies, or selective constraint placement remains an important direction for future work. More broadly, monotonicity differs from conventional regularization by constraining \emph{how} representations evolve rather than simply penalizing their magnitude, encouraging predictable behavior instead of uniformly smoother representations.
++decoder-only architectures, the same constraint scope incurs a
++considerably larger perplexity cost that full-budget recovery
++training does not eliminate, resulting in a significantly steeper
++quality--robustness trade-off.
++%% [CHANGE: factual] was "requires broader constraint coverage" (twice)
++Reducing this cost through improved initialization, specialized optimization strategies, or selective constraint placement remains an important direction for future work. More broadly, monotonicity differs from conventional regularization by constraining \emph{how} representations evolve rather than simply penalizing their magnitude, encouraging predictable behavior instead of uniformly smoother representations.
+ 
+-Our study is limited to models of modest scale (T5-small and Pythia-1.4B) and does not provide formal robustness certificates. Extending the theoretical analysis toward stronger guarantees, scaling the approach to larger models, and narrowing the quality gap in decoder-only architectures remain important directions for future research. Nevertheless, the combination of theoretical insight and consistent empirical improvements across two Transformer families suggests that monotonicity is a practical and principled architectural prior for improving the robustness and predictability of large language models.
++Our study is limited to models of modest scale (T5-small and Pythia-1.4B) and does not provide formal robustness certificates. Extending the theoretical analysis toward stronger guarantees, scaling the approach to larger models, and narrowing the quality gap in decoder-only architectures remain important directions for future research. Nevertheless, the combination of theoretical insight and consistent empirical improvements across two Transformer families suggests that monotonicity is a practical and principled architectural prior for improving the robustness of large language models.
+ 
+ 
+ \section{Conclusion}
+ 
+-We investigated monotonicity as a structural inductive bias for improving robustness in Transformer language models. By enforcing non-negativity constraints on feed-forward sublayers, we observe substantial reductions in vulnerability to gradient-based adversarial attacks with only modest impact on summarization quality in the encoder-decoder setting. Extending the study to a decoder-only foundation model shows that the benefit transfers, but only when the constraint scope is matched to the architecture: decoder-only models require constraining both feed-forward projections to close adversarial leak paths, and incur a larger cost in clean perplexity. These results suggest that monotonicity offers a practical
++We investigated monotonicity as a structural inductive bias for improving robustness in Transformer language models. By enforcing non-negativity constraints on feed-forward sublayers, we observe substantial reductions in vulnerability to gradient-based adversarial attacks with only modest impact on summarization quality in the encoder-decoder setting. Extending the study to a decoder-only foundation model shows that the benefit transfers under the same constraint scope, that constraining the feed-forward input projection alone leaves adversarial leak paths open, and that decoder-only models incur a larger cost in clean perplexity.
++%% [CHANGE: factual] was "only when the constraint scope is matched to the architecture: decoder-only models require constraining both feed-forward projections"
++These results suggest that monotonicity offers a practical
+ architectural mechanism for navigating the
+ quality--robustness trade-off in language models. While the
+ cost of enforcing monotonicity depends on architectural
+ structure, carefully placed constraints can substantially
+ improve robustness without fundamentally compromising model
+-utility.
++utility in the encoder--decoder setting, and at a substantial but quantified perplexity cost in the decoder-only setting.
+ 
+ 
+ An important direction for future work is to develop theoretical guarantees that characterize when and why monotonicity yields improved robustness in high-dimensional language models. Reducing the perplexity cost of monotone constraints on decoder-only architectures, and scaling this approach to larger model variants and broader tasks, are further promising avenues that may help clarify the role of structural constraints in building more reliable language models.
+@@ -1035,7 +1302,7 @@
+ 
+ % In the unusual situation where you want a paper to appear in the
+ % references without citing it in the main text, use \nocite
+-\nocite{langley00}
++%% [CHANGE: cleanup] removed template \nocite{langley00}
+ 
+ \bibliography{example_paper}
+ \bibliographystyle{icml2025}
+@@ -1098,9 +1365,10 @@
+ 
+ \label{prf:jac}
+ \begin{proof}
+-Recall $T(s)=s+g(s)$, so
++%% [CHANGE: math-rigor, minor] differentiability qualifier and Jacobian notation aligned with the lemma; general depth and kinks added below
++Recall $T(s)=s+g(s)$, so at every point of differentiability
+ \[
+-J_T(s)=\nabla_s T(s)=I + J_g(s).
++J_T(s)=\partial T(s)/\partial s=I + J_g(s).
+ \]
+ For a two-layer $g(s)=W_2 \sigma(W_1 s + b_1)+b_2$ with $W_1,W_2\ge 0$ elementwise,
+ \[
+@@ -1109,33 +1377,140 @@
+ Since $\sigma$ is elementwise non-decreasing, $\sigma'(z)\ge 0$ wherever it exists,
+ so $\operatorname{diag}(\sigma'(\cdot))\ge 0$ elementwise. Hence $J_g(s)\ge 0$
+ elementwise, and therefore $J_T(s)=I+J_g(s)\ge 0$ elementwise.
++%% [CHANGE: math-rigor, minor] general depth and kinks
++For an $L$-layer $g$ with hidden states $h_\ell = \sigma(z_\ell)$ and pre-activations
++$z_\ell = W_\ell h_{\ell-1} + b_\ell$ (with $h_0 = s$),
++\[
++J_g(s)=W_L\,\operatorname{diag}(\sigma'(z_{L-1}))\,W_{L-1}\,\operatorname{diag}(\sigma'(z_{L-2}))\cdots W_2\,\operatorname{diag}(\sigma'(z_1))\,W_1
++\]
++is a product of
++$L$ weight matrices and $L-1$ diagonal matrices, each elementwise nonnegative, and is
++therefore elementwise nonnegative, so the conclusion is unchanged. At a point $s$ where
++some pre-activation lies at a kink of $\sigma$ (for ReLU, $z_j = 0$), $T$ is locally
++Lipschitz whenever $\sigma$ is, and its Clarke generalized Jacobian is by definition the
++convex hull of all limits $\lim_k J_T(s_k)$ along sequences $s_k \to s$ of points of
++differentiability. Each $J_T(s_k)$ is elementwise nonnegative by the product formula,
++and the set of elementwise nonnegative matrices is closed and convex, so every element
++of the Clarke generalized Jacobian is elementwise nonnegative. Reverse-mode automatic
++differentiation evaluates the same product with $\sigma'(z_j)$ at a kink replaced by the
++framework's convention (for ReLU in PyTorch, $\sigma'(0)=0$); for any nonnegative
++convention the result is again a product of nonnegative matrices.
+ \end{proof}
+ 
++\subsubsection{Proof of Lemma~\ref{lem:gradient-attenuation}}
++\label{prf:atten}
++%% [CHANGE: math-rigor] new proof; the previous pointer for this lemma resolved to the proof of Lemma jacobian-nonneg
++\begin{proof}
++Write $D(s) := \operatorname{diag}(\sigma'(z(s)))$. Then
++$J_g(s) = W_2 D(s) W_1 = \sum_{j=1}^m \sigma'(z_j(s))\, W_2[:,j]\, W_1[j,:]$, which is
++the stated decomposition. With $v := \nabla_{s'}\mathcal{L}$,
++\[
++\nabla_s \mathcal{L}(T(s)) = (I + J_g(s))^\top v
++= v + \sum_{j=1}^m \sigma'(z_j(s))\, W_1[j,:]^\top \bigl(W_2[:,j]^\top v\bigr).
++\]
++Splitting the sum into $j \in S$ and $j \notin S$, the difference in the statement
++equals $\sum_{j\in S} \sigma'(z_j(s))\, W_1[j,:]^\top (W_2[:,j]^\top v)$. By the
++triangle and Cauchy--Schwarz inequalities its Euclidean norm is at most
++\[
++\sum_{j\in S} |\sigma'(z_j(s))|\, \|W_1[j,:]\|_2\, \|W_2[:,j]\|_2\, \|v\|_2
++\;\le\; \varepsilon\, G \sum_{j\in S} \|W_2[:,j]\|_2\, \|W_1[j,:]\|_2 .
++\]
++For the final claim, if $z_j(s_k) \to -\infty$ for all $j \in S$ then
++$\max_{j\in S}|\sigma'(z_j(s_k))| \to 0$ by Assumption~\ref{ass:saturation}, so
++the bound above tends to $0$ as long as $\|\nabla_{s'}\mathcal{L}\|_2$ stays bounded
++along the sequence.
++\end{proof}
++
+ \subsubsection{Proof of Lemma~\ref{lem:persistence}}
+ \label{prf:persis}
++%% [CHANGE: math-rigor] direction reversed and epsilon-saturation used; see the lemma
+ \begin{proof}
+-Let $z_j(s) := (W_1 s + b_1)_j$. Since $W_1\ge 0$ elementwise and $\delta\ge 0$,
++Let $z_j(s) := (W_1 s + b_1)_j$. Since $W_1\ge 0$ elementwise and $\delta\le 0$,
+ \[
+-z_j(s' + \delta) = (W_1(s' + \delta) + b_1)_j \ge (W_1 s' + b_1)_j = z_j(s').
++z_j(s' + \delta) = z_j(s') + (W_1 \delta)_j \le z_j(s') \le z^\ast .
+ \]
+-Thus if the unit is saturated at $s'$ (i.e., $\sigma'(z_j(s'))=0$ in the saturated
+-regime), it remains saturated at $s'+\delta$.
++Because $|\sigma'|$ is non-decreasing on $(-\infty, z^\ast]$ by
++Assumption~\ref{ass:saturation}, $|\sigma'(z_j(s'+\delta))| \le |\sigma'(z_j(s'))|
++\le \varepsilon$. Thus the unit remains $\varepsilon$-saturated at $s'+\delta$.
++For ReLU with $z^\ast = 0$ the argument is simply that $z_j(s') \le 0$ implies
++$z_j(s'+\delta) \le 0$.
+ \end{proof}
+ 
+ \subsection{Training and Evaluation Protocol}
+ \label{app:training}
+-Both baseline and monotone models are fine-tuned from the same pretrained \texttt{T5-small} checkpoint under identical optimization settings. We use the AdamW optimizer with learning rate $5 \times 10^{-5}$ and weight decay $0.01$, a batch size of 4, and gradient clipping with norm 1.0. To accommodate the constrained parameterization, the monotone model employs an extended warmup phase of 15\% of training steps, compared to 10\% for the baseline. Both models are trained for 7 epochs and receive the same total training budget.
++Both baseline and monotone models are fine-tuned from the same pretrained \texttt{T5-small} checkpoint under identical optimization settings. We use the AdamW optimizer with learning rate $5 \times 10^{-5}$ and weight decay $0.01$, a batch size of 4, and gradient clipping with norm 1.0. To accommodate the constrained parameterization, the monotone model employs an extended warmup phase of 15\% of training steps, compared to 10\% for the baseline. Both models are trained for 7 epochs with linear learning-rate decay after warmup and receive the same total training budget; the checkpoint with the lowest validation loss is used for all downstream evaluation.
+ 
+-Training is conducted on the DialogSum, HighlightSum, and arXiv abstract datasets, comprising approximately 150K examples in total. Evaluation is performed on three held-out benchmarks: CNN/DailyMail (11{,}490 test examples), XSUM (11{,}334 test examples), and SAMSum (819 test examples). CNN/DailyMail is excluded entirely from training to assess out-of-distribution generalization.
++Training is conducted on the DialogSum, HighlightSum, and arXiv abstract datasets, comprising 242{,}774 examples in total, with 8{,}296 validation examples drawn from the corresponding validation splits. %% [CHANGE: factual] was "approximately 150K"; data_statistics.json records 242,774
++Evaluation is performed on two held-out benchmarks using their full test sets: CNN/DailyMail (11{,}490 test examples) and XSUM (11{,}333 test examples; one example with an empty field is dropped by the loader).
++%% [CHANGE: factual] SAMSum removed — its test split loaded zero examples in every run (dataset loader fallback), so no SAMSum results exist
++Neither CNN/DailyMail nor XSUM is used in training, so both evaluations measure out-of-distribution generalization.
+ 
+-At inference time, decoding is performed using beam search with 4 beams and a length penalty of 1.2, enforcing a minimum generation length of 10 tokens and a maximum length of 80 tokens. We additionally apply no-repeat $n$-gram blocking with $n=3$ to discourage degenerate repetitions. All decoding parameters are fixed across models and evaluation sets. ROUGE-1, ROUGE-2, and ROUGE-L scores are computed using the \texttt{rouge-score} library with Porter stemming. We report bootstrap-based 95\% confidence intervals using 1{,}000 resamples and assess statistical significance via paired $t$-tests with Bonferroni correction for multiple comparisons. Effect sizes are reported using Cohen's $d$.
++At inference time, decoding is performed using beam search with 4 beams and a length penalty of 1.2, enforcing a minimum generation length of 10 tokens and a maximum length of 80 tokens. We additionally apply no-repeat $n$-gram blocking with $n=3$ to discourage degenerate repetitions. All decoding parameters are fixed across models and evaluation sets. %% [CHANGE: protocol] ROUGE-L is the summary-level rougeLsum F1 in the code; paired t-tests are per-example within seed, Bonferroni across the three ROUGE variants
++ROUGE-1, ROUGE-2, and summary-level ROUGE-L (\texttt{rougeLsum}) F$_1$ scores are computed using the \texttt{rouge-score} library with Porter stemming. Within each seed we report bootstrap-based 95\% confidence intervals using 1{,}000 resamples and assess statistical significance via per-example paired $t$-tests between the baseline and monotone models, with Bonferroni correction across the three ROUGE variants. Effect sizes are reported using Cohen's $d$.
+ 
+-\subsection{Experimental Setup}
+-To evaluate robustness to training stochasticity, all experiments are repeated using five random seeds (42, 1337, 2024, 8888, and 12345), controlling randomness across Python, NumPy, and PyTorch. We report the mean and standard deviation across seeds for all metrics. Statistical significance across training runs is assessed using paired $t$-tests on seed-level means, complemented by per-example paired $t$-tests within each seed. This dual evaluation captures both test-time variability and variance induced by random initialization and data ordering. All experiments are conducted using deterministic algorithms where available, on a single NVIDIA A100 GPU with 40GB memory, using PyTorch~2.0.1 and Transformers~4.30.2.
++\subsection{Seeds, Statistical Tests, and Compute}
++To evaluate robustness to training stochasticity, the T5 training and evaluation pipeline is repeated using five random seeds (42, 1337, 2024, 8888, and 12345), controlling randomness across Python, NumPy, and PyTorch. Summarization quality, training dynamics, and the order-preservation diagnostic are reported as the mean and standard deviation across all five seeds; universal-trigger attacks are reported across four seeds (1337, 2024, 8888, 12345); the HotFlip evaluation in Table~\ref{tab:hotflip} uses the seed-2024 models, corroborated by an earlier evaluation of the seed-42 models.
++%% [CHANGE: factual] previous text claimed mean ± s.d. "for all metrics"
++Across-seed differences are assessed using paired $t$-tests on seed-level means (baseline vs.\ monotone ROUGE-L: $t = 14.9$ on CNN/DailyMail and $t = 13.4$ on XSUM with 4 degrees of freedom), complemented by per-example paired $t$-tests within each seed. This dual evaluation captures both test-time variability and variance induced by random initialization and data ordering. All experiments are conducted using deterministic algorithms where available, on NVIDIA A100 (40GB and 80GB), H200 (141GB), and RTX PRO 6000 (96GB) GPUs under the SLURM workload manager, using PyTorch builds with CUDA 11.8 (A100) or CUDA 12.8 (H200, RTX PRO 6000) and Transformers~4.30 or later.
++%% [CHANGE: factual] was "a single NVIDIA A100 GPU with 40GB memory, PyTorch 2.0.1, Transformers 4.30.2"
+ 
++\subsection{Attribution Ablation: Constraint versus Initialization}
++\label{app:ablation}
++%% [CHANGE: new result] seed_42_sign_frozen and seed_42_abs_init_free arms; T5_ABLATION_MODE in hpc_version/utils/common_utils.py
++%% DECISION FOR AUTHORS: the robustness evaluation (Stages 4--7) of these two arms was still running at the time of writing.
++%% Either add those numbers here before submission or keep this section limited to training dynamics, as it is now.
++The monotone parameterization changes two things relative to the pretrained model: it imposes the nonnegativity constraint, and it initializes the FFN weights at $|W_{\mathrm{pre}}|$, discarding their sign pattern. To attribute the clean-quality cost between these two factors we train two additional T5-small models at seed 42 under the protocol of Appendix~\ref{app:training}. The \emph{sign-frozen} arm uses $W = \operatorname{sign}(W_{\mathrm{pre}}) \odot \phi(V)$ with the sign pattern held fixed, so the reparameterization and magnitude initialization are identical to the monotone model but the sublayer is not constrained to be monotone; the \emph{abs-init-free} arm uses $W = V$ with $V$ initialized at $|W_{\mathrm{pre}}| + \epsilon$ and trained without any constraint. Table~\ref{tab:ablation} reports their training dynamics. The sign-frozen arm converges to within 0.06 of the baseline validation loss, whereas the abs-init-free arm converges to the same validation loss as the monotone model. The clean-quality cost of the monotone model is therefore attributable to the loss of the pretrained sign structure at initialization rather than to the reparameterization or to the constraint itself. Whether the robustness gain is likewise attributable to the constraint rather than to the initialization requires the corresponding robustness evaluation of these two arms, which we leave to future work.
++
++\begin{table}[h]
++\caption{Attribution ablation on T5-small (seed 42; 7 epochs). Validation loss at epoch 1 and epoch 7.}
++\label{tab:ablation}
++\vskip 0.1in
++\begin{center}
++\begin{small}
++\begin{tabular}{llccc}
++\toprule
++Arm & Parameterization & Constraint & Val.\ loss (ep.\ 1) & Val.\ loss (ep.\ 7) \\
++\midrule
++Baseline & $W$ (pretrained) & none & 2.43 & 2.21 \\
++Sign-frozen & $\operatorname{sign}(W_{\mathrm{pre}}) \odot \phi(V)$ & none & 2.51 & 2.27 \\
++Abs-init-free & $V$, $V_0 = |W_{\mathrm{pre}}| + \epsilon$ & none & 2.91 & 2.51 \\
++Monotone & $\phi(V)$, $V_0 = \phi^{-1}(|W_{\mathrm{pre}}| + \epsilon)$ & $W \ge 0$ & 2.92 & 2.51 \\
++\bottomrule
++\end{tabular}
++\end{small}
++\end{center}
++\vskip -0.1in
++\end{table}
++
++\subsection{Universal Trigger Transfer}
++\label{app:transfer}
++%% [CHANGE: new result] stage_5b_uat_transfer.py (Pythia, 900 held-out texts, three seeds) and T5 uat_results.json transfer matrices (four seeds)
++Table~\ref{tab:uat-transfer} reports the cross-model transfer of learned universal triggers on Pythia-1.4B, evaluated on 900 held-out texts. The baseline is vulnerable to triggers learned on either model, whereas the monotone model is substantially less affected by the baseline's trigger than by its own. On T5, where universal triggers are weak against every model, the off-diagonal entries of the corresponding ROUGE-L transfer matrix (computed on the first 100 evaluation examples) average within $\pm 0.35$ points and never exceed 0.75 points in any of the four seeds.
++
++\begin{table}[h]
++\caption{Universal-trigger transfer on Pythia-1.4B: relative NLL increase (mean $\pm$ s.d.\ over seeds 42, 1337, 2024) when the trigger learned on the row model is prepended to inputs of the column model.}
++\label{tab:uat-transfer}
++\vskip 0.1in
++\begin{center}
++\begin{small}
++\begin{tabular}{lcc}
++\toprule
++Trigger learned on & Evaluated on baseline & Evaluated on monotone \\
++\midrule
++Baseline & $+17.8 \pm 0.7\%$ & $+6.3 \pm 0.3\%$ \\
++Monotone & $+13.3 \pm 0.5\%$ & $+11.1 \pm 3.7\%$ \\
++\bottomrule
++\end{tabular}
++\end{small}
++\end{center}
++\vskip -0.1in
++\end{table}
++
+ \subsection{Foundation Model Training Protocol}
+ \label{app:pythia}
+-The decoder-only track fine-tunes Pythia-1.4B~\citep{biderman2023pythia} on the uncopyrighted subset of the Pile~\citep{gao2020pile}, with held-out evaluation texts drawn from a disjoint streaming sample. Constraint-scope screening (Table~\ref{tab:pythia-variants}) uses a reduced budget of 30{,}000 training samples at sequence length 1024 for 3--4 epochs on seed 42; full-budget validation of the selected MLP-both scope (Table~\ref{tab:pythia-seeds}) trains the baseline for 5 epochs and the monotone model for 10 epochs on each of three seeds (42, 1337, 2024). The extended monotone budget parallels the extended warmup used in the T5 track and compensates for the constrained parameterization's slower recovery. HotFlip evaluation uses 200 held-out examples with up to 10 token flips per example; UAT evaluation uses coordinate ascent with 3 restarts and 50 iterations, optimizing triggers on 80 texts and evaluating on 120 disjoint texts. Attack-time model evaluation is performed in bfloat16 precision. All foundation-model experiments are executed on NVIDIA A100 GPUs with 80GB memory under the SLURM workload manager, with per-stage checkpointing to permit resumption across scheduler preemptions.
++The decoder-only track fine-tunes Pythia-1.4B~\citep{biderman2023pythia} on the uncopyrighted subset of the Pile~\citep{gao2020pile}, with held-out evaluation texts drawn from a disjoint streaming sample. Constraint-scope screening (Table~\ref{tab:pythia-variants}) was run on seed 42, the MLP-in scope under the full budget described below and the MLP-both and MLP-in\,+\,Attn-out scopes under a reduced budget of 30{,}000 training samples at sequence length 1024 for 3 (baseline) and 4 (monotone) epochs; full-budget validation of the selected MLP-both scope (Table~\ref{tab:pythia-seeds}) trains the baseline for 5 epochs and the monotone model for 10 epochs on each of three seeds (42, 1337, 2024). The extended monotone budget parallels the extended warmup used in the T5 track and compensates for the constrained parameterization's slower recovery. %% [CHANGE: protocol] hyperparameters as in foundation_llm_experiments/configs/experiment_config.py
++Both recovery runs use AdamW with weight decay $0.01$, linear warmup followed by linear decay, gradient clipping at norm $1.0$, an effective batch of 32 sequences (8 per step with 4 accumulation steps) at sequence length 2048, and bfloat16 weights with gradient checkpointing; the learning rate and warmup fraction are $10^{-5}$ and 10\% for the baseline and $5\times 10^{-5}$ and 20\% for the monotone model. Full-budget runs train on the first 100{,}000 documents of the streamed training split (90\%/10\% train/validation) and retain the checkpoint with the lowest validation perplexity. HotFlip evaluation uses 200 held-out examples with up to 10 token flips per example; UAT evaluation uses coordinate ascent with 3 restarts and 50 iterations, optimizing triggers on 80 texts and evaluating on 120 disjoint texts. Universal-trigger optimization and evaluation (including the trigger-transfer replay and the order-preservation probe) run with the models in bfloat16 precision; HotFlip, the substitution-transfer and gradient-free controls, and held-out perplexity are computed in float32. %% [CHANGE: factual] was "Attack-time model evaluation is performed in bfloat16 precision"
++All foundation-model experiments are executed on NVIDIA A100 GPUs with 80GB memory under the SLURM workload manager, with per-stage checkpointing to permit resumption across scheduler preemptions.
+ 
+ % You can have as much text here as you want. The main body must be at most $8$ pages long.
+ % For the final version, one more page can be added.
