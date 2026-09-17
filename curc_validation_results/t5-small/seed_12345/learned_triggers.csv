@@ -1,0 +1,4 @@
+model_name,trigger_text,trigger_ids
+standard_t5,» Morkon mir president,"[1168, 4574, 4470, 1870, 2753]"
+baseline_t5,prior 2016. recherche values prior,"[1884, 4619, 3895, 2620, 1884]"
+monotonic_t5,Therefore processes connect travail parking,"[4063, 2842, 1979, 2954, 3078]"

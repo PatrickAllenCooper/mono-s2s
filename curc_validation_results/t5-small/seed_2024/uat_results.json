@@ -1,0 +1,120 @@
+{
+  "seed": 2024,
+  "attack_config": {
+    "trigger_length": 5,
+    "num_iterations": 100,
+    "num_restarts": 5,
+    "trigger_opt_samples": 1000,
+    "trigger_eval_samples": 1500
+  },
+  "learned_triggers": {
+    "standard_t5": "quagan \u00bb Romania officials",
+    "baseline_t5": "altdem56 recherche analysis",
+    "monotonic_t5": "affect developing 2. charged competitive"
+  },
+  "results": {
+    "standard_t5": {
+      "trigger_text": "quagan \u00bb Romania officials",
+      "trigger_ids": [
+        4960,
+        2565,
+        1168,
+        3871,
+        4298
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.005346592308094422,
+        "rouge2": -0.00419348812996545,
+        "rougeLsum": -0.005741672498427497
+      },
+      "nll_increase": 0.0083150473455654,
+      "clean_rouge": {
+        "rouge1": 0.2807628395154779,
+        "rouge2": 0.09429837011020781,
+        "rougeLsum": 0.2321916361285829
+      },
+      "attack_rouge": {
+        "rouge1": 0.2754162472073835,
+        "rouge2": 0.09010488198024236,
+        "rougeLsum": 0.2264499636301554
+      }
+    },
+    "baseline_t5": {
+      "trigger_text": "altdem56 recherche analysis",
+      "trigger_ids": [
+        4445,
+        1778,
+        4834,
+        3895,
+        1693
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.0023392164743511468,
+        "rouge2": -0.0017271127882850928,
+        "rougeLsum": -0.001943927106984572
+      },
+      "nll_increase": 0.005131321381328762,
+      "clean_rouge": {
+        "rouge1": 0.2833537439192841,
+        "rouge2": 0.09053852829505392,
+        "rougeLsum": 0.22989162073453023
+      },
+      "attack_rouge": {
+        "rouge1": 0.28101452744493294,
+        "rouge2": 0.08881141550676883,
+        "rougeLsum": 0.22794769362754566
+      }
+    },
+    "monotonic_t5": {
+      "trigger_text": "affect developing 2. charged competitive",
+      "trigger_ids": [
+        2603,
+        2421,
+        1682,
+        4977,
+        3265
+      ],
+      "rouge_deltas": {
+        "rouge1": 0.0007038281725768591,
+        "rouge2": 0.0007663141919503763,
+        "rougeLsum": 4.592113110735152e-05
+      },
+      "nll_increase": 0.002844530794426522,
+      "clean_rouge": {
+        "rouge1": 0.26334634875875107,
+        "rouge2": 0.07639914558242196,
+        "rougeLsum": 0.21612184002266296
+      },
+      "attack_rouge": {
+        "rouge1": 0.26405017693132793,
+        "rouge2": 0.07716545977437234,
+        "rougeLsum": 0.21616776115377032
+      }
+    }
+  },
+  "transfer_matrix": {
+    "standard_t5": {
+      "standard_t5": -0.01645951259631856,
+      "baseline_t5": 0.005119848101711039,
+      "monotonic_t5": 0.002593875993542827
+    },
+    "baseline_t5": {
+      "standard_t5": -0.002625589597154615,
+      "baseline_t5": 0.003504801998625018,
+      "monotonic_t5": -7.244264059630412e-05
+    },
+    "monotonic_t5": {
+      "standard_t5": -0.00238587653175934,
+      "baseline_t5": 0.002477550987999566,
+      "monotonic_t5": -9.620168206195268e-05
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-15 21:04:44",
+    "date": "2026-09-15",
+    "time": "21:04:44",
+    "seed": 2024,
+    "unix_timestamp": 1789527884,
+    "run_id": "20260915_210444_seed2024"
+  }
+}

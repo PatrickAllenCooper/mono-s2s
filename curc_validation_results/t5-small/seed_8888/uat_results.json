@@ -1,0 +1,120 @@
+{
+  "seed": 8888,
+  "attack_config": {
+    "trigger_length": 5,
+    "num_iterations": 100,
+    "num_restarts": 5,
+    "trigger_opt_samples": 1000,
+    "trigger_eval_samples": 1500
+  },
+  "learned_triggers": {
+    "standard_t5": "mich \u00bb attack denn court",
+    "baseline_t5": "\u00bb. proposed functions reduction introduced",
+    "monotonic_t5": "atmosphere prezent proposed solar requirements"
+  },
+  "results": {
+    "standard_t5": {
+      "trigger_text": "mich \u00bb attack denn court",
+      "trigger_ids": [
+        2278,
+        1168,
+        3211,
+        4140,
+        1614
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.005743030755805567,
+        "rouge2": -0.005009887574279753,
+        "rougeLsum": -0.005906006164828614
+      },
+      "nll_increase": 0.006789333535457284,
+      "clean_rouge": {
+        "rouge1": 0.2807628395154779,
+        "rouge2": 0.09429837011020781,
+        "rougeLsum": 0.2321916361285829
+      },
+      "attack_rouge": {
+        "rouge1": 0.27501980875967236,
+        "rouge2": 0.08928848253592805,
+        "rougeLsum": 0.2262856299637543
+      }
+    },
+    "baseline_t5": {
+      "trigger_text": "\u00bb. proposed functions reduction introduced",
+      "trigger_ids": [
+        4841,
+        4382,
+        3621,
+        4709,
+        3665
+      ],
+      "rouge_deltas": {
+        "rouge1": 0.0014838389543982422,
+        "rouge2": 0.0014746320333025725,
+        "rougeLsum": 0.0016999819411298023
+      },
+      "nll_increase": 0.0050178587550595306,
+      "clean_rouge": {
+        "rouge1": 0.28161435773842053,
+        "rouge2": 0.08931244714369642,
+        "rougeLsum": 0.2279685975270167
+      },
+      "attack_rouge": {
+        "rouge1": 0.28309819669281877,
+        "rouge2": 0.09078707917699899,
+        "rougeLsum": 0.2296685794681465
+      }
+    },
+    "monotonic_t5": {
+      "trigger_text": "atmosphere prezent proposed solar requirements",
+      "trigger_ids": [
+        4643,
+        4592,
+        4382,
+        3693,
+        1502
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.00104137786503683,
+        "rouge2": -0.0010090949045606368,
+        "rougeLsum": -0.0013226109213380632
+      },
+      "nll_increase": 0.0036617666244780794,
+      "clean_rouge": {
+        "rouge1": 0.2681613754034412,
+        "rouge2": 0.07872721886362319,
+        "rougeLsum": 0.21967957401967075
+      },
+      "attack_rouge": {
+        "rouge1": 0.2671199975384044,
+        "rouge2": 0.07771812395906255,
+        "rougeLsum": 0.2183569630983327
+      }
+    }
+  },
+  "transfer_matrix": {
+    "standard_t5": {
+      "standard_t5": -0.010994148964009465,
+      "baseline_t5": -0.0008335516440037272,
+      "monotonic_t5": -0.004439355725804256
+    },
+    "baseline_t5": {
+      "standard_t5": -0.007074882276645239,
+      "baseline_t5": -0.0006605743208962511,
+      "monotonic_t5": -0.005979118120918586
+    },
+    "monotonic_t5": {
+      "standard_t5": -0.002489479886168905,
+      "baseline_t5": 0.0019666956417839776,
+      "monotonic_t5": -0.0076076699740666165
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-16 09:42:23",
+    "date": "2026-09-16",
+    "time": "09:42:23",
+    "seed": 8888,
+    "unix_timestamp": 1789573343,
+    "run_id": "20260916_094223_seed8888"
+  }
+}

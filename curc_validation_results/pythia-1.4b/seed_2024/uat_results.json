@@ -1,0 +1,50 @@
+{
+  "seed": 2024,
+  "attack_config": {
+    "trigger_length": 10,
+    "num_iterations": 50,
+    "num_restarts": 3,
+    "num_opt_samples": 80,
+    "num_eval_samples": 120
+  },
+  "results": {
+    "baseline_pythia": {
+      "trigger_text": "\n     ife](#\u043eically]{ donimesoolimes",
+      "trigger_ids": [
+        1043,
+        1074,
+        1084,
+        1068,
+        1037,
+        1019,
+        1053,
+        1022,
+        1062,
+        1022
+      ],
+      "clean_loss": 2.0072551449139913,
+      "attacked_loss": 2.338703759511312,
+      "nll_increase": 0.16512530329646896,
+      "nll_increase_percent": 16.512530329646896
+    },
+    "monotonic_pythia": {
+      "trigger_text": " doesool gener di ext]{ool [@orkinvalid",
+      "trigger_ids": [
+        1057,
+        1062,
+        1006,
+        1073,
+        1021,
+        1019,
+        1062,
+        1008,
+        1064,
+        25359
+      ],
+      "clean_loss": 3.7587671359380086,
+      "attacked_loss": 4.321235251426697,
+      "nll_increase": 0.1496416498140748,
+      "nll_increase_percent": 14.96416498140748
+    }
+  }
+}

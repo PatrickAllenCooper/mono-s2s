@@ -1,0 +1,4 @@
+model_name,trigger_text,trigger_ids
+standard_t5,mich » attack denn court,"[2278, 1168, 3211, 4140, 1614]"
+baseline_t5,». proposed functions reduction introduced,"[4841, 4382, 3621, 4709, 3665]"
+monotonic_t5,atmosphere prezent proposed solar requirements,"[4643, 4592, 4382, 3693, 1502]"

@@ -1,0 +1,50 @@
+{
+  "seed": 1337,
+  "attack_config": {
+    "trigger_length": 10,
+    "num_iterations": 50,
+    "num_restarts": 3,
+    "num_opt_samples": 80,
+    "num_eval_samples": 120
+  },
+  "results": {
+    "baseline_pythia": {
+      "trigger_text": "ement]{\n      every](#](# high gener(\\ale",
+      "trigger_ids": [
+        1003,
+        1019,
+        1043,
+        1046,
+        1084,
+        1084,
+        1029,
+        1006,
+        1035,
+        1079
+      ],
+      "clean_loss": 2.007831350962321,
+      "attacked_loss": 2.336655294895172,
+      "nll_increase": 0.16377069905560113,
+      "nll_increase_percent": 16.377069905560113
+    },
+    "monotonic_pythia": {
+      "trigger_text": "ily](#](#]{ention](#                                                                 eachily(\\",
+      "trigger_ids": [
+        1031,
+        1084,
+        1084,
+        1019,
+        1075,
+        1084,
+        1085,
+        1016,
+        1031,
+        1035
+      ],
+      "clean_loss": 3.9479030768076577,
+      "attacked_loss": 4.266816933949788,
+      "nll_increase": 0.08078056906098353,
+      "nll_increase_percent": 8.078056906098354
+    }
+  }
+}

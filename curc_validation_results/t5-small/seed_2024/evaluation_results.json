@@ -1,0 +1,364 @@
+{
+  "cnn_dm": {
+    "standard_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.38585897071601005,
+          "lower": 0.3833488713548181,
+          "upper": 0.38819125102680174,
+          "ci_width": 0.004842379671983643
+        },
+        "rouge2": {
+          "mean": 0.17125668471266112,
+          "lower": 0.1687030165607221,
+          "upper": 0.17359157320947924,
+          "ci_width": 0.0048885566487571475
+        },
+        "rougeLsum": {
+          "mean": 0.3316777617461899,
+          "lower": 0.3292429117948444,
+          "upper": 0.33394497558575253,
+          "ci_width": 0.004702063790908151
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 62.31070496083551,
+        "std": 12.011724701824866,
+        "median": 62.0,
+        "min": 18,
+        "max": 81,
+        "total": 715950,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 78.29556135770235,
+        "std": 32.37306506159237,
+        "median": 73.0,
+        "min": 11,
+        "max": 967,
+        "total": 899616,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 0.7737281656821422,
+        "length_ratio": 0.7958395582115035,
+        "avg_pred_length": 62.31070496083551,
+        "avg_ref_length": 78.29556135770235
+      }
+    },
+    "baseline_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.39850538609969754,
+          "lower": 0.39644396746389754,
+          "upper": 0.40064524999136,
+          "ci_width": 0.0042012825274624355
+        },
+        "rouge2": {
+          "mean": 0.1687234056167904,
+          "lower": 0.16659763495349683,
+          "upper": 0.17080473045285702,
+          "ci_width": 0.004207095499360186
+        },
+        "rougeLsum": {
+          "mean": 0.33148072786705257,
+          "lower": 0.32948207985275924,
+          "upper": 0.33356779450808005,
+          "ci_width": 0.004085714655320816
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 75.65587467362924,
+        "std": 6.539984326596371,
+        "median": 77.0,
+        "min": 12,
+        "max": 81,
+        "total": 869286,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 78.29556135770235,
+        "std": 32.37306506159237,
+        "median": 73.0,
+        "min": 11,
+        "max": 967,
+        "total": 899616,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 0.9657109594094575,
+        "length_ratio": 0.9662856151958169,
+        "avg_pred_length": 75.65587467362924,
+        "avg_ref_length": 78.29556135770235
+      }
+    },
+    "monotonic_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.37657809925259916,
+          "lower": 0.37448474363072826,
+          "upper": 0.3786350966922636,
+          "ci_width": 0.004150353061535328
+        },
+        "rouge2": {
+          "mean": 0.150043139107483,
+          "lower": 0.14810068059221443,
+          "upper": 0.15194203690994174,
+          "ci_width": 0.003841356317727307
+        },
+        "rougeLsum": {
+          "mean": 0.31356525950138364,
+          "lower": 0.31153405736855627,
+          "upper": 0.31547701189766386,
+          "ci_width": 0.00394295452910759
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 74.46422976501306,
+        "std": 10.15652006233557,
+        "median": 78.0,
+        "min": 13,
+        "max": 81,
+        "total": 855594,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 78.29556135770235,
+        "std": 32.37306506159237,
+        "median": 73.0,
+        "min": 11,
+        "max": 967,
+        "total": 899616,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 0.9498492665969465,
+        "length_ratio": 0.9510657880695763,
+        "avg_pred_length": 74.46422976501306,
+        "avg_ref_length": 78.29556135770235
+      }
+    },
+    "paired_tests_baseline_vs_monotonic": {
+      "rouge1": {
+        "t_stat": 23.857739293206567,
+        "p_value": 7.939588891169941e-123,
+        "cohens_d": 0.22257135724805688,
+        "n": 11490,
+        "p_value_bonferroni": 2.3818766673509825e-122,
+        "bonferroni_m": 3
+      },
+      "rouge2": {
+        "t_stat": 21.5538146419029,
+        "p_value": 4.817953778058001e-101,
+        "cohens_d": 0.2010778020400021,
+        "n": 11490,
+        "p_value_bonferroni": 1.4453861334174002e-100,
+        "bonferroni_m": 3
+      },
+      "rougeLsum": {
+        "t_stat": 20.345002161221668,
+        "p_value": 1.9950485491751188e-90,
+        "cohens_d": 0.18980066336491302,
+        "n": 11490,
+        "p_value_bonferroni": 5.985145647525356e-90,
+        "bonferroni_m": 3
+      }
+    }
+  },
+  "xsum": {
+    "standard_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.2008499494063523,
+          "lower": 0.19938428083146012,
+          "upper": 0.20230841867169327,
+          "ci_width": 0.002924137840233154
+        },
+        "rouge2": {
+          "mean": 0.029120292519144806,
+          "lower": 0.028390761051390774,
+          "upper": 0.029879286288747708,
+          "ci_width": 0.0014885252373569337
+        },
+        "rougeLsum": {
+          "mean": 0.13534633006192956,
+          "lower": 0.1343867380757358,
+          "upper": 0.1363587270326618,
+          "ci_width": 0.0019719889569259907
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 53.12070943263037,
+        "std": 12.246428751351587,
+        "median": 53.0,
+        "min": 9,
+        "max": 80,
+        "total": 602017,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.8084236518312025,
+        "avg_pred_length": 53.12070943263037,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "baseline_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.20064780374936175,
+          "lower": 0.19937081035108767,
+          "upper": 0.20196514513454167,
+          "ci_width": 0.002594334783454
+        },
+        "rouge2": {
+          "mean": 0.031166587827314747,
+          "lower": 0.03050043183276471,
+          "upper": 0.0318700749355049,
+          "ci_width": 0.0013696431027401916
+        },
+        "rougeLsum": {
+          "mean": 0.13097117011526824,
+          "lower": 0.13009393044811804,
+          "upper": 0.13187737131168142,
+          "ci_width": 0.0017834408635633847
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 72.10067943174799,
+        "std": 13.6253397412453,
+        "median": 79.0,
+        "min": 10,
+        "max": 80,
+        "total": 817117,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.4545713976737478,
+        "avg_pred_length": 72.10067943174799,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "monotonic_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.19263153471332536,
+          "lower": 0.1913820822384323,
+          "upper": 0.1939137350969331,
+          "ci_width": 0.0025316528585007936
+        },
+        "rouge2": {
+          "mean": 0.027833418996178347,
+          "lower": 0.02720776454956559,
+          "upper": 0.02849999653799113,
+          "ci_width": 0.0012922319884255407
+        },
+        "rougeLsum": {
+          "mean": 0.12806764803741144,
+          "lower": 0.12717114931702758,
+          "upper": 0.12899159582017014,
+          "ci_width": 0.0018204465031425587
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 70.31774463954822,
+        "std": 15.4779406322307,
+        "median": 79.0,
+        "min": 10,
+        "max": 81,
+        "total": 796911,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.393873762376238,
+        "avg_pred_length": 70.31774463954822,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "paired_tests_baseline_vs_monotonic": {
+      "rouge1": {
+        "t_stat": 14.345204273403189,
+        "p_value": 2.8994625799432664e-46,
+        "cohens_d": 0.13475171230615265,
+        "n": 11333,
+        "p_value_bonferroni": 8.698387739829798e-46,
+        "bonferroni_m": 3
+      },
+      "rouge2": {
+        "t_stat": 10.38313394472166,
+        "p_value": 3.835748122905779e-25,
+        "cohens_d": 0.09753399474063082,
+        "n": 11333,
+        "p_value_bonferroni": 1.1507244368717338e-24,
+        "bonferroni_m": 3
+      },
+      "rougeLsum": {
+        "t_stat": 6.9413929151499065,
+        "p_value": 4.094567865029217e-12,
+        "cohens_d": 0.06520399175078077,
+        "n": 11333,
+        "p_value_bonferroni": 1.2283703595087653e-11,
+        "bonferroni_m": 3
+      }
+    }
+  },
+  "metadata": {
+    "seed": 2024,
+    "model_name": "t5-small",
+    "use_full_test_sets": true,
+    "decoding_params": {
+      "num_beams": 4,
+      "length_penalty": 1.2,
+      "min_new_tokens": 10,
+      "max_new_tokens": 80,
+      "no_repeat_ngram_size": 3,
+      "early_stopping": true
+    },
+    "rouge_config": {
+      "metrics": [
+        "rouge1",
+        "rouge2",
+        "rougeLsum"
+      ],
+      "use_stemmer": true,
+      "bootstrap_samples": 1000
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-13 19:58:52",
+    "date": "2026-09-13",
+    "time": "19:58:52",
+    "seed": 2024,
+    "unix_timestamp": 1789351132,
+    "run_id": "20260913_195852_seed2024"
+  }
+}

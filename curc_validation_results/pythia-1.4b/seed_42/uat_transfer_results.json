@@ -1,0 +1,97 @@
+{
+  "seed": 42,
+  "source_note": "Triggers replayed from stage_5_uat_attacks.py (no re-optimization).",
+  "num_eval_samples": 900,
+  "transfer_matrix": {
+    "baseline_pythia": {
+      "baseline_pythia": 17.00447360495174,
+      "monotonic_pythia": 6.4961861861859145
+    },
+    "monotonic_pythia": {
+      "baseline_pythia": 13.763302922085096,
+      "monotonic_pythia": 9.313015220952053
+    }
+  },
+  "full_results": {
+    "baseline_pythia": {
+      "baseline_pythia": {
+        "trigger_text": "ement]{inceox]{ high\u043e el](#imes",
+        "trigger_ids": [
+          1003,
+          1019,
+          1090,
+          1004,
+          1019,
+          1029,
+          1068,
+          1045,
+          1084,
+          1022
+        ],
+        "clean_loss": 1.9231398163901434,
+        "attacked_loss": 2.2501596188545228,
+        "nll_increase": 0.17004473604951742,
+        "nll_increase_percent": 17.00447360495174
+      },
+      "monotonic_pythia": {
+        "trigger_text": "ement]{inceox]{ high\u043e el](#imes",
+        "trigger_ids": [
+          1003,
+          1019,
+          1090,
+          1004,
+          1019,
+          1029,
+          1068,
+          1045,
+          1084,
+          1022
+        ],
+        "clean_loss": 3.6752111477322047,
+        "attacked_loss": 3.913959706624349,
+        "nll_increase": 0.06496186186185915,
+        "nll_increase_percent": 6.4961861861859145
+      }
+    },
+    "monotonic_pythia": {
+      "baseline_pythia": {
+        "trigger_text": "\n               ](# produ                                                                ities]{](#ized [@ cur",
+        "trigger_ids": [
+          1015,
+          1084,
+          1002,
+          1085,
+          1005,
+          1019,
+          1084,
+          1025,
+          1008,
+          1095
+        ],
+        "clean_loss": 1.9231398163901434,
+        "attacked_loss": 2.18782737493515,
+        "nll_increase": 0.13763302922085097,
+        "nll_increase_percent": 13.763302922085096
+      },
+      "monotonic_pythia": {
+        "trigger_text": "\n               ](# produ                                                                ities]{](#ized [@ cur",
+        "trigger_ids": [
+          1015,
+          1084,
+          1002,
+          1085,
+          1005,
+          1019,
+          1084,
+          1025,
+          1008,
+          1095
+        ],
+        "clean_loss": 3.6752111477322047,
+        "attacked_loss": 4.0174841213226316,
+        "nll_increase": 0.09313015220952053,
+        "nll_increase_percent": 9.313015220952053
+      }
+    }
+  }
+}

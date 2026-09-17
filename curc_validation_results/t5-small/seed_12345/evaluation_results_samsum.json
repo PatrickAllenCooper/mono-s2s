@@ -1,0 +1,32 @@
+{
+  "metadata": {
+    "seed": 12345,
+    "model_name": "t5-small",
+    "use_full_test_sets": true,
+    "decoding_params": {
+      "num_beams": 4,
+      "length_penalty": 1.2,
+      "min_new_tokens": 10,
+      "max_new_tokens": 80,
+      "no_repeat_ngram_size": 3,
+      "early_stopping": true
+    },
+    "rouge_config": {
+      "metrics": [
+        "rouge1",
+        "rouge2",
+        "rougeLsum"
+      ],
+      "use_stemmer": true,
+      "bootstrap_samples": 1000
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-14 08:54:25",
+    "date": "2026-09-14",
+    "time": "08:54:25",
+    "seed": 12345,
+    "unix_timestamp": 1789397665,
+    "run_id": "20260914_085425_seed12345"
+  }
+}

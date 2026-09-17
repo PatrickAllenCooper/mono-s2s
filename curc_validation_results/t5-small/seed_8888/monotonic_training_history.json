@@ -1,0 +1,48 @@
+{
+  "train_losses": [
+    5.016038552431878,
+    3.0537463469132446,
+    2.898354315698239,
+    2.8182275713356253,
+    2.7743432261664758,
+    2.746984595793352,
+    2.731781087342167
+  ],
+  "val_losses": [
+    2.941290454441464,
+    2.6982333717603693,
+    2.6086580348681574,
+    2.566961322019277,
+    2.5378733320429334,
+    2.518560454838531,
+    2.512566105838912
+  ],
+  "best_val_loss": 2.512566105838912,
+  "training_time_seconds": 77931.06985497475,
+  "training_time_minutes": 1298.8511642495791,
+  "this_run_seconds": 77931.06985497475,
+  "num_epochs": 7,
+  "hyperparameters": {
+    "learning_rate": 5e-05,
+    "weight_decay": 0.01,
+    "batch_size": 4,
+    "warmup_ratio": 0.1,
+    "max_grad_norm": 1.0
+  },
+  "seed": 8888,
+  "constraint_info": {
+    "type": "softplus_parametrization",
+    "formula": "W = softplus(V) >= 0",
+    "scope": "FFN sublayers only (wi, wi_0, wi_1, wo)",
+    "globally_monotonic": false,
+    "reason": "LayerNorm, residuals, and attention unconstrained"
+  },
+  "_metadata": {
+    "timestamp": "2026-09-11 12:05:03",
+    "date": "2026-09-11",
+    "time": "12:05:03",
+    "seed": 8888,
+    "unix_timestamp": 1789149903,
+    "run_id": "20260911_120503_seed8888"
+  }
+}

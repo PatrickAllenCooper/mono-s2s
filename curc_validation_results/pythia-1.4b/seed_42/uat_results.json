@@ -1,0 +1,50 @@
+{
+  "seed": 42,
+  "attack_config": {
+    "trigger_length": 10,
+    "num_iterations": 50,
+    "num_restarts": 3,
+    "num_opt_samples": 80,
+    "num_eval_samples": 120
+  },
+  "results": {
+    "baseline_pythia": {
+      "trigger_text": "ement]{inceox]{ high\u043e el](#imes",
+      "trigger_ids": [
+        1003,
+        1019,
+        1090,
+        1004,
+        1019,
+        1029,
+        1068,
+        1045,
+        1084,
+        1022
+      ],
+      "clean_loss": 2.007271881898244,
+      "attacked_loss": 2.31759504477183,
+      "nll_increase": 0.15459946690436302,
+      "nll_increase_percent": 15.459946690436302
+    },
+    "monotonic_pythia": {
+      "trigger_text": "\n               ](# produ                                                                ities]{](#ized [@ cur",
+      "trigger_ids": [
+        1015,
+        1084,
+        1002,
+        1085,
+        1005,
+        1019,
+        1084,
+        1025,
+        1008,
+        1095
+      ],
+      "clean_loss": 3.7821263631184894,
+      "attacked_loss": 4.114599831899008,
+      "nll_increase": 0.08790649408825747,
+      "nll_increase_percent": 8.790649408825747
+    }
+  }
+}

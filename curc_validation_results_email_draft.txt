@@ -1,0 +1,36 @@
+Subject: Updated CURC validation results (multi-seed T5-small + Pythia-1.4B attacks)
+
+Hi all,
+
+Attached is a bundle of the CURC validation results we've collected since the
+original ICML submission (which only reported seed-42, n=200-subset numbers).
+Everything here uses the full test sets. Summary:
+
+- T5-small, 5 seeds (42, 1337, 2024, 8888, 12345): full-test-set ROUGE for
+  Standard/Baseline/Monotonic T5 on CNN/DailyMail, XSUM, and SAMSum, with
+  bootstrap CIs and paired significance tests. The monotonicity-vs-robustness
+  trade-off holds consistently across all 5 seeds, not just seed 42. Most
+  seeds also have UAT and order-preservation results; HotFlip attacks are
+  complete for one seed and still running for the rest.
+
+- Two attribution-ablation arms (sign_frozen, abs_init_free) at seed 42, to
+  isolate whether nonnegativity itself vs. the initialization disruption
+  drives the effect. Monotonic training just finished cleanly for both;
+  evaluation is next.
+
+- Pythia-1.4B, 3 seeds: UAT attacks, cross-model UAT trigger transfer, and
+  HotFlip substitution transfer, all complete. The robustness pattern shows
+  up here too (monotonic Pythia sees a smaller NLL increase under attack than
+  baseline), consistent with the T5 results.
+
+Not included yet: T5-base/T5-large and Pythia-2.8B/6.9B/Llama-3 scale-up. We
+hit a real bug there — the monotonic softplus reparametrization loses
+precision catastrophically under bfloat16, which silently corrupted T5-base's
+monotonic training. That's fixed now and T5-base is re-running; we're
+prioritizing what's needed for a complete submission given the deadline and
+treating the larger-scale results as bonus if they land in time.
+
+Full breakdown of what's in the zip is in its README.md.
+
+Best,
+[name]

@@ -1,0 +1,120 @@
+{
+  "seed": 12345,
+  "attack_config": {
+    "trigger_length": 5,
+    "num_iterations": 100,
+    "num_restarts": 5,
+    "trigger_opt_samples": 1000,
+    "trigger_eval_samples": 1500
+  },
+  "learned_triggers": {
+    "standard_t5": "\u00bb Morkon mir president",
+    "baseline_t5": "prior 2016. recherche values prior",
+    "monotonic_t5": "Therefore processes connect travail parking"
+  },
+  "results": {
+    "standard_t5": {
+      "trigger_text": "\u00bb Morkon mir president",
+      "trigger_ids": [
+        1168,
+        4574,
+        4470,
+        1870,
+        2753
+      ],
+      "rouge_deltas": {
+        "rouge1": -0.0044405070898139165,
+        "rouge2": -0.004113969265254161,
+        "rougeLsum": -0.0052207717128978925
+      },
+      "nll_increase": 0.006485422625049198,
+      "clean_rouge": {
+        "rouge1": 0.2807628395154779,
+        "rouge2": 0.09429837011020781,
+        "rougeLsum": 0.2321916361285829
+      },
+      "attack_rouge": {
+        "rouge1": 0.276322332425664,
+        "rouge2": 0.09018440084495365,
+        "rougeLsum": 0.226970864415685
+      }
+    },
+    "baseline_t5": {
+      "trigger_text": "prior 2016. recherche values prior",
+      "trigger_ids": [
+        1884,
+        4619,
+        3895,
+        2620,
+        1884
+      ],
+      "rouge_deltas": {
+        "rouge1": 5.0537374330583695e-05,
+        "rouge2": 0.00010768554091740434,
+        "rougeLsum": -6.120459653871646e-05
+      },
+      "nll_increase": 0.006030686746288328,
+      "clean_rouge": {
+        "rouge1": 0.28162187339066697,
+        "rouge2": 0.08935493302644841,
+        "rougeLsum": 0.22880666124813592
+      },
+      "attack_rouge": {
+        "rouge1": 0.28167241076499755,
+        "rouge2": 0.08946261856736581,
+        "rougeLsum": 0.2287454566515972
+      }
+    },
+    "monotonic_t5": {
+      "trigger_text": "Therefore processes connect travail parking",
+      "trigger_ids": [
+        4063,
+        2842,
+        1979,
+        2954,
+        3078
+      ],
+      "rouge_deltas": {
+        "rouge1": 0.004274277923167202,
+        "rouge2": 0.0032481011520821,
+        "rougeLsum": 0.0025916725399737217
+      },
+      "nll_increase": 0.0030078656733071633,
+      "clean_rouge": {
+        "rouge1": 0.26576174745214126,
+        "rouge2": 0.07649498324991721,
+        "rougeLsum": 0.21757570195541764
+      },
+      "attack_rouge": {
+        "rouge1": 0.27003602537530846,
+        "rouge2": 0.07974308440199931,
+        "rougeLsum": 0.22016737449539137
+      }
+    }
+  },
+  "transfer_matrix": {
+    "standard_t5": {
+      "standard_t5": -0.009112503054887033,
+      "baseline_t5": -0.0011120257023330693,
+      "monotonic_t5": 0.0033710036207613425
+    },
+    "baseline_t5": {
+      "standard_t5": 0.0004657954476896542,
+      "baseline_t5": -0.002612201240634243,
+      "monotonic_t5": 0.006621584283473841
+    },
+    "monotonic_t5": {
+      "standard_t5": -0.0009481850334867592,
+      "baseline_t5": -0.0024269213083550345,
+      "monotonic_t5": 0.007213925709189689
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-16 03:59:20",
+    "date": "2026-09-16",
+    "time": "03:59:20",
+    "seed": 12345,
+    "unix_timestamp": 1789552760,
+    "run_id": "20260916_035920_seed12345"
+  }
+}

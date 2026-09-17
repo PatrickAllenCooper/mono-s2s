@@ -1,0 +1,198 @@
+{
+  "xsum": {
+    "standard_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.2008499494063523,
+          "lower": 0.19938616605743287,
+          "upper": 0.20217082692050597,
+          "ci_width": 0.0027846608630731073
+        },
+        "rouge2": {
+          "mean": 0.029120292519144806,
+          "lower": 0.02839772792534818,
+          "upper": 0.029822141055326535,
+          "ci_width": 0.0014244131299783538
+        },
+        "rougeLsum": {
+          "mean": 0.13534633006192956,
+          "lower": 0.1343208656567725,
+          "upper": 0.13629899940709958,
+          "ci_width": 0.0019781337503270713
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 53.12070943263037,
+        "std": 12.246428751351587,
+        "median": 53.0,
+        "min": 9,
+        "max": 80,
+        "total": 602017,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 1.8084236518312025,
+        "avg_pred_length": 53.12070943263037,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "baseline_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.20054184877536138,
+          "lower": 0.19918650096364277,
+          "upper": 0.2017299753589764,
+          "ci_width": 0.0025434743953336447
+        },
+        "rouge2": {
+          "mean": 0.03091243245431729,
+          "lower": 0.030243826715880988,
+          "upper": 0.0315666131918598,
+          "ci_width": 0.0013227864759788113
+        },
+        "rougeLsum": {
+          "mean": 0.13069705519074518,
+          "lower": 0.12980980559321795,
+          "upper": 0.13158177536501364,
+          "ci_width": 0.001771969771795695
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 72.19932939204094,
+        "std": 13.617153511374898,
+        "median": 79.0,
+        "min": 10,
+        "max": 80,
+        "total": 818235,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.4579298039027204,
+        "avg_pred_length": 72.19932939204094,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "monotonic_t5": {
+      "rouge_scores": {
+        "rouge1": {
+          "mean": 0.1941133146055102,
+          "lower": 0.1928580996664446,
+          "upper": 0.19541419061238502,
+          "ci_width": 0.00255609094594042
+        },
+        "rouge2": {
+          "mean": 0.028879125343063094,
+          "lower": 0.028216021894300555,
+          "upper": 0.029543634111568427,
+          "ci_width": 0.0013276122172678727
+        },
+        "rougeLsum": {
+          "mean": 0.12863049921594386,
+          "lower": 0.12776974279550263,
+          "upper": 0.129470967195679,
+          "ci_width": 0.0017012244001763654
+        }
+      },
+      "prediction_length_stats": {
+        "mean": 71.17762287126092,
+        "std": 14.86626000394553,
+        "median": 79.0,
+        "min": 10,
+        "max": 82,
+        "total": 806656,
+        "unit": "tokens"
+      },
+      "reference_length_stats": {
+        "mean": 29.374040412953324,
+        "std": 8.326805869784195,
+        "median": 29.0,
+        "min": 4,
+        "max": 153,
+        "total": 332896,
+        "unit": "tokens"
+      },
+      "brevity_penalty": {
+        "brevity_penalty": 1.0,
+        "length_ratio": 2.4231471690858406,
+        "avg_pred_length": 71.17762287126092,
+        "avg_ref_length": 29.374040412953324
+      }
+    },
+    "paired_tests_baseline_vs_monotonic": {
+      "rouge1": {
+        "t_stat": 11.853420932742234,
+        "p_value": 3.2015021971700806e-32,
+        "cohens_d": 0.1113451392486641,
+        "n": 11333,
+        "p_value_bonferroni": 9.604506591510241e-32,
+        "bonferroni_m": 3
+      },
+      "rouge2": {
+        "t_stat": 6.368999101813211,
+        "p_value": 1.9763154460767775e-10,
+        "cohens_d": 0.05982720903019079,
+        "n": 11333,
+        "p_value_bonferroni": 5.928946338230332e-10,
+        "bonferroni_m": 3
+      },
+      "rougeLsum": {
+        "t_stat": 5.053597330485536,
+        "p_value": 4.403274458676042e-07,
+        "cohens_d": 0.047470979193465004,
+        "n": 11333,
+        "p_value_bonferroni": 1.3209823376028127e-06,
+        "bonferroni_m": 3
+      }
+    }
+  },
+  "metadata": {
+    "seed": 8888,
+    "model_name": "t5-small",
+    "use_full_test_sets": true,
+    "decoding_params": {
+      "num_beams": 4,
+      "length_penalty": 1.2,
+      "min_new_tokens": 10,
+      "max_new_tokens": 80,
+      "no_repeat_ngram_size": 3,
+      "early_stopping": true
+    },
+    "rouge_config": {
+      "metrics": [
+        "rouge1",
+        "rouge2",
+        "rougeLsum"
+      ],
+      "use_stemmer": true,
+      "bootstrap_samples": 1000
+    }
+  },
+  "_metadata": {
+    "timestamp": "2026-09-15 06:45:44",
+    "date": "2026-09-15",
+    "time": "06:45:44",
+    "seed": 8888,
+    "unix_timestamp": 1789476344,
+    "run_id": "20260915_064544_seed8888"
+  }
+}

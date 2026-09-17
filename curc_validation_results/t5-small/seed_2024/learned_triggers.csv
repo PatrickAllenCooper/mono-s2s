@@ -1,0 +1,4 @@
+model_name,trigger_text,trigger_ids
+standard_t5,quagan » Romania officials,"[4960, 2565, 1168, 3871, 4298]"
+baseline_t5,altdem56 recherche analysis,"[4445, 1778, 4834, 3895, 1693]"
+monotonic_t5,affect developing 2. charged competitive,"[2603, 2421, 1682, 4977, 3265]"

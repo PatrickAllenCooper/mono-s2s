@@ -1,0 +1,4 @@
+model_name,trigger_text,trigger_ids
+standard_t5,» presidentday ban hit,"[1168, 2753, 1135, 4514, 1560]"
+baseline_t5,2019. thus 2005 investigation materials,"[4144, 2932, 3105, 4962, 1397]"
+monotonic_t5,recherche» shift flexible travail,"[3895, 3704, 4108, 4136, 2954]"
